@@ -1,0 +1,79 @@
+import * as movieService from '../services/movieService';
+import {
+  fetchMoviesRequest, fetchMoviesSuccess, fetchMoviesFailure,
+  addMovieRequest, addMovieSuccess, addMovieFailure,
+  updateMovieRequest, updateMovieSuccess, updateMovieFailure,
+  deleteMovieRequest, deleteMovieSuccess, deleteMovieFailure
+} from './actions';
+
+// ============================================================
+// THUNK: Fetch all movies
+// ============================================================
+export const fetchMovies = () => async (dispatch) => {
+  dispatch(fetchMoviesRequest());
+  try {
+    const movies = await movieService.getAllMovies();
+    dispatch(fetchMoviesSuccess(movies));
+  } catch (error) {
+    dispatch(fetchMoviesFailure(error.message));
+  }
+};
+
+// ============================================================
+// THUNK: Add a new movie
+// ============================================================
+export const addMovie = (movieData) => async (dispatch) => {
+  dispatch(addMovieRequest());
+  try {
+    const newMovie = await movieService.createMovie(movieData);
+    dispatch(addMovieSuccess(newMovie));
+    return newMovie;
+  } catch (error) {
+    dispatch(addMovieFailure(error.message));
+  }
+};
+
+// ============================================================
+// THUNK: Update a movie (edit review, rating, move to watched)
+// ============================================================
+export const updateMovie = (id, updatedData) => async (dispatch) => {
+  dispatch(updateMovieRequest());
+  try {
+    const updated = await movieService.updateMovie(id, updatedData);
+    dispatch(updateMovieSuccess(updated));
+    return updated;
+  } catch (error) {
+    dispatch(updateMovieFailure(error.message));
+  }
+};
+
+// ============================================================
+// THUNK: Move movie from watchlist to watched
+// ============================================================
+export const markAsWatched = (id, watchData) => async (dispatch) => {
+  dispatch(updateMovieRequest());
+  try {
+    const updated = await movieService.updateMovie(id, {
+      ...watchData,
+      status: 'watched',
+      watchedOn: new Date().toISOString().split('T')[0]
+    });
+    dispatch(updateMovieSuccess(updated));
+    return updated;
+  } catch (error) {
+    dispatch(updateMovieFailure(error.message));
+  }
+};
+
+// ============================================================
+// THUNK: Delete a movie
+// ============================================================
+export const deleteMovie = (id) => async (dispatch) => {
+  dispatch(deleteMovieRequest());
+  try {
+    await movieService.deleteMovie(id);
+    dispatch(deleteMovieSuccess(id));
+  } catch (error) {
+    dispatch(deleteMovieFailure(error.message));
+  }
+};
