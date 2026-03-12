@@ -20,7 +20,7 @@ class MoviesPage extends Component {
     }
 
     handleAddMovie = async (movieData) => {
-        await this.props.addMovie({ ...movieData, mediaType: 'movie' });
+        await this.props.addMovie(movieData);
         this.setState({ showAddModal: false, toast: { message: 'Movie added!', type: 'success' } });
     }
 
@@ -90,7 +90,7 @@ class MoviesPage extends Component {
                     </div>
                 ) : (
                     <div className="movie-grid">
-                        {filtered.map(movie => <MovieCard key={movie.id} movie={movie} />)}
+                        {filtered.map(movie => <MovieCard key={movie._id} movie={movie} />)}
                     </div>
                 )}
 

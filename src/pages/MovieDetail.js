@@ -5,11 +5,13 @@ import { fetchMovies, updateMovie, deleteMovie, markAsWatched } from '../store/t
 import MarkWatchedModal from '../components/MarkWatchedModal';
 import Toast from '../components/Toast';
 import { fetchStreamingAvailability } from '../services/tmdbService';
+import RecommendModal from '../components/RecommendModal';
+import axios from 'axios';
 
 function MovieDetailWrapper(props) {
   const navigate = useNavigate();
   const { id } = useParams();
-  return <MovieDetail {...props} navigate={navigate} movieId={parseInt(id)} />;
+  return <MovieDetail {...props} navigate={navigate} movieId={id} />;
 }
 
 class MovieDetail extends Component {
@@ -18,6 +20,7 @@ class MovieDetail extends Component {
     this.state = {
       editing: false,
       showMarkWatched: false,
+      showRecommend: false,
       toast: null,
       editForm: {}
     };
@@ -94,7 +97,31 @@ class MovieDetail extends Component {
   }
 
   getMovie() {
-    return this.props.movies.find(m => m.id === this.props.movieId);
+    return this.props.movies.find(m => m._id === this.props.movieId);
+  }
+
+  handleToggleTopPick = async () => {
+    const movie = this.getMovie();
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.patch(`http://localhost:5000/api/users/profile/top-picks`, {
+        mediaId: movie._id
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      this.showToast(movie.isTopPick ? 'Removed from Top Picks' : 'Added to Top Picks!');
+      this.props.fetchMovies(); // Refresh to get updated isTopPick status if we had it in the model, 
+      // but actually User model stores the array. Let's assume we need to refresh or update local state.
+      // Better: The media model itself could have as reference or we just refresh the profile later.
+    } catch (error) {
+      console.error('Error toggling top pick:', error);
+    }
+  }
+
+  handleRecommend = () => {
+    this.setState({ showRecommend: false });
+    this.showToast('Recommendation sent! 🚀');
   }
 
   showToast = (message, type = 'success') => {
@@ -126,7 +153,7 @@ class MovieDetail extends Component {
   handleEditSave = async () => {
     const movie = this.getMovie();
     const { editForm } = this.state;
-    await this.props.updateMovie(movie.id, {
+    await this.props.updateMovie(movie._id, {
       ...editForm,
       year: parseInt(editForm.year),
       rating: editForm.rating ? parseInt(editForm.rating) : movie.rating
@@ -137,7 +164,7 @@ class MovieDetail extends Component {
 
   handleMarkWatched = async (watchData) => {
     const movie = this.getMovie();
-    await this.props.markAsWatched(movie.id, watchData);
+    await this.props.markAsWatched(movie._id, watchData);
     this.setState({ showMarkWatched: false });
     this.showToast('Marked as watched! 🎬');
   }
@@ -145,7 +172,7 @@ class MovieDetail extends Component {
   handleDelete = async () => {
     if (!window.confirm('Remove this movie from your list?')) return;
     const movie = this.getMovie();
-    await this.props.deleteMovie(movie.id);
+    await this.props.deleteMovie(movie._id);
     this.props.navigate(-1);
   }
 
@@ -200,7 +227,16 @@ class MovieDetail extends Component {
 
             {/* Info */}
             <div className="detail-info">
-              <div className="detail-genre-year">{movie.genre} · {movie.year}</div>
+              <div className="detail-genre-year">
+                {movie.genre} · {movie.year}
+                <button
+                  onClick={this.handleToggleTopPick}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', marginLeft: '12px' }}
+                  title="Toggle Top Pick"
+                >
+                  {movie.isTopPick ? '⭐' : '☆'}
+                </button>
+              </div>
               <h1 className="detail-title">{movie.title}</h1>
               {movie.director && <div className="detail-director">Directed by {movie.director}</div>}
 
@@ -253,6 +289,9 @@ class MovieDetail extends Component {
                     ✓ Mark as Watched
                   </button>
                 )}
+                <button className="btn btn-secondary" onClick={() => this.setState({ showRecommend: true })}>
+                  ✉ Recommend
+                </button>
                 <button className="btn btn-secondary" onClick={this.startEditing}>
                   ✎ Edit
                 </button>
@@ -326,6 +365,14 @@ class MovieDetail extends Component {
             movie={movie}
             onSubmit={this.handleMarkWatched}
             onClose={() => this.setState({ showMarkWatched: false })}
+          />
+        )}
+
+        {this.state.showRecommend && (
+          <RecommendModal
+            movie={movie}
+            onRecommend={this.handleRecommend}
+            onClose={() => this.setState({ showRecommend: false })}
           />
         )}
 

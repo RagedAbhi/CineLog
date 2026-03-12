@@ -20,7 +20,7 @@ class TVShowsPage extends Component {
     }
 
     handleAddShow = async (movieData) => {
-        await this.props.addMovie({ ...movieData, mediaType: 'series' });
+        await this.props.addMovie(movieData);
         this.setState({ showAddModal: false, toast: { message: 'TV Show added!', type: 'success' } });
     }
 
@@ -90,7 +90,7 @@ class TVShowsPage extends Component {
                     </div>
                 ) : (
                     <div className="movie-grid">
-                        {filtered.map(show => <MovieCard key={show.id} movie={show} />)}
+                        {filtered.map(show => <MovieCard key={show._id} movie={show} />)}
                     </div>
                 )}
 

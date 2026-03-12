@@ -9,28 +9,42 @@ const BASE_URL = 'https://api.themoviedb.org/3';
  * @param {string} type - 'movie' or 'series'
  * @param {number|string} year 
  */
-export const fetchStreamingAvailability = async (title, type, year) => {
+export const fetchStreamingAvailability = async (title, type, year, imdbID = null) => {
     if (!TMDB_API_KEY || TMDB_API_KEY === 'your_tmdb_api_key_here') {
         return { error: 'NO_API_KEY' };
     }
 
     try {
+        let tmdbId = null;
         const tmdbType = type === 'series' ? 'tv' : 'movie';
 
-        // 1. Search for the content to get TMDB ID
-        const searchResponse = await axios.get(`${BASE_URL}/search/${tmdbType}`, {
-            params: {
-                api_key: TMDB_API_KEY,
-                query: title,
-                year: year // for movies
-                // first_air_date_year: year // for TV shows (optional refinement)
-            }
-        });
+        // 1. If imdbID is provided, use it for direct lookup (most accurate)
+        if (imdbID) {
+            const findResponse = await axios.get(`${BASE_URL}/find/${imdbID}`, {
+                params: {
+                    api_key: TMDB_API_KEY,
+                    external_source: 'imdb_id'
+                }
+            });
+            const findResult = (type === 'series' ? findResponse.data.tv_results : findResponse.data.movie_results)?.[0];
+            if (findResult) tmdbId = findResult.id;
+        }
 
-        const result = searchResponse.data.results[0];
-        if (!result) return null;
+        // 2. Fallback to search if no imdbID or find failed
+        if (!tmdbId) {
+            const searchResponse = await axios.get(`${BASE_URL}/search/${tmdbType}`, {
+                params: {
+                    api_key: TMDB_API_KEY,
+                    query: title,
+                    year: year // for movies
+                    // first_air_date_year: year // for TV shows (optional refinement)
+                }
+            });
+            const searchResult = searchResponse.data.results[0];
+            if (searchResult) tmdbId = searchResult.id;
+        }
 
-        const tmdbId = result.id;
+        if (!tmdbId) return null;
 
         // 2. Fetch watch providers
         const providersResponse = await axios.get(`${BASE_URL}/${tmdbType}/${tmdbId}/watch/providers`, {
@@ -59,6 +73,7 @@ export const fetchStreamingAvailability = async (title, type, year) => {
         const platformMap = {
             'Netflix': 'Netflix',
             'Amazon Prime Video': 'Amazon Prime',
+            'Amazon Prime Video with Ads': 'Amazon Prime',
             'Prime Video': 'Amazon Prime',
             'Amazon Video': 'Amazon Prime',
             'Disney Plus Hotstar': 'Hotstar',
@@ -91,7 +106,7 @@ export const fetchStreamingAvailability = async (title, type, year) => {
             'Amazon Prime': 'https://www.primevideo.com/search/ref=atv_nb_sr?phrase=',
             'Hotstar': 'https://www.hotstar.com/in/explore?search_query=',
             'Zee5': 'https://www.zee5.com/search?q=',
-            'SonyLiv': 'https://www.sonyliv.com/search?search_query=',
+            'SonyLiv': 'https://www.sonyliv.com/search?q=',
             'AppleTV': 'https://tv.apple.com/in/search?term=',
             'Rakuten Viki': 'https://www.viki.com/search?q=',
             'JioCinema': 'https://www.jiocinema.com/search/',

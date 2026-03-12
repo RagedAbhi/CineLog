@@ -19,7 +19,7 @@ class MovieCard extends Component {
   async componentDidMount() {
     const { movie } = this.props;
     if (movie.title) {
-      const providers = await fetchStreamingAvailability(movie.title, movie.mediaType || 'movie', movie.year);
+      const providers = await fetchStreamingAvailability(movie.title, movie.mediaType || 'movie', movie.year, movie.imdbID);
       if (providers && providers.length > 0) {
         this.setState({ streamingProviders: providers });
       }
@@ -46,7 +46,8 @@ class MovieCard extends Component {
     return (
       <div
         className="movie-card"
-        onClick={() => navigate(`/movies/${movie.id}`)}
+        onClick={() => movie._id ? navigate(`/movies/${movie._id}`) : null}
+        style={{ cursor: movie._id ? 'pointer' : 'default' }}
       >
         {movie.priority && (
           <span className={`priority-badge priority-${movie.priority}`}>

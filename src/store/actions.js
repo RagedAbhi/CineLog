@@ -21,6 +21,11 @@ export const SET_FILTER = 'SET_FILTER';
 export const SET_SEARCH = 'SET_SEARCH';
 export const CLEAR_FILTERS = 'CLEAR_FILTERS';
 
+export const AUTH_REQUEST = 'AUTH_REQUEST';
+export const AUTH_SUCCESS = 'AUTH_SUCCESS';
+export const AUTH_FAILURE = 'AUTH_FAILURE';
+export const LOGOUT = 'LOGOUT';
+
 // ============================================================
 // ACTION CREATORS
 // ============================================================
@@ -43,3 +48,8 @@ export const deleteMovieFailure = (error) => ({ type: DELETE_MOVIE_FAILURE, payl
 export const setFilter = (filterType, value) => ({ type: SET_FILTER, payload: { filterType, value } });
 export const setSearch = (query) => ({ type: SET_SEARCH, payload: query });
 export const clearFilters = () => ({ type: CLEAR_FILTERS });
+
+export const authRequest = () => ({ type: AUTH_REQUEST });
+export const authSuccess = (data) => ({ type: AUTH_SUCCESS, payload: data });
+export const authFailure = (error) => ({ type: AUTH_FAILURE, payload: error });
+export const logout = () => ({ type: LOGOUT });

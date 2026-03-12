@@ -1,9 +1,11 @@
 import * as movieService from '../services/movieService';
+import * as authService from '../services/authService';
 import {
   fetchMoviesRequest, fetchMoviesSuccess, fetchMoviesFailure,
   addMovieRequest, addMovieSuccess, addMovieFailure,
   updateMovieRequest, updateMovieSuccess, updateMovieFailure,
-  deleteMovieRequest, deleteMovieSuccess, deleteMovieFailure
+  deleteMovieRequest, deleteMovieSuccess, deleteMovieFailure,
+  authRequest, authSuccess, authFailure, logout as logoutAction
 } from './actions';
 
 // ============================================================
@@ -76,4 +78,38 @@ export const deleteMovie = (id) => async (dispatch) => {
   } catch (error) {
     dispatch(deleteMovieFailure(error.message));
   }
+};
+
+// ============================================================
+// AUTH THUNKS
+// ============================================================
+export const login = (credentials) => async (dispatch) => {
+  dispatch(authRequest());
+  try {
+    const data = await authService.login(credentials);
+    dispatch(authSuccess(data));
+    return data;
+  } catch (error) {
+    const message = error.response?.data?.message || error.message;
+    dispatch(authFailure(message));
+    throw new Error(message);
+  }
+};
+
+export const signup = (userData) => async (dispatch) => {
+  dispatch(authRequest());
+  try {
+    const data = await authService.signup(userData);
+    dispatch(authSuccess(data));
+    return data;
+  } catch (error) {
+    const message = error.response?.data?.message || error.message;
+    dispatch(authFailure(message));
+    throw new Error(message);
+  }
+};
+
+export const logout = () => (dispatch) => {
+  authService.logout();
+  dispatch(logoutAction());
 };

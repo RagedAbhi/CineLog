@@ -123,7 +123,7 @@ class Watchlist extends Component {
         ) : (
           <div className="movie-grid">
             {filtered.map(movie => (
-              <MovieCard key={movie.id} movie={movie} />
+              <MovieCard key={movie._id} movie={movie} />
             ))}
           </div>
         )}

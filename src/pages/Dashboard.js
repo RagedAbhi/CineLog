@@ -2,8 +2,10 @@ import { Component } from 'react';
 import { connect } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchMovies, addMovie } from '../store/thunks';
+import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import Toast from '../components/Toast';
+import axios from 'axios';
 
 function DashboardWrapper(props) {
   const navigate = useNavigate();
@@ -13,11 +15,22 @@ function DashboardWrapper(props) {
 class Dashboard extends Component {
   constructor(props) {
     super(props);
-    this.state = { showAddModal: false, toast: null };
+    this.state = { showAddModal: false, toast: null, recommendations: [] };
   }
 
   componentDidMount() {
     if (this.props.movies.length === 0) this.props.fetchMovies();
+    this.fetchRecommendations();
+  }
+
+  fetchRecommendations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:5000/api/recommendations', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      this.setState({ recommendations: res.data });
+    } catch (err) { console.error(err); }
   }
 
   showToast = (message, type = 'success') => this.setState({ toast: { message, type } });
@@ -115,7 +128,7 @@ class Dashboard extends Component {
             ) : (
               <div className="recent-list">
                 {recentlyWatched.map(movie => (
-                  <div key={movie.id} className="recent-item" onClick={() => navigate(`/movies/${movie.id}`)}>
+                  <div key={movie._id} className="recent-item" onClick={() => navigate(`/movies/${movie._id}`)}>
                     {movie.poster
                       ? <img src={movie.poster} alt={movie.title} onError={(e) => e.target.style.display = 'none'} />
                       : <div style={{ width: 36, height: 54, background: 'var(--bg-elevated)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{movie.mediaType === 'series' ? '📺' : '🎬'}</div>
@@ -146,7 +159,7 @@ class Dashboard extends Component {
             ) : (
               <div className="recent-list">
                 {upNext.map(movie => (
-                  <div key={movie.id} className="recent-item" onClick={() => navigate(`/movies/${movie.id}`)}>
+                  <div key={movie._id} className="recent-item" onClick={() => navigate(`/movies/${movie._id}`)}>
                     {movie.poster
                       ? <img src={movie.poster} alt={movie.title} onError={(e) => e.target.style.display = 'none'} />
                       : <div style={{ width: 36, height: 54, background: 'var(--bg-elevated)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{movie.mediaType === 'series' ? '📺' : '🎬'}</div>
@@ -163,6 +176,26 @@ class Dashboard extends Component {
           </div>
         </div>
 
+        {/* Social Suggestions Sidebar */}
+        {this.state.recommendations.length > 0 && (
+          <div style={{ marginTop: '48px' }}>
+            <h3 style={{ marginBottom: '24px' }}>Friend Recommendations</h3>
+            <div className="movie-grid">
+              {this.state.recommendations.map(rec => (
+                <MovieCard
+                  key={rec._id}
+                  movie={{
+                    title: rec.mediaTitle,
+                    poster: rec.poster,
+                    genre: `Recommended by ${rec.sender.name}`,
+                    mediaType: rec.mediaType,
+                    imdbID: rec.imdbID
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
         {showAddModal && (
           <AddMovieModal onSubmit={this.handleAddMovie} onClose={() => this.setState({ showAddModal: false })} />
         )}

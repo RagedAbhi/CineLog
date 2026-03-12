@@ -4,7 +4,8 @@ import {
   ADD_MOVIE_SUCCESS,
   UPDATE_MOVIE_SUCCESS,
   DELETE_MOVIE_SUCCESS,
-  SET_FILTER, SET_SEARCH, CLEAR_FILTERS
+  SET_FILTER, SET_SEARCH, CLEAR_FILTERS,
+  AUTH_REQUEST, AUTH_SUCCESS, AUTH_FAILURE, LOGOUT
 } from './actions';
 
 // ============================================================
@@ -76,11 +77,56 @@ const filterReducer = (state = initialFilterState, action) => {
 };
 
 // ============================================================
+// AUTH REDUCER
+// ============================================================
+const initialAuthState = {
+  token: localStorage.getItem('token'),
+  user: null,
+  isAuthenticated: !!localStorage.getItem('token'),
+  loading: false,
+  error: null
+};
+
+const authReducer = (state = initialAuthState, action) => {
+  switch (action.type) {
+    case AUTH_REQUEST:
+      return { ...state, loading: true, error: null };
+
+    case AUTH_SUCCESS:
+      return {
+        ...state,
+        loading: false,
+        isAuthenticated: true,
+        token: action.payload.token,
+        user: action.payload.user
+      };
+
+    case AUTH_FAILURE:
+      return { ...state, loading: false, error: action.payload };
+
+    case LOGOUT:
+      localStorage.removeItem('token');
+      return {
+        ...state,
+        token: null,
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        error: null
+      };
+
+    default:
+      return state;
+  }
+};
+
+// ============================================================
 // ROOT REDUCER
 // ============================================================
 const rootReducer = combineReducers({
   movies: moviesReducer,
-  filters: filterReducer
+  filters: filterReducer,
+  auth: authReducer
 });
 
 export default rootReducer;

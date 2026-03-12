@@ -7,7 +7,7 @@ class AddMovieModal extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      mediaType: 'movie',   // 'movie' | 'series'
+      mediaType: props.defaultType || 'movie',   // 'movie' | 'series'
       // Step 1: Search
       query: '',
       searching: false,
@@ -78,39 +78,35 @@ class AddMovieModal extends Component {
     const { fetchedMovie, manualMode, manualTitle, manualGenre, manualYear, manualDirector,
       mediaType, status, priority, rating, review, watchedOn } = this.state;
 
-    if (manualMode) {
-      if (!manualTitle.trim() || !manualGenre) return;
-      const movieData = {
-        title: manualTitle.trim(),
-        genre: manualGenre,
-        director: manualDirector.trim() || null,
-        year: manualYear ? parseInt(manualYear) : null,
-        poster: '',
-        mediaType,
-        status,
-        priority,
-        rating: status === 'watched' && rating ? parseInt(rating) : null,
-        review: status === 'watched' ? review.trim() : '',
-        watchedOn: status === 'watched' ? watchedOn || new Date().toISOString().split('T')[0] : null
-      };
-      this.props.onSubmit(movieData);
-    } else {
-      if (!fetchedMovie) return;
-      const movieData = {
-        title: fetchedMovie.title,
-        genre: fetchedMovie.genre,
-        director: fetchedMovie.director,
-        year: parseInt(fetchedMovie.year) || null,
-        poster: fetchedMovie.poster,
-        mediaType,
-        status,
-        priority,
-        rating: status === 'watched' && rating ? parseInt(rating) : null,
-        review: status === 'watched' ? review.trim() : '',
-        watchedOn: status === 'watched' ? watchedOn || new Date().toISOString().split('T')[0] : null
-      };
-      this.props.onSubmit(movieData);
-    }
+    const movieData = manualMode ? {
+      title: manualTitle.trim(),
+      genre: manualGenre,
+      director: manualDirector.trim() || null,
+      year: manualYear ? parseInt(manualYear) : null,
+      poster: '',
+      mediaType,
+      status,
+      priority,
+      rating: status === 'watched' && rating ? parseInt(rating) : null,
+      review: status === 'watched' ? review.trim() : '',
+      watchedOn: status === 'watched' ? watchedOn || new Date().toISOString().split('T')[0] : null
+    } : {
+      title: fetchedMovie.title,
+      genre: fetchedMovie.genre,
+      director: fetchedMovie.director,
+      year: parseInt(fetchedMovie.year) || null,
+      imdbID: fetchedMovie.imdbID,
+      poster: fetchedMovie.poster,
+      mediaType,
+      status,
+      priority,
+      rating: status === 'watched' && rating ? parseInt(rating) : null,
+      review: status === 'watched' ? review.trim() : '',
+      watchedOn: status === 'watched' ? watchedOn || new Date().toISOString().split('T')[0] : null
+    };
+
+    if (!movieData.title) return;
+    this.props.onSubmit(movieData);
   }
 
   setMediaType = (type) => {

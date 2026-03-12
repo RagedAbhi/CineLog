@@ -1,9 +1,16 @@
 import { Component } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { logout } from '../store/thunks';
 
 function TopbarWrapper(props) {
     const navigate = useNavigate();
-    return <Topbar {...props} navigate={navigate} />;
+    const dispatch = useDispatch();
+    const onLogout = () => {
+        dispatch(logout());
+        navigate('/auth');
+    };
+    return <Topbar {...props} navigate={navigate} onLogout={onLogout} />;
 }
 
 class Topbar extends Component {
@@ -24,13 +31,10 @@ class Topbar extends Component {
 
     handleSearchKeyDown = (e) => {
         if (e.key === 'Escape') this.setState({ searchOpen: false, searchQuery: '' });
-        if (e.key === 'Enter' && this.state.searchQuery.trim()) {
-            this.setState({ searchOpen: false, searchQuery: '' });
-        }
     }
 
     render() {
-        const { onSearchChange, searchQuery: externalQuery } = this.props;
+        const { onSearchChange, searchQuery: externalQuery, onLogout } = this.props;
         const { searchOpen } = this.state;
 
         return (
@@ -49,12 +53,15 @@ class Topbar extends Component {
                     <NavLink to="/tvshows" className={({ isActive }) => `topnav-link ${isActive ? 'active' : ''}`}>
                         TV Shows
                     </NavLink>
+                    <NavLink to="/friends" className={({ isActive }) => `topnav-link ${isActive ? 'active' : ''}`}>
+                        Friends
+                    </NavLink>
                     <NavLink to="/analytics" className={({ isActive }) => `topnav-link ${isActive ? 'active' : ''}`}>
                         Analytics
                     </NavLink>
                 </nav>
 
-                {/* Right: Search icon */}
+                {/* Right: Search + Profile + Logout */}
                 <div className="topbar-right">
                     <div className={`search-bar-wrapper ${searchOpen ? 'open' : ''}`}>
                         {searchOpen && (
@@ -71,6 +78,14 @@ class Topbar extends Component {
                             {searchOpen ? '✕' : '🔍'}
                         </button>
                     </div>
+
+                    <NavLink to="/profile" className="topbar-icon-btn" title="Profile" style={{ fontSize: '20px' }}>
+                        👤
+                    </NavLink>
+
+                    <button className="topbar-icon-btn" onClick={onLogout} title="Logout" style={{ marginLeft: '8px' }}>
+                        🚪
+                    </button>
                 </div>
             </header>
         );

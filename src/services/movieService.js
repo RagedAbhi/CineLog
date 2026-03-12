@@ -1,52 +1,36 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = 'http://localhost:5000/api/media';
 
-const api = axios.create({
-  baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' }
-});
+// Helper to get Auth header
+const getAuthHeader = () => {
+  const token = localStorage.getItem('token');
+  return {
+    headers: { Authorization: `Bearer ${token}` }
+  };
+};
 
 // ============================================================
-// GET all movies
+// INTERNAL API (MONGODB / BACKEND)
 // ============================================================
+
 export const getAllMovies = async () => {
-  const response = await api.get('/movies');
+  const response = await axios.get(BASE_URL, getAuthHeader());
   return response.data;
 };
 
-// ============================================================
-// GET single movie by ID
-// ============================================================
-export const getMovieById = async (id) => {
-  const response = await api.get(`/movies/${id}`);
-  return response.data;
-};
-
-// ============================================================
-// POST create new movie
-// ============================================================
 export const createMovie = async (movieData) => {
-  const response = await api.post('/movies', {
-    ...movieData,
-    addedOn: new Date().toISOString().split('T')[0]
-  });
+  const response = await axios.post(BASE_URL, movieData, getAuthHeader());
   return response.data;
 };
 
-// ============================================================
-// PATCH update existing movie
-// ============================================================
 export const updateMovie = async (id, updatedData) => {
-  const response = await api.patch(`/movies/${id}`, updatedData);
+  const response = await axios.patch(`${BASE_URL}/${id}`, updatedData, getAuthHeader());
   return response.data;
 };
 
-// ============================================================
-// DELETE a movie
-// ============================================================
 export const deleteMovie = async (id) => {
-  await api.delete(`/movies/${id}`);
+  await axios.delete(`${BASE_URL}/${id}`, getAuthHeader());
   return id;
 };
 
