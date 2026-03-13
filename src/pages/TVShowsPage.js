@@ -48,7 +48,7 @@ class TVShowsPage extends Component {
         const filtered = this.getFiltered();
 
         return (
-            <div>
+            <div className="container-fluid">
                 <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h2>TV Shows</h2>

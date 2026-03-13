@@ -51,10 +51,10 @@ const Profile = () => {
     if (loading) return <div className="loading">Loading profile...</div>;
     if (!profile) return <div className="error">Profile not found.</div>;
 
-    const isOwnProfile = !id || id === currentUser.id;
+    const isOwnProfile = !id || id === currentUser?.id;
 
     return (
-        <div className="profile-container" style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto' }}>
+        <div className="container-fluid">
             <div className="profile-header" style={{
                 background: 'var(--bg-elevated)', borderRadius: '24px', padding: '40px',
                 border: '1px solid var(--border)', marginBottom: '40px', position: 'relative'

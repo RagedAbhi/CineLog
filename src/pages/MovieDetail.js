@@ -7,6 +7,7 @@ import Toast from '../components/Toast';
 import { fetchStreamingAvailability } from '../services/tmdbService';
 import RecommendModal from '../components/RecommendModal';
 import axios from 'axios';
+import gsap from 'gsap';
 
 function MovieDetailWrapper(props) {
   const navigate = useNavigate();
@@ -31,12 +32,35 @@ class MovieDetail extends Component {
       await this.props.fetchMovies();
     }
     this.fetchStreamingInfo();
+    this.initAnimations();
   }
 
-  async componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps) {
     if (prevProps.movies.length === 0 && this.props.movies.length > 0) {
       this.fetchStreamingInfo();
+      this.initAnimations();
     }
+  }
+
+  initAnimations = () => {
+    gsap.fromTo(".detail-tags-premium, .detail-title-premium, .detail-director-premium",
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 1, stagger: 0.1, ease: "power3.out" }
+    );
+
+    gsap.to(".reveal", {
+      opacity: 1,
+      y: 0,
+      duration: 1,
+      stagger: 0.1,
+      ease: "power3.out",
+      delay: 0.2
+    });
+
+    gsap.fromTo(".detail-backdrop-img",
+      { opacity: 0, scale: 1.1 },
+      { opacity: 1, scale: 1, duration: 2, ease: "power2.out" }
+    );
   }
 
   fetchStreamingInfo = async () => {
@@ -208,181 +232,215 @@ class MovieDetail extends Component {
     }
 
     return (
-      <div>
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
+      <div className="detail-page container-fluid" style={{ minHeight: '100vh', padding: '40px 0' }}>
+        {/* Full Bleed Backdrop */}
+        {movie.poster && (
+          <div className="detail-hero-backdrop">
+            <div className="hero-bg-placeholder" style={{ position: 'absolute', inset: 0, background: 'var(--bg)' }} />
+            <img
+              src={movie.poster}
+              className="detail-backdrop-img"
+              alt=""
+              onError={(e) => { e.target.style.opacity = '0'; }}
+            />
+            {/* Gradient overlay to blend backdrop into page */}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 0%, var(--bg) 90%)' }}></div>
+          </div>
+        )}
 
-        {!editing ? (
-          <div className="detail-layout">
-            {/* Poster */}
-            <div>
-              <div className="detail-poster">
-                {movie.poster
-                  ? <img src={movie.poster} alt={movie.title} onError={(e) => e.target.style.display = 'none'} />
-                  : <div className="detail-poster-placeholder">🎬</div>
-                }
-              </div>
-            </div>
+        <div className="detail-container-premium">
+          <button className="back-btn reveal" onClick={() => navigate(-1)} style={{ marginBottom: '24px' }}>
+            ← Back to Dashboard
+          </button>
 
-            {/* Info */}
-            <div className="detail-info">
-              <div className="detail-genre-year">
-                {movie.genre} · {movie.year}
-                <button
-                  onClick={this.handleToggleTopPick}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', marginLeft: '12px' }}
-                  title="Toggle Top Pick"
-                >
-                  {movie.isTopPick ? '⭐' : '☆'}
-                </button>
-              </div>
-              <h1 className="detail-title">{movie.title}</h1>
-              {movie.director && <div className="detail-director">Directed by {movie.director}</div>}
-
-              {movie.status === 'watched' && movie.rating && (
-                <div className="detail-rating-display">
-                  <div className="rating-big">{movie.rating}</div>
-                  <div>
-                    <div className="rating-stars">{this.renderStars(movie.rating)}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>out of 10</div>
-                  </div>
+          {!editing ? (
+            <div className="detail-layout-premium">
+              {/* Sidebar with Poster and Actions */}
+              <div className="detail-sidebar-premium reveal">
+                <div className="detail-poster-premium">
+                  <div className="detail-poster-placeholder">🎬</div>
+                  {movie.poster && (
+                    <img
+                      src={movie.poster}
+                      alt={movie.title}
+                      onError={(e) => { e.target.style.opacity = '0'; }}
+                    />
+                  )}
                 </div>
-              )}
 
-              {movie.review && (
-                <div className="detail-review">"{movie.review}"</div>
-              )}
-
-              <div className="detail-meta-grid">
-                <div className="detail-meta-item">
-                  <div className="label">Status</div>
-                  <div className="value" style={{ color: movie.status === 'watched' ? 'var(--green)' : 'var(--accent)' }}>
-                    {movie.status === 'watched' ? '✓ Watched' : '◎ In Watchlist'}
-                  </div>
-                </div>
-                <div className="detail-meta-item">
-                  <div className="label">Priority</div>
-                  <div className="value">
-                    <span className={`priority-badge priority-${movie.priority}`} style={{ position: 'static', display: 'inline-block' }}>
-                      {movie.priority}
-                    </span>
-                  </div>
-                </div>
-                {movie.watchedOn && (
-                  <div className="detail-meta-item">
-                    <div className="label">Watched On</div>
-                    <div className="value">{movie.watchedOn}</div>
-                  </div>
-                )}
-                <div className="detail-meta-item">
-                  <div className="label">Added On</div>
-                  <div className="value">{movie.addedOn}</div>
-                </div>
-              </div>
-
-              {this.renderOTTSection()}
-
-              <div className="detail-actions">
-                {movie.status === 'watchlist' && (
-                  <button className="btn btn-primary" onClick={() => this.setState({ showMarkWatched: true })}>
-                    ✓ Mark as Watched
+                <div className="detail-actions-premium">
+                  {movie.status === 'watchlist' && (
+                    <button className="btn btn-primary" onClick={() => this.setState({ showMarkWatched: true })}>
+                      ✓ Mark as Watched
+                    </button>
+                  )}
+                  <button className="btn btn-secondary glass-panel" onClick={() => this.setState({ showRecommend: true })}>
+                    ✉ Recommend to Friend
                   </button>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button className="btn btn-secondary glass-panel" style={{ flex: 1 }} onClick={this.startEditing}>
+                      ✎ Edit
+                    </button>
+                    <button className="btn btn-danger" style={{ flex: 1, background: 'rgba(238, 82, 83, 0.1)', borderColor: 'rgba(238, 82, 83, 0.2)' }} onClick={this.handleDelete}>
+                      ✕ Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Information Panel */}
+              <div className="detail-main-premium">
+                <div className="detail-header-premium reveal">
+                  <div className="detail-tags-premium">
+                    <span className="detail-tag">{movie.mediaType === 'series' ? 'TV Show' : 'Movie'}</span>
+                    <span className="detail-tag-outline">{movie.year}</span>
+                    <span className="detail-tag-outline">{movie.genre}</span>
+                    <button
+                      onClick={this.handleToggleTopPick}
+                      className={`top-pick-btn ${movie.isTopPick ? 'active' : ''}`}
+                      title="Toggle Top Pick"
+                    >
+                      {movie.isTopPick ? '⭐ Top Pick' : '☆ Add to Top Picks'}
+                    </button>
+                  </div>
+                  <h1 className="detail-title-premium">{movie.title}</h1>
+                  {movie.director && <p className="detail-director-premium">Directed by <span>{movie.director}</span></p>}
+                </div>
+
+                <div className="detail-glass-card reveal">
+                  <div className="detail-grid-premium">
+                    <div className="detail-stat">
+                      <div className="stat-label">Your Rating</div>
+                      <div className="stat-value">
+                        {movie.status === 'watched' && movie.rating ? (
+                          <div className="rating-huge">
+                            {movie.rating}<span>/10</span>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>Unrated</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="detail-stat-group">
+                      <div className="detail-stat-small">
+                        <div className="stat-label">Status</div>
+                        <div className="stat-value" style={{ color: movie.status === 'watched' ? 'var(--accent)' : 'var(--text-primary)' }}>
+                          {movie.status === 'watched' ? '✓ Completed' : '👁 On Watchlist'}
+                        </div>
+                      </div>
+                      <div className="detail-stat-small">
+                        <div className="stat-label">Added To Library</div>
+                        <div className="stat-value" style={{ fontSize: '1.1rem' }}>{movie.addedOn || 'N/A'}</div>
+                      </div>
+                      {movie.watchedOn && (
+                        <div className="detail-stat-small">
+                          <div className="stat-label">Watched On</div>
+                          <div className="stat-value" style={{ fontSize: '1.1rem' }}>{movie.watchedOn}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {movie.review && (
+                  <div className="detail-glass-card reveal">
+                    <div className="stat-label" style={{ marginBottom: '12px' }}>Your Personal Review</div>
+                    <p className="detail-review-premium">
+                      "{movie.review}"
+                    </p>
+                  </div>
                 )}
-                <button className="btn btn-secondary" onClick={() => this.setState({ showRecommend: true })}>
-                  ✉ Recommend
-                </button>
-                <button className="btn btn-secondary" onClick={this.startEditing}>
-                  ✎ Edit
-                </button>
-                <button className="btn btn-danger" onClick={this.handleDelete}>
-                  ✕ Remove
-                </button>
+
+                <div className="reveal" style={{ marginTop: '24px' }}>
+                  {this.renderOTTSection()}
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          /* Edit Form */
-          <div>
-            <div className="page-header">
-              <h2>Edit Movie</h2>
-            </div>
-            <div style={{ maxWidth: 600 }}>
-              <div className="form-group">
-                <label className="form-label">Title</label>
-                <input className="form-input" name="title" value={editForm.title} onChange={this.handleEditChange} />
+
+          ) : (
+            /* Edit Form */
+            <div>
+              <div className="page-header">
+                <h2>Edit Movie</h2>
               </div>
-              <div className="form-row">
+              <div style={{ maxWidth: 600 }}>
                 <div className="form-group">
-                  <label className="form-label">Genre</label>
-                  <input className="form-input" name="genre" value={editForm.genre} onChange={this.handleEditChange} />
+                  <label className="form-label">Title</label>
+                  <input className="form-input" name="title" value={editForm.title} onChange={this.handleEditChange} />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Year</label>
-                  <input className="form-input" type="number" name="year" value={editForm.year} onChange={this.handleEditChange} />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Director</label>
-                  <input className="form-input" name="director" value={editForm.director} onChange={this.handleEditChange} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Priority</label>
-                  <select className="form-input" name="priority" value={editForm.priority} onChange={this.handleEditChange}>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                </div>
-              </div>
-              {movie.status === 'watched' && (
-                <>
+                <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Rating (1-10)</label>
-                    <input className="form-input" type="number" name="rating" min="1" max="10" value={editForm.rating} onChange={this.handleEditChange} />
+                    <label className="form-label">Genre</label>
+                    <input className="form-input" name="genre" value={editForm.genre} onChange={this.handleEditChange} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Review</label>
-                    <textarea className="form-input" name="review" value={editForm.review} onChange={this.handleEditChange} />
+                    <label className="form-label">Year</label>
+                    <input className="form-input" type="number" name="year" value={editForm.year} onChange={this.handleEditChange} />
                   </div>
-                </>
-              )}
-              <div className="form-group">
-                <label className="form-label">Poster URL</label>
-                <input className="form-input" name="poster" value={editForm.poster} onChange={this.handleEditChange} />
-              </div>
-              <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
-                <button className="btn btn-primary" onClick={this.handleEditSave}>Save Changes</button>
-                <button className="btn btn-secondary" onClick={() => this.setState({ editing: false })}>Cancel</button>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Director</label>
+                    <input className="form-input" name="director" value={editForm.director} onChange={this.handleEditChange} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Priority</label>
+                    <select className="form-input" name="priority" value={editForm.priority} onChange={this.handleEditChange}>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                </div>
+                {movie.status === 'watched' && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Rating (1-10)</label>
+                      <input className="form-input" type="number" name="rating" min="1" max="10" value={editForm.rating} onChange={this.handleEditChange} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Review</label>
+                      <textarea className="form-input" name="review" value={editForm.review} onChange={this.handleEditChange} />
+                    </div>
+                  </>
+                )}
+                <div className="form-group">
+                  <label className="form-label">Poster URL</label>
+                  <input className="form-input" name="poster" value={editForm.poster} onChange={this.handleEditChange} />
+                </div>
+                <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
+                  <button className="btn btn-primary" onClick={this.handleEditSave}>Save Changes</button>
+                  <button className="btn btn-secondary" onClick={() => this.setState({ editing: false })}>Cancel</button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {showMarkWatched && (
-          <MarkWatchedModal
-            movie={movie}
-            onSubmit={this.handleMarkWatched}
-            onClose={() => this.setState({ showMarkWatched: false })}
-          />
-        )}
+          {showMarkWatched && (
+            <MarkWatchedModal
+              movie={movie}
+              onSubmit={this.handleMarkWatched}
+              onClose={() => this.setState({ showMarkWatched: false })}
+            />
+          )}
 
-        {this.state.showRecommend && (
-          <RecommendModal
-            movie={movie}
-            onRecommend={this.handleRecommend}
-            onClose={() => this.setState({ showRecommend: false })}
-          />
-        )}
+          {this.state.showRecommend && (
+            <RecommendModal
+              movie={movie}
+              onRecommend={this.handleRecommend}
+              onClose={() => this.setState({ showRecommend: false })}
+            />
+          )}
 
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => this.setState({ toast: null })}
-          />
-        )}
+          {toast && (
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => this.setState({ toast: null })}
+            />
+          )}
+        </div>
       </div>
     );
   }

@@ -18,9 +18,25 @@ class Topbar extends Component {
         super(props);
         this.state = {
             searchOpen: false,
-            searchQuery: ''
+            searchQuery: '',
+            scrolled: false
         };
         this.searchRef = null;
+    }
+
+    componentDidMount() {
+        window.addEventListener('scroll', this.handleScroll);
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('scroll', this.handleScroll);
+    }
+
+    handleScroll = () => {
+        const isScrolled = window.scrollY > 50;
+        if (isScrolled !== this.state.scrolled) {
+            this.setState({ scrolled: isScrolled });
+        }
     }
 
     toggleSearch = () => {
@@ -35,10 +51,10 @@ class Topbar extends Component {
 
     render() {
         const { onSearchChange, searchQuery: externalQuery, onLogout } = this.props;
-        const { searchOpen } = this.state;
+        const { searchOpen, scrolled } = this.state;
 
         return (
-            <header className="topbar">
+            <header className={`topbar ${scrolled ? 'scrolled' : ''}`}>
                 {/* Logo */}
                 <NavLink to="/" className="topbar-logo">CINELOG</NavLink>
 

@@ -1,6 +1,8 @@
 import { Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStreamingAvailability } from '../services/tmdbService';
+import React from 'react'; // Added for React.createRef()
+import gsap from 'gsap'; // Added for GSAP animations
 
 // Wrapper to provide navigate to class component
 function MovieCardWrapper(props) {
@@ -12,12 +14,27 @@ class MovieCard extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      streamingProviders: null
+      streamingProviders: [] // Changed from null to empty array
     };
+    this.cardRef = React.createRef(); // Added ref
   }
 
   async componentDidMount() {
     const { movie } = this.props;
+
+    // Entry Animation
+    gsap.fromTo(this.cardRef.current,
+      { opacity: 0, scale: 0.9, y: 20 },
+      {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        duration: 0.6,
+        delay: (this.props.index % 10) * 0.05, // Staggered delay
+        ease: "power2.out"
+      }
+    );
+
     if (movie.title) {
       const providers = await fetchStreamingAvailability(movie.title, movie.mediaType || 'movie', movie.year, movie.imdbID);
       if (providers && providers.length > 0) {
@@ -26,18 +43,12 @@ class MovieCard extends Component {
     }
   }
 
-  renderStars(rating) {
-    if (!rating) return null;
-    const filled = Math.round(rating / 2);
-    return Array.from({ length: 5 }, (_, i) => (
-      <span key={i}>{i < filled ? '★' : '☆'}</span>
-    ));
-  }
+  // renderStars method removed as per instruction snippet
 
   handlePlatformClick = (e, link) => {
     e.stopPropagation(); // Don't navigate to detail page
     window.open(link, '_blank');
-  }
+  }; // Added semicolon
 
   render() {
     const { movie, navigate } = this.props;
@@ -45,7 +56,8 @@ class MovieCard extends Component {
 
     return (
       <div
-        className="movie-card"
+        className="movie-card bio-luminescent" // Added bio-luminescent class
+        ref={this.cardRef} // Added ref
         onClick={() => movie._id ? navigate(`/movies/${movie._id}`) : null}
         style={{ cursor: movie._id ? 'pointer' : 'default' }}
       >
@@ -56,47 +68,46 @@ class MovieCard extends Component {
         )}
 
         <div className="movie-card-poster-container">
-          {movie.poster ? (
+          <div className="movie-card-poster-placeholder">🎬</div>
+          {movie.poster && (
             <img
               src={movie.poster}
               alt={movie.title}
               className="movie-card-poster"
-              onError={(e) => { e.target.style.display = 'none'; }}
+              onError={(e) => { e.target.style.opacity = '0'; }}
             />
-          ) : (
-            <div className="movie-card-poster-placeholder">🎬</div>
           )}
 
-          {streamingProviders && (
-            <div className="ott-overlay">
-              <div className="ott-label">Watch on:</div>
-              <div className="ott-platforms">
-                {streamingProviders.map(p => (
-                  <img
-                    key={p.name}
-                    src={p.logo}
-                    alt={p.name}
-                    title={`Play on ${p.name}`}
-                    className="ott-icon"
-                    onClick={(e) => this.handlePlatformClick(e, p.link)}
-                  />
-                ))}
+          <div className="movie-card-overlay">
+            <div className="movie-card-title">{movie.title}</div>
+            <div className="movie-card-meta">
+              {movie.genre ? `${movie.genre} · ` : ''}{movie.year}
+            </div>
+            {movie.rating && (
+              <div className="movie-card-rating">
+                <span>★</span>
+                <span>{movie.rating}/10</span>
               </div>
-            </div>
-          )}
-        </div>
+            )}
 
-        <div className="movie-card-body">
-          <div className="movie-card-title">{movie.title}</div>
-          <div className="movie-card-meta">
-            {movie.genre} · {movie.year}
+            {streamingProviders && streamingProviders.length > 0 && (
+              <div className="ott-platforms-inline" style={{ marginTop: '12px' }}>
+                <div className="ott-label" style={{ marginBottom: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: '#fff' }}>Watch on:</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {streamingProviders.map(p => (
+                    <img
+                      key={p.name}
+                      src={p.logo}
+                      alt={p.name}
+                      title={`Play on ${p.name}`}
+                      className="ott-icon"
+                      onClick={(e) => this.handlePlatformClick(e, p.link)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          {movie.rating && (
-            <div className="movie-card-rating">
-              <span>★</span>
-              <span>{movie.rating}/10</span>
-            </div>
-          )}
         </div>
       </div>
     );

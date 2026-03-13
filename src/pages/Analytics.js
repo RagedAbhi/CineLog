@@ -126,7 +126,7 @@ class Analytics extends Component {
     const topFilms = this.getTopFilms();
 
     return (
-      <div>
+      <div className="container-fluid">
         <div className="page-header">
           <h2>Analytics</h2>
           <p>Your taste in cinema, visualized</p>

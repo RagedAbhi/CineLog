@@ -66,7 +66,7 @@ class Watchlist extends Component {
     const filtered = this.getFilteredMovies();
 
     return (
-      <div>
+      <div className="container-fluid">
         <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h2>Watchlist</h2>
