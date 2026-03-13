@@ -57,3 +57,28 @@ exports.getUserProfile = async (req, res) => {
         res.status(500).json({ message: 'Error fetching user profile', error: error.message });
     }
 };
+
+// Toggle top pick
+exports.toggleTopPick = async (req, res) => {
+    try {
+        const { mediaId } = req.body;
+        if (!mediaId) return res.status(400).json({ message: 'Media ID is required' });
+
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const index = user.topPicks.indexOf(mediaId);
+        if (index === -1) {
+            // Add if not present
+            user.topPicks.push(mediaId);
+        } else {
+            // Remove if present
+            user.topPicks.splice(index, 1);
+        }
+
+        await user.save();
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Error toggling top pick', error: error.message });
+    }
+};
