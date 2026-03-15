@@ -57,6 +57,10 @@ class Watched extends Component {
       list = list.filter(m => m.rating && m.rating >= minRating);
     }
 
+    if (filters.mediaType !== 'all') {
+        list = list.filter(m => m.mediaType === filters.mediaType);
+    }
+
     // Sort
     if (sortBy === 'watchedOn') {
       list = list.sort((a, b) => new Date(b.watchedOn || 0) - new Date(a.watchedOn || 0));
@@ -122,9 +126,24 @@ class Watched extends Component {
             <option value="rating">Sort: Highest Rated</option>
             <option value="title">Sort: Title A-Z</option>
           </select>
-          {(filters.search || filters.genre !== 'all' || filters.rating !== 'all') && (
+          {(filters.search || filters.genre !== 'all' || filters.rating !== 'all' || filters.mediaType !== 'all') && (
             <button className="btn-clear" onClick={this.props.clearFilters}>Clear filters</button>
           )}
+        </div>
+
+        {/* Media Tabs */}
+        <div className="analytics-controls" style={{ marginTop: 20 }}>
+            <div className="analytics-media-tabs">
+                {['all', 'movie', 'series'].map(type => (
+                <button 
+                    key={type}
+                    className={`media-tab ${filters.mediaType === type ? 'active' : ''}`}
+                    onClick={() => this.props.setFilter('mediaType', type)}
+                >
+                    {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+                </button>
+                ))}
+            </div>
         </div>
 
         {loading && this.props.movies.length === 0 ? (

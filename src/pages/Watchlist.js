@@ -51,13 +51,15 @@ class Watchlist extends Component {
       list = list.filter(m => m.genre === filters.genre);
     }
 
-    if (filters.priority !== 'all') {
-      list = list.filter(m => m.priority === filters.priority);
+    if (filters.genre !== 'all') {
+      list = list.filter(m => m.genre === filters.genre);
     }
 
-    // Sort by priority
-    const order = { high: 0, medium: 1, low: 2 };
-    return list.sort((a, b) => order[a.priority] - order[b.priority]);
+    if (filters.mediaType !== 'all') {
+      list = list.filter(m => m.mediaType === filters.mediaType);
+    }
+
+    return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
   render() {
@@ -94,19 +96,24 @@ class Watchlist extends Component {
               <option key={g} value={g}>{g === 'all' ? 'All Genres' : g}</option>
             ))}
           </select>
-          <select
-            className="filter-select"
-            value={filters.priority}
-            onChange={(e) => this.props.setFilter('priority', e.target.value)}
-          >
-            <option value="all">All Priorities</option>
-            <option value="high">High Priority</option>
-            <option value="medium">Medium Priority</option>
-            <option value="low">Low Priority</option>
-          </select>
-          {(filters.search || filters.genre !== 'all' || filters.priority !== 'all') && (
+          {(filters.search || filters.genre !== 'all' || filters.mediaType !== 'all') && (
             <button className="btn-clear" onClick={this.props.clearFilters}>Clear filters</button>
           )}
+        </div>
+
+        {/* Media Tabs */}
+        <div className="analytics-controls" style={{ marginTop: 20 }}>
+            <div className="analytics-media-tabs">
+                {['all', 'movie', 'series'].map(type => (
+                <button 
+                    key={type}
+                    className={`media-tab ${filters.mediaType === type ? 'active' : ''}`}
+                    onClick={() => this.props.setFilter('mediaType', type)}
+                >
+                    {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+                </button>
+                ))}
+            </div>
         </div>
 
         {loading && this.props.movies.length === 0 ? (

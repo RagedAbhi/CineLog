@@ -38,7 +38,6 @@ class TVShowsPage extends Component {
             list = list.filter(m => m.title.toLowerCase().includes(q) || (m.director && m.director.toLowerCase().includes(q)));
         }
         if (filters.genre !== 'all') list = list.filter(m => m.genre === filters.genre);
-        if (filters.priority !== 'all') list = list.filter(m => m.priority === filters.priority);
         return list;
     }
 
@@ -69,13 +68,7 @@ class TVShowsPage extends Component {
                     <select className="filter-select" value={filters.genre} onChange={(e) => this.props.setFilter('genre', e.target.value)}>
                         {GENRES.map(g => <option key={g} value={g}>{g === 'all' ? 'All Genres' : g}</option>)}
                     </select>
-                    <select className="filter-select" value={filters.priority} onChange={(e) => this.props.setFilter('priority', e.target.value)}>
-                        <option value="all">All Priorities</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                    </select>
-                    {(filters.search || filters.genre !== 'all' || filters.priority !== 'all') && (
+                    {(filters.search || filters.genre !== 'all') && (
                         <button className="btn-clear" onClick={this.props.clearFilters}>Clear filters</button>
                     )}
                 </div>

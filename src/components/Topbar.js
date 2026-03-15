@@ -3,6 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { logout } from '../store/thunks';
 
+import GlobalSearch from './GlobalSearch';
+
 function TopbarWrapper(props) {
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -17,11 +19,8 @@ class Topbar extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            searchOpen: false,
-            searchQuery: '',
             scrolled: false
         };
-        this.searchRef = null;
     }
 
     componentDidMount() {
@@ -33,75 +32,54 @@ class Topbar extends Component {
     }
 
     handleScroll = () => {
-        const isScrolled = window.scrollY > 50;
+        const isScrolled = window.scrollY > 20;
         if (isScrolled !== this.state.scrolled) {
             this.setState({ scrolled: isScrolled });
         }
     }
 
-    toggleSearch = () => {
-        this.setState(s => ({ searchOpen: !s.searchOpen, searchQuery: '' }), () => {
-            if (this.state.searchOpen && this.searchRef) this.searchRef.focus();
-        });
-    }
-
-    handleSearchKeyDown = (e) => {
-        if (e.key === 'Escape') this.setState({ searchOpen: false, searchQuery: '' });
-    }
-
     render() {
-        const { onSearchChange, searchQuery: externalQuery, onLogout } = this.props;
-        const { searchOpen, scrolled } = this.state;
+        const { onLogout } = this.props;
+        const { scrolled } = this.state;
 
         return (
-            <header className={`topbar ${scrolled ? 'scrolled' : ''}`}>
-                {/* Logo */}
-                <NavLink to="/" className="topbar-logo">CINELOG</NavLink>
+            <header className={`topbar-minimal ${scrolled ? 'scrolled' : ''}`}>
+                <div className="topbar-inner">
+                    {/* Left: Logo */}
+                    <NavLink to="/" className="topbar-logo-minimal">
+                        CINELOG <span className="logo-dot">.</span>
+                    </NavLink>
 
-                {/* Center Nav */}
-                <nav className="topnav">
-                    <NavLink to="/" end className={({ isActive }) => `topnav-link ${isActive ? 'active' : ''}`}>
-                        Home
-                    </NavLink>
-                    <NavLink to="/movies-list" className={({ isActive }) => `topnav-link ${isActive ? 'active' : ''}`}>
-                        Movies
-                    </NavLink>
-                    <NavLink to="/tvshows" className={({ isActive }) => `topnav-link ${isActive ? 'active' : ''}`}>
-                        TV Shows
-                    </NavLink>
-                    <NavLink to="/friends" className={({ isActive }) => `topnav-link ${isActive ? 'active' : ''}`}>
-                        Friends
-                    </NavLink>
-                    <NavLink to="/analytics" className={({ isActive }) => `topnav-link ${isActive ? 'active' : ''}`}>
-                        Analytics
-                    </NavLink>
-                </nav>
+                    <GlobalSearch />
 
-                {/* Right: Search + Profile + Logout */}
-                <div className="topbar-right">
-                    <div className={`search-bar-wrapper ${searchOpen ? 'open' : ''}`}>
-                        {searchOpen && (
-                            <input
-                                ref={r => this.searchRef = r}
-                                className="topbar-search-input"
-                                placeholder="Search movies & shows…"
-                                value={externalQuery || ''}
-                                onChange={e => onSearchChange && onSearchChange(e.target.value)}
-                                onKeyDown={this.handleSearchKeyDown}
-                            />
-                        )}
-                        <button className="topbar-icon-btn" onClick={this.toggleSearch} title="Search">
-                            {searchOpen ? '✕' : '🔍'}
+                    {/* Center: Nav */}
+                    <nav className="topnav-minimal">
+                        <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                            Home
+                        </NavLink>
+                        <NavLink to="/movies-list" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                            Movies
+                        </NavLink>
+                        <NavLink to="/tvshows" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                            Shows
+                        </NavLink>
+                        <NavLink to="/friends" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                            Social
+                        </NavLink>
+                        <NavLink to="/analytics" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                            Stats
+                        </NavLink>
+                    </nav>
+
+                    {/* Right: Actions */}
+                    <div className="topbar-actions">
+                        <NavLink to="/profile" className="action-btn" title="Profile">
+                            <span className="icon-simple">👤</span>
+                        </NavLink>
+                        <button className="action-btn logout" onClick={onLogout} title="Logout">
+                            <span className="icon-simple">🚪</span>
                         </button>
                     </div>
-
-                    <NavLink to="/profile" className="topbar-icon-btn" title="Profile" style={{ fontSize: '20px' }}>
-                        👤
-                    </NavLink>
-
-                    <button className="topbar-icon-btn" onClick={onLogout} title="Logout" style={{ marginLeft: '8px' }}>
-                        🚪
-                    </button>
                 </div>
             </header>
         );

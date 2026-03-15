@@ -1,28 +1,103 @@
-import { Component } from 'react';
+import { Component, createRef } from 'react';
 import { connect } from 'react-redux';
 import { fetchMovies } from '../store/thunks';
+import MovieCard from '../components/MovieCard';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
   LineChart, Line, CartesianGrid
 } from 'recharts';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-const CHART_COLORS = ['#e8c547', '#47e88a', '#e84747', '#4788e8', '#e847c8', '#47c8e8', '#c8e847'];
+gsap.registerPlugin(ScrollTrigger);
+
+const CHART_COLORS = ['#00f2ff', '#00ffcc', '#ff4d4d', '#70a1ff', '#eccc68', '#ff6b6b', '#a29bfe'];
 
 class Analytics extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      activeTab: 'rating', // rating, genre, masterpiece, watchlist
+      mediaType: 'all',    // all, movie, series
+      localLoading: false
+    };
+    this.headerRef = createRef();
+    this.cardsRef = createRef();
+    this.contentRef = createRef();
+  }
+
   componentDidMount() {
     if (this.props.movies.length === 0) {
       this.props.fetchMovies();
     }
+    this.initAnimations();
+    this.animateContentTransition(); // Animate initial tab
   }
 
-  getWatchedMovies() {
-    return this.props.movies.filter(m => m.status === 'watched');
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.activeTab !== this.state.activeTab || prevState.mediaType !== this.state.mediaType) {
+        this.animateContentTransition();
+    }
   }
 
-  // Genre distribution
+  initAnimations = () => {
+    // Reveal header
+    gsap.fromTo(this.headerRef.current, 
+      { opacity: 0, y: -30 }, 
+      { opacity: 1, y: 0, duration: 1, ease: 'power3.out' }
+    );
+
+    // Stagger cards
+    const cards = this.cardsRef.current.children;
+    gsap.fromTo(cards, 
+      { opacity: 0, scale: 0.9, y: 30 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.8, stagger: 0.1, ease: 'back.out(1.7)', delay: 0.2 }
+    );
+
+    // Parallax effect on cards hover is handled via CSS, 
+    // but we can add a subtle scroll trigger for the whole grid
+    gsap.to(this.cardsRef.current, {
+      scrollTrigger: {
+        trigger: this.cardsRef.current,
+        start: "top bottom",
+        end: "bottom top",
+        scrub: 1
+      },
+      y: -20
+    });
+  }
+
+  animateContentTransition = () => {
+    const el = this.contentRef.current;
+    if (!el) return;
+
+    // Animate the container
+    gsap.fromTo(el,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }
+    );
+
+    // Specifically reveal elements with .reveal class
+    const reveals = el.querySelectorAll('.reveal');
+    if (reveals.length > 0) {
+        gsap.fromTo(reveals,
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out', delay: 0.1 }
+        );
+    }
+  }
+
+  getFilteredMovies(status = 'watched') {
+    let list = this.props.movies.filter(m => m.status === status);
+    if (this.state.mediaType !== 'all') {
+      list = list.filter(m => m.mediaType === this.state.mediaType);
+    }
+    return list;
+  }
+
   getGenreData() {
-    const watched = this.getWatchedMovies();
+    const watched = this.getFilteredMovies('watched');
     const genreCount = {};
     watched.forEach(m => {
       genreCount[m.genre] = (genreCount[m.genre] || 0) + 1;
@@ -32,26 +107,22 @@ class Analytics extends Component {
       .sort((a, b) => b.count - a.count);
   }
 
-  // Rating distribution
   getRatingData() {
-    const watched = this.getWatchedMovies();
+    const watched = this.getFilteredMovies('watched');
     const dist = {};
     for (let i = 1; i <= 10; i++) dist[i] = 0;
     watched.filter(m => m.rating).forEach(m => { dist[m.rating]++; });
     return Object.entries(dist).map(([rating, count]) => ({ rating: `${rating}★`, count }));
   }
 
-  // Monthly watching activity
   getMonthlyData() {
-    const watched = this.getWatchedMovies().filter(m => m.watchedOn);
+    const watched = this.getFilteredMovies('watched').filter(m => m.watchedOn);
     const monthly = {};
-
     watched.forEach(m => {
       const date = new Date(m.watchedOn);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       monthly[key] = (monthly[key] || 0) + 1;
     });
-
     return Object.entries(monthly)
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-6)
@@ -61,17 +132,8 @@ class Analytics extends Component {
       }));
   }
 
-  // Top films
-  getTopFilms() {
-    return this.getWatchedMovies()
-      .filter(m => m.rating)
-      .sort((a, b) => b.rating - a.rating)
-      .slice(0, 5);
-  }
-
-  // Summary stats
   getSummaryStats() {
-    const watched = this.getWatchedMovies();
+    const watched = this.getFilteredMovies('watched');
     const withRatings = watched.filter(m => m.rating);
     const avgRating = withRatings.length
       ? (withRatings.reduce((sum, m) => sum + m.rating, 0) / withRatings.length).toFixed(1)
@@ -80,21 +142,129 @@ class Analytics extends Component {
     const genreData = this.getGenreData();
     const topGenre = genreData[0]?.genre || '—';
     const masterpieces = withRatings.filter(m => m.rating >= 9).length;
-    const watchlist = this.props.movies.filter(m => m.status === 'watchlist').length;
+    const watchlist = this.getFilteredMovies('watchlist').length;
 
-    return { avgRating, topGenre, masterpieces, watchlist };
+    return { avgRating, topGenre, masterpieces, watchlist, watchedCount: watched.length };
   }
 
-  customTooltipStyle = {
-    backgroundColor: 'var(--bg-elevated)',
-    border: '1px solid var(--border)',
-    borderRadius: 8,
-    color: 'var(--text-primary)',
-    fontSize: 13
+  renderTabs() {
+    const { mediaType } = this.state;
+    return (
+      <div className="analytics-media-tabs">
+        {['all', 'movie', 'series'].map(type => (
+          <button 
+            key={type}
+            className={`media-tab ${mediaType === type ? 'active' : ''}`}
+            onClick={() => this.setState({ mediaType: type })}
+          >
+            {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  renderRatingContent() {
+    const genreData = this.getGenreData();
+    const ratingData = this.getRatingData();
+    const monthlyData = this.getMonthlyData();
+    
+    return (
+      <div className="analytics-content-grid">
+        <div className="charts-grid-analytics">
+          <div className="chart-card-premium glass-panel reveal">
+            <h3>Rating Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={ratingData}>
+                <XAxis dataKey="rating" tick={{ fill: '#8892b0', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: '#112240', border: '1px solid #1d2d50', borderRadius: '12px' }} />
+                <Bar dataKey="count" fill="var(--accent)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="chart-card-premium glass-panel reveal">
+            <h3>Watching Velocity</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#233554" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: '#8892b0', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ background: '#112240', border: '1px solid #1d2d50', borderRadius: '12px' }} />
+                <Line type="monotone" dataKey="count" stroke="var(--accent)" strokeWidth={3} dot={{ fill: 'var(--accent)', r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  renderGenreContent() {
+    const genreData = this.getGenreData();
+    const stats = this.getSummaryStats();
+    const itemsInTopGenre = this.getFilteredMovies('watched').filter(m => m.genre === stats.topGenre);
+
+    return (
+      <div className="analytics-sub-section">
+        <div className="genre-analysis-header">
+            <h3>Dominant Taste: <span className="highlight-text">{stats.topGenre}</span></h3>
+            <div className="genre-chart-mini">
+                <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                        <Pie data={genreData} dataKey="count" nameKey="genre" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                            {genreData.map((_, index) => <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+        
+        <div className="movie-grid-premium">
+            {itemsInTopGenre.map(movie => <MovieCard key={movie._id} movie={movie} />)}
+        </div>
+      </div>
+    );
+  }
+
+  renderMasterpieceContent() {
+    const masterpieces = this.getFilteredMovies('watched').filter(m => m.rating >= 9);
+    return (
+      <div className="analytics-sub-section">
+        <div className="section-intro">
+            <h3>The Hall of Fame</h3>
+            <p>Your highest rated cinematic experiences ({masterpieces.length} titles)</p>
+        </div>
+        <div className="movie-grid-premium">
+            {masterpieces.length > 0 ? (
+                masterpieces.map(movie => <MovieCard key={movie._id} movie={movie} />)
+            ) : (
+                <div className="empty-state-mini">No 9+ ratings yet. Keep watching!</div>
+            )}
+        </div>
+      </div>
+    );
+  }
+
+  renderWatchlistContent() {
+    const watchlist = this.getFilteredMovies('watchlist');
+    return (
+      <div className="analytics-sub-section">
+        <div className="section-intro">
+            <h3>Upcoming Adventures</h3>
+            <p>{watchlist.length} items waiting to be experienced</p>
+        </div>
+        <div className="movie-grid-premium">
+            {watchlist.map(movie => <MovieCard key={movie._id} movie={movie} />)}
+        </div>
+      </div>
+    );
   }
 
   render() {
     const { loading } = this.props;
+    const { activeTab } = this.state;
+    const stats = this.getSummaryStats();
 
     if (loading && this.props.movies.length === 0) {
       return (
@@ -105,185 +275,73 @@ class Analytics extends Component {
       );
     }
 
-    const watched = this.getWatchedMovies();
-    if (watched.length === 0) {
-      return (
-        <div>
-          <div className="page-header"><h2>Analytics</h2></div>
-          <div className="empty-state">
-            <div className="empty-icon">◉</div>
-            <h3>No data yet</h3>
-            <p>Watch and log some films to see your taste analytics</p>
-          </div>
-        </div>
-      );
-    }
-
-    const stats = this.getSummaryStats();
-    const genreData = this.getGenreData();
-    const ratingData = this.getRatingData();
-    const monthlyData = this.getMonthlyData();
-    const topFilms = this.getTopFilms();
-
     return (
-      <div className="container-fluid">
-        <div className="page-header">
-          <h2>Analytics</h2>
-          <p>Your taste in cinema, visualized</p>
+      <div className="container-fluid analytics-page-premium">
+        <div className="analytics-glow" />
+        <div className="page-header-premium" ref={this.headerRef}>
+          <div className="badge-premium">INSIGHTS</div>
+          <h2>CineAnalytics <span className="logo-dot">.</span></h2>
+          <p>A deep dive into your cinematic journey</p>
         </div>
 
-        {/* Summary */}
-        <div className="stats-grid" style={{ marginBottom: 32 }}>
-          <div className="stat-card accent">
+        {/* Clickable Stat Cards */}
+        <div className="stats-grid-interactive" ref={this.cardsRef}>
+          <div 
+            className={`stat-card-premium ${activeTab === 'rating' ? 'active accent' : ''}`}
+            onClick={() => this.setState({ activeTab: 'rating' })}
+          >
+            <div className="stat-icon">⭐</div>
             <div className="stat-label">Avg Rating</div>
             <div className="stat-value">{stats.avgRating}</div>
-            <div className="stat-sub">across {watched.length} films</div>
+            <div className="stat-sub">Across {stats.watchedCount} views</div>
+            <div className="active-indicator" />
           </div>
-          <div className="stat-card">
+
+          <div 
+            className={`stat-card-premium ${activeTab === 'genre' ? 'active' : ''}`}
+            onClick={() => this.setState({ activeTab: 'genre' })}
+          >
+            <div className="stat-icon">🎭</div>
             <div className="stat-label">Top Genre</div>
-            <div className="stat-value" style={{ fontSize: 28 }}>{stats.topGenre}</div>
-            <div className="stat-sub">most watched</div>
+            <div className="stat-value">{stats.topGenre}</div>
+            <div className="stat-sub">Most explored</div>
+            <div className="active-indicator" />
           </div>
-          <div className="stat-card">
+
+          <div 
+            className={`stat-card-premium ${activeTab === 'masterpiece' ? 'active' : ''}`}
+            onClick={() => this.setState({ activeTab: 'masterpiece' })}
+          >
+            <div className="stat-icon">🏆</div>
             <div className="stat-label">Masterpieces</div>
             <div className="stat-value">{stats.masterpieces}</div>
-            <div className="stat-sub">rated 9 or above</div>
+            <div className="stat-sub">Rated 9+</div>
+            <div className="active-indicator" />
           </div>
-          <div className="stat-card">
-            <div className="stat-label">Still to Watch</div>
+
+          <div 
+            className={`stat-card-premium ${activeTab === 'watchlist' ? 'active' : ''}`}
+            onClick={() => this.setState({ activeTab: 'watchlist' })}
+          >
+            <div className="stat-icon">⏳</div>
+            <div className="stat-label">Watchlist</div>
             <div className="stat-value">{stats.watchlist}</div>
-            <div className="stat-sub">in watchlist</div>
+            <div className="stat-sub">To be watched</div>
+            <div className="active-indicator" />
           </div>
         </div>
 
-        {/* Charts Row 1 */}
-        <div className="charts-grid">
-          {/* Genre Bar Chart */}
-          <div className="chart-card">
-            <h3>Films by Genre</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={genreData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="genre" tick={{ fill: '#8888aa', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#8888aa', fontSize: 11 }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={this.customTooltipStyle}
-                  cursor={{ fill: 'rgba(232,197,71,0.05)' }}
-                />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {genreData.map((_, index) => (
-                    <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Rating Distribution */}
-          <div className="chart-card">
-            <h3>Rating Distribution</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={ratingData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="rating" tick={{ fill: '#8888aa', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#8888aa', fontSize: 11 }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={this.customTooltipStyle}
-                  cursor={{ fill: 'rgba(232,197,71,0.05)' }}
-                />
-                <Bar dataKey="count" fill="#e8c547" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Charts Row 2 */}
-        <div className="charts-grid">
-          {/* Monthly Activity */}
-          {monthlyData.length > 1 && (
-            <div className="chart-card">
-              <h3>Monthly Activity</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={monthlyData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid stroke="#2a2a3a" strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fill: '#8888aa', fontSize: 11 }} />
-                  <YAxis tick={{ fill: '#8888aa', fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip contentStyle={this.customTooltipStyle} />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#e8c547"
-                    strokeWidth={2}
-                    dot={{ fill: '#e8c547', r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+        <div className="analytics-main-container">
+            <div className="analytics-controls">
+                {this.renderTabs()}
             </div>
-          )}
 
-          {/* Genre Pie */}
-          <div className="chart-card">
-            <h3>Genre Breakdown</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={genreData}
-                  dataKey="count"
-                  nameKey="genre"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  innerRadius={40}
-                >
-                  {genreData.map((_, index) => (
-                    <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={this.customTooltipStyle} />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(value) => <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Top Films */}
-        <div className="chart-card" style={{ marginTop: 0 }}>
-          <h3 style={{ marginBottom: 20 }}>Your Top Films</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {topFilms.map((movie, index) => (
-              <div key={movie.id} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 16,
-                padding: '12px 16px',
-                background: 'var(--bg-elevated)',
-                borderRadius: 8,
-                border: '1px solid var(--border)'
-              }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  background: index === 0 ? 'var(--accent-dim)' : 'var(--bg)',
-                  color: index === 0 ? 'var(--accent)' : 'var(--text-muted)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'var(--font-display)', fontSize: 18, flexShrink: 0
-                }}>
-                  {index + 1}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600 }}>{movie.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {movie.genre} · {movie.year} · {movie.director}
-                  </div>
-                </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--accent)' }}>
-                  {movie.rating}
-                </div>
-              </div>
-            ))}
-          </div>
+            <div className="analytics-dynamic-content" ref={this.contentRef}>
+                {activeTab === 'rating' && this.renderRatingContent()}
+                {activeTab === 'genre' && this.renderGenreContent()}
+                {activeTab === 'masterpiece' && this.renderMasterpieceContent()}
+                {activeTab === 'watchlist' && this.renderWatchlistContent()}
+            </div>
         </div>
       </div>
     );

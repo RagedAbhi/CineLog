@@ -56,7 +56,7 @@ const moviesReducer = (state = initialMoviesState, action) => {
 const initialFilterState = {
   genre: 'all',
   rating: 'all',
-  priority: 'all',
+  mediaType: 'all',
   search: ''
 };
 

@@ -1,10 +1,12 @@
 import { Component } from 'react';
 import { connect } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
-import { fetchMovies, updateMovie, deleteMovie, markAsWatched } from '../store/thunks';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie } from '../store/thunks';
 import MarkWatchedModal from '../components/MarkWatchedModal';
+import AddMovieModal from '../components/AddMovieModal';
 import Toast from '../components/Toast';
 import { fetchStreamingAvailability } from '../services/tmdbService';
+import { getMovieDetailsExternal } from '../services/movieService';
 import RecommendModal from '../components/RecommendModal';
 import axios from 'axios';
 import gsap from 'gsap';
@@ -12,7 +14,9 @@ import gsap from 'gsap';
 function MovieDetailWrapper(props) {
   const navigate = useNavigate();
   const { id } = useParams();
-  return <MovieDetail {...props} navigate={navigate} movieId={id} />;
+  const location = useLocation();
+  const isExternal = new URLSearchParams(location.search).get('external') === 'true';
+  return <MovieDetail {...props} navigate={navigate} movieId={id} isExternal={isExternal} />;
 }
 
 class MovieDetail extends Component {
@@ -23,22 +27,115 @@ class MovieDetail extends Component {
       showMarkWatched: false,
       showRecommend: false,
       toast: null,
-      editForm: {}
+      editForm: {},
+      externalMovie: null,
+      localLoading: false
     };
   }
 
   async componentDidMount() {
+    console.log('DEBUG: MovieDetail Mount. ID:', this.props.movieId);
     if (this.props.movies.length === 0) {
+      console.log('DEBUG: Movies empty, fetching library...');
       await this.props.fetchMovies();
     }
-    this.fetchStreamingInfo();
-    this.initAnimations();
+    
+    this.loadInitialData();
   }
 
-  componentDidUpdate(prevProps) {
-    if (prevProps.movies.length === 0 && this.props.movies.length > 0) {
+  loadInitialData = () => {
+    const movie = this.getMovie();
+    console.log('DEBUG: Initial getMovie check:', movie ? movie.title : 'NULL');
+    if (movie && (!this.props.isExternal || movie.status)) {
       this.fetchStreamingInfo();
       this.initAnimations();
+    } else if (this.props.isExternal) {
+        this.fetchExternalMovie();
+    } else {
+        this.fetchMovieDirectly();
+    }
+  }
+
+  fetchExternalMovie = async () => {
+    this.setState({ localLoading: true });
+    try {
+        const details = await getMovieDetailsExternal(this.props.movieId);
+        this.setState({ 
+            externalMovie: { ...details, isExternalRec: true, imdbID: this.props.movieId }, 
+            localLoading: false 
+        }, () => {
+            this.fetchStreamingInfo();
+            this.initAnimations();
+        });
+    } catch (err) {
+        console.error('External fetch failed:', err);
+        this.setState({ localLoading: false });
+    }
+  }
+
+  fetchMovieDirectly = async () => {
+    console.log('DEBUG: fetchMovieDirectly for', this.props.movieId);
+    this.setState({ localLoading: true });
+    try {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await axios.get(`http://localhost:5000/api/media/${this.props.movieId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data) {
+                console.log('DEBUG: Found in library via direct API');
+                this.setState({ externalMovie: { ...res.data, isExternalRec: false }, localLoading: false }, () => {
+                    this.fetchStreamingInfo();
+                    this.initAnimations();
+                });
+                return;
+            }
+        } catch (mediaErr) {
+            console.log('DEBUG: Not in library (404 expected)', mediaErr.response?.status);
+            this.fetchRecommendationFallback();
+        }
+    } catch (err) {
+        console.error('DEBUG: Direct fetch failed:', err);
+        this.setState({ localLoading: false });
+    }
+  }
+
+  async componentDidUpdate(prevProps) {
+    if (prevProps.movies.length === 0 && this.props.movies.length > 0) {
+      console.log('DEBUG: Movies loaded into Redux, re-checking getMovie');
+      this.loadInitialData();
+    }
+    if (prevProps.movieId !== this.props.movieId) {
+      console.log('DEBUG: movieId changed, reloading...');
+      this.loadInitialData();
+    }
+  }
+
+  fetchRecommendationFallback = async () => {
+    console.log('DEBUG: fetchRecommendationFallback for', this.props.movieId);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:5000/api/recommendations/${this.props.movieId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const rec = res.data;
+      console.log('DEBUG: Found as recommendation:', rec.mediaTitle);
+      const movieData = {
+        _id: rec._id,
+        title: rec.mediaTitle,
+        mediaType: rec.mediaType,
+        poster: rec.poster,
+        imdbID: rec.imdbID,
+        isExternalRec: true,
+        sender: rec.sender
+      };
+      this.setState({ externalMovie: movieData, localLoading: false }, () => {
+        this.fetchStreamingInfo();
+        this.initAnimations();
+      });
+    } catch (err) {
+      console.error('DEBUG: Recommendation lookup failed:', err.response?.status);
+      this.setState({ localLoading: false });
     }
   }
 
@@ -121,7 +218,11 @@ class MovieDetail extends Component {
   }
 
   getMovie() {
-    return this.props.movies.find(m => m._id === this.props.movieId);
+    if (!this.props.movies || !this.props.movieId) return this.state.externalMovie;
+    const movie = this.props.movies.find(m => 
+        (m._id && m._id.toString() === this.props.movieId.toString())
+    );
+    return movie || this.state.externalMovie;
   }
 
   handleToggleTopPick = async () => {
@@ -163,7 +264,6 @@ class MovieDetail extends Component {
         year: movie.year,
         rating: movie.rating || '',
         review: movie.review || '',
-        priority: movie.priority,
         poster: movie.poster || ''
       }
     });
@@ -209,10 +309,10 @@ class MovieDetail extends Component {
 
   render() {
     const { navigate, loading } = this.props;
-    const { editing, editForm, showMarkWatched, toast } = this.state;
+    const { editing, editForm, showMarkWatched, toast, externalMovie, localLoading } = this.state;
     const movie = this.getMovie();
 
-    if (loading && !movie) {
+    if ((loading || localLoading) && !movie) {
       return (
         <div className="loading-spinner">
           <div className="spinner" />
@@ -269,22 +369,29 @@ class MovieDetail extends Component {
                 </div>
 
                 <div className="detail-actions-premium">
-                  {movie.status === 'watchlist' && (
+                  {!movie.isExternalRec && movie.status === 'watchlist' && (
                     <button className="btn btn-primary" onClick={() => this.setState({ showMarkWatched: true })}>
                       ✓ Mark as Watched
+                    </button>
+                  )}
+                  {movie.isExternalRec && (
+                    <button className="btn btn-primary bio-luminescent" onClick={() => this.setState({ showAddModal: true })}>
+                      + Add to Watchlist
                     </button>
                   )}
                   <button className="btn btn-secondary glass-panel" onClick={() => this.setState({ showRecommend: true })}>
                     ✉ Recommend to Friend
                   </button>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn btn-secondary glass-panel" style={{ flex: 1 }} onClick={this.startEditing}>
-                      ✎ Edit
-                    </button>
-                    <button className="btn btn-danger" style={{ flex: 1, background: 'rgba(238, 82, 83, 0.1)', borderColor: 'rgba(238, 82, 83, 0.2)' }} onClick={this.handleDelete}>
-                      ✕ Remove
-                    </button>
-                  </div>
+                  {!movie.isExternalRec && (
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button className="btn btn-secondary glass-panel" style={{ flex: 1 }} onClick={this.startEditing}>
+                        ✎ Edit
+                      </button>
+                      <button className="btn btn-danger" style={{ flex: 1, background: 'rgba(238, 82, 83, 0.1)', borderColor: 'rgba(238, 82, 83, 0.2)' }} onClick={this.handleDelete}>
+                        ✕ Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -384,14 +491,16 @@ class MovieDetail extends Component {
                     <label className="form-label">Director</label>
                     <input className="form-input" name="director" value={editForm.director} onChange={this.handleEditChange} />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Priority</label>
-                    <select className="form-input" name="priority" value={editForm.priority} onChange={this.handleEditChange}>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                    </select>
-                  </div>
+                  <div className="edit-field-minimal">
+                      <label>STATUS</label>
+                      <select 
+                        value={editForm.status}
+                        onChange={(e) => this.setState({ editForm: { ...editForm, status: e.target.value } })}
+                      >
+                        <option value="watchlist">WATCHLIST</option>
+                        <option value="watched">WATCHED</option>
+                      </select>
+                    </div>
                 </div>
                 {movie.status === 'watched' && (
                   <>
@@ -433,7 +542,25 @@ class MovieDetail extends Component {
             />
           )}
 
-          {toast && (
+          {this.state.showAddModal && (
+          <AddMovieModal 
+            initialData={{
+                title: movie.title,
+                mediaType: movie.mediaType,
+                poster: movie.poster,
+                imdbID: movie.imdbID
+            }}
+            onSubmit={async (data) => {
+                await this.props.addMovie(data);
+                this.setState({ showAddModal: false });
+                this.props.navigate('/dashboard');
+                // Refresh movies is handled by thunk
+            }} 
+            onClose={() => this.setState({ showAddModal: false })} 
+          />
+        )}
+
+        {toast && (
             <Toast
               message={toast.message}
               type={toast.type}
@@ -451,6 +578,6 @@ const mapStateToProps = (state) => ({
   loading: state.movies.loading
 });
 
-const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched };
+const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie };
 
 export default connect(mapStateToProps, mapDispatchToProps)(MovieDetailWrapper);

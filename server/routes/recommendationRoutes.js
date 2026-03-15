@@ -8,6 +8,7 @@ router.use(protect);
 
 router.get('/', recommendationController.getMyRecommendations);
 router.post('/', recommendationController.sendRecommendation);
+router.get('/:id', recommendationController.getRecommendationById);
 router.patch('/:id/read', recommendationController.markAsRead);
 
 module.exports = router;

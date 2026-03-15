@@ -61,27 +61,34 @@ class MovieCard extends Component {
         onClick={() => movie._id ? navigate(`/movies/${movie._id}`) : null}
         style={{ cursor: movie._id ? 'pointer' : 'default' }}
       >
-        {movie.priority && (
-          <span className={`priority-badge priority-${movie.priority}`}>
-            {movie.priority}
-          </span>
-        )}
 
         <div className="movie-card-poster-container">
-          <div className="movie-card-poster-placeholder">🎬</div>
-          {movie.poster && (
+          <div className="movie-card-poster-placeholder" style={{ opacity: (movie.poster && movie.poster !== 'N/A') ? 0 : 1 }}>
+            <span>🎬</span>
+            <div className="fallback-title">{movie.title}</div>
+          </div>
+          {movie.poster && movie.poster !== 'N/A' && (
             <img
               src={movie.poster}
               alt={movie.title}
               className="movie-card-poster"
-              onError={(e) => { e.target.style.opacity = '0'; }}
+              onLoad={(e) => {
+                e.target.style.opacity = '1';
+                const placeholder = e.target.parentElement.querySelector('.movie-card-poster-placeholder');
+                if (placeholder) placeholder.style.opacity = '0';
+              }}
+              onError={(e) => { 
+                e.target.style.opacity = '0'; 
+                const placeholder = e.target.parentElement.querySelector('.movie-card-poster-placeholder');
+                if (placeholder) placeholder.style.opacity = '1';
+              }}
             />
           )}
 
           <div className="movie-card-overlay">
             <div className="movie-card-title">{movie.title}</div>
             <div className="movie-card-meta">
-              {movie.genre ? `${movie.genre} · ` : ''}{movie.year}
+              {movie.genre ? `${movie.genre} · ` : ''}{movie.year} · {movie.mediaType === 'series' ? 'TV' : 'Movie'}
             </div>
             {movie.rating && (
               <div className="movie-card-rating">

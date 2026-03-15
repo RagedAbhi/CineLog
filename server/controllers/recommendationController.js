@@ -42,6 +42,11 @@ exports.getMyRecommendations = async (req, res) => {
             .populate('sender', 'username name')
             .sort({ createdAt: -1 });
 
+        console.log('Sending recommendations to client:', recommendations.length);
+        if (recommendations.length > 0) {
+            console.log('First recommendation ID:', recommendations[0]._id);
+        }
+
         res.status(200).json(recommendations);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching recommendations', error: error.message });
@@ -62,5 +67,28 @@ exports.markAsRead = async (req, res) => {
         res.status(200).json(recommendation);
     } catch (error) {
         res.status(400).json({ message: 'Error updating recommendation', error: error.message });
+    }
+};
+// Get a single recommendation by ID
+exports.getRecommendationById = async (req, res) => {
+    try {
+        console.log('DEBUG: getRecommendationById - looking for', req.params.id, 'for user', req.user.id);
+        const recommendation = await Recommendation.findById(req.params.id).populate('sender', 'username name');
+
+        if (!recommendation) {
+            console.log('DEBUG: Recommendation NOT in DB');
+            return res.status(404).json({ message: 'Recommendation not found' });
+        }
+        
+        console.log('DEBUG: Recommendation receiver:', recommendation.receiver.toString());
+        if (recommendation.receiver.toString() !== req.user.id.toString()) {
+            console.log('DEBUG: Recommendation receiver mismatch');
+            return res.status(403).json({ message: 'Not authorized to view this recommendation' });
+        }
+        
+        res.status(200).json(recommendation);
+    } catch (error) {
+        console.error('DEBUG: Error in getRecommendationById:', error);
+        res.status(500).json({ message: 'Error fetching recommendation', error: error.message });
     }
 };

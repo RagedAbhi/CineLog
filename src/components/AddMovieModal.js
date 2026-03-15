@@ -7,15 +7,22 @@ class AddMovieModal extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      mediaType: props.defaultType || 'movie',   // 'movie' | 'series'
+      mediaType: props.initialData?.mediaType || props.defaultType || 'movie',
       // Step 1: Search
-      query: '',
+      query: props.initialData?.title || '',
       searching: false,
       searchError: '',
       // Step 2a: Search Results List
       searchResults: [],
       // Step 2b: Fetched movie details (Selected)
-      fetchedMovie: null,
+      fetchedMovie: props.initialData ? {
+        title: props.initialData.title,
+        mediaType: props.initialData.mediaType,
+        poster: props.initialData.poster,
+        imdbID: props.initialData.imdbID,
+        genre: 'Loading...', // Will be updated by getMovieDetails if needed, or we just keep it
+        year: ''
+      } : null,
       // Step 2c: Manual fallback
       manualMode: false,
       manualTitle: '',
@@ -24,11 +31,15 @@ class AddMovieModal extends Component {
       manualDirector: '',
       // User preferences
       status: 'watchlist',
-      priority: 'medium',
       rating: '',
-      review: '',
-      watchedOn: ''
+      review: ''
     };
+  }
+
+  async componentDidMount() {
+    if (this.props.initialData && this.props.initialData.imdbID) {
+        this.handleSelectMovie(this.props.initialData);
+    }
   }
 
   handleQueryChange = (e) => {
@@ -76,33 +87,31 @@ class AddMovieModal extends Component {
   handleSubmit = (e) => {
     e.preventDefault();
     const { fetchedMovie, manualMode, manualTitle, manualGenre, manualYear, manualDirector,
-      mediaType, status, priority, rating, review, watchedOn } = this.state;
+      mediaType, status, rating, review } = this.state;
 
     const movieData = manualMode ? {
       title: manualTitle.trim(),
       genre: manualGenre,
-      director: manualDirector.trim() || null,
-      year: manualYear ? parseInt(manualYear) : null,
+      year: manualYear,
+      director: manualDirector,
       poster: '',
       mediaType,
       status,
-      priority,
       rating: status === 'watched' && rating ? parseInt(rating) : null,
       review: status === 'watched' ? review.trim() : '',
-      watchedOn: status === 'watched' ? watchedOn || new Date().toISOString().split('T')[0] : null
+      watchedOn: status === 'watched' ? new Date().toISOString().split('T')[0] : null
     } : {
       title: fetchedMovie.title,
       genre: fetchedMovie.genre,
+      year: fetchedMovie.year,
       director: fetchedMovie.director,
-      year: parseInt(fetchedMovie.year) || null,
-      imdbID: fetchedMovie.imdbID,
       poster: fetchedMovie.poster,
+      imdbID: fetchedMovie.imdbID,
       mediaType,
       status,
-      priority,
       rating: status === 'watched' && rating ? parseInt(rating) : null,
       review: status === 'watched' ? review.trim() : '',
-      watchedOn: status === 'watched' ? watchedOn || new Date().toISOString().split('T')[0] : null
+      watchedOn: status === 'watched' ? new Date().toISOString().split('T')[0] : null
     };
 
     if (!movieData.title) return;
@@ -291,9 +300,9 @@ class AddMovieModal extends Component {
 
           {/* Manual Entry Form */}
           {manualMode && (
-            <div style={{ padding: '14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', marginBottom: '20px' }}>
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
-                ✏️ Enter details manually
+            <div style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', marginBottom: '24px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '16px' }}>
+                ✏️ Manual Entry
               </div>
               <div className="form-group">
                 <label className="form-label">Title *</label>
@@ -321,42 +330,68 @@ class AddMovieModal extends Component {
           {/* User Preferences (shown only when there's a result) */}
           {hasResult && (
             <form onSubmit={this.handleSubmit}>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select className="form-input" name="status" value={status} onChange={this.handleChange}>
-                    <option value="watchlist">Watchlist</option>
-                    <option value="watched">Already Watched</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Priority</label>
-                  <select className="form-input" name="priority" value={priority} onChange={this.handleChange}>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
+              <div className="movie-preview-premium" style={{ 
+                display: 'flex', gap: '20px', padding: '16px', background: 'var(--bg-elevated)', 
+                borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '24px' 
+              }}>
+                <img 
+                  src={(manualMode ? '' : fetchedMovie.poster) || 'https://via.placeholder.com/150'} 
+                  alt="poster" 
+                  style={{ width: '80px', height: '120px', objectFit: 'cover', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }} 
+                />
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#fff', marginBottom: '4px' }}>
+                    {manualMode ? manualTitle : fetchedMovie.title}
+                  </h4>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+                    {manualMode ? manualYear : fetchedMovie.year} • {mediaType.toUpperCase()}
+                  </p>
+                  {fetchedMovie?.genre && !manualMode && (
+                    <div style={{ marginTop: '8px', display: 'flex', gap: '6px' }}>
+                      <span className="detail-tag-outline" style={{ fontSize: '10px', padding: '2px 8px' }}>{fetchedMovie.genre}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {status === 'watched' && (
-                <>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Rating (1–10)</label>
-                      <input className="form-input" type="number" name="rating" value={rating} onChange={this.handleChange} min="1" max="10" placeholder="8" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Watched On</label>
-                      <input className="form-input" type="date" name="watchedOn" value={watchedOn} onChange={this.handleChange} />
-                    </div>
-                  </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Status</label>
+                  <select 
+                    className="form-input"
+                    value={this.state.status} 
+                    onChange={(e) => this.setState({ status: e.target.value })}
+                  >
+                    <option value="watchlist">Watchlist</option>
+                    <option value="watched">Watched</option>
+                  </select>
+                </div>
+
+                {this.state.status === 'watched' && (
                   <div className="form-group">
-                    <label className="form-label">Review</label>
-                    <textarea className="form-input" name="review" value={review} onChange={this.handleChange} placeholder="Your thoughts…" rows={3} />
+                    <label className="form-label">Rating (1-10)</label>
+                    <input 
+                      className="form-input"
+                      type="number" 
+                      min="1" max="10" 
+                      placeholder="Optional"
+                      value={this.state.rating}
+                      onChange={(e) => this.setState({ rating: e.target.value })}
+                    />
                   </div>
-                </>
-              )}
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Note / Review</label>
+                <textarea 
+                  className="form-input"
+                  placeholder="What's on your mind?"
+                  value={this.state.review}
+                  onChange={(e) => this.setState({ review: e.target.value })}
+                  rows={3}
+                />
+              </div>
 
               <div className="form-actions">
                 <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
@@ -365,10 +400,9 @@ class AddMovieModal extends Component {
             </form>
           )}
 
-          {/* Cancel only (no result yet) */}
           {!hasResult && (
             <div className="form-actions">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              <button type="button" className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={onClose}>Cancel</button>
             </div>
           )}
         </div>

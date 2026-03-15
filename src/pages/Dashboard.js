@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchMovies, addMovie } from '../store/thunks';
 import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
+import RecommendModal from '../components/RecommendModal';
 import Toast from '../components/Toast';
 import axios from 'axios';
 import gsap from 'gsap';
@@ -23,7 +24,9 @@ class Dashboard extends Component {
       showAddModal: false,
       toast: null,
       recommendations: [],
-      activeHeroIndex: 0
+      activeHeroIndex: 0,
+      showRecommendModal: false,
+      selectedMedia: null
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
@@ -120,7 +123,33 @@ class Dashboard extends Component {
     if (this.rotationTimer) clearInterval(this.rotationTimer);
     this.rotationTimer = setInterval(() => {
       this.rotateHero();
-    }, 120000); // Rotate every 2 minutes
+    }, 8000); // Rotate every 8 seconds
+  }
+
+  handleHeroDotClick = (index) => {
+    if (index === this.state.activeHeroIndex) return;
+    
+    // Reset timer on manual click
+    this.startHeroRotation();
+    
+    const featuredList = this.getFeaturedList();
+    
+    // Transition Out
+    gsap.to([".hero-content", ".hero-poster-side", ".hero-bg-blur"], {
+      opacity: 0,
+      y: 10,
+      duration: 0.5,
+      ease: "power2.in",
+      onComplete: () => {
+        this.setState({ activeHeroIndex: index }, () => {
+          // Transition In
+          gsap.fromTo([".hero-content", ".hero-poster-side", ".hero-bg-blur"],
+            { opacity: 0, y: -10 },
+            { opacity: 1, y: 0, duration: 0.8, stagger: 0.1, ease: "power3.out" }
+          );
+        });
+      }
+    });
   }
 
   rotateHero = () => {
@@ -130,17 +159,17 @@ class Dashboard extends Component {
     // Transition Out
     gsap.to([".hero-content", ".hero-poster-side", ".hero-bg-blur"], {
       opacity: 0,
-      y: 20,
-      duration: 0.8,
-      ease: "power2.inOut",
+      y: 10,
+      duration: 0.6,
+      ease: "sine.in",
       onComplete: () => {
         this.setState(prevState => ({
           activeHeroIndex: (prevState.activeHeroIndex + 1) % featuredList.length
         }), () => {
           // Transition In
           gsap.fromTo([".hero-content", ".hero-poster-side", ".hero-bg-blur"],
-            { opacity: 0, y: -20 },
-            { opacity: 1, y: 0, duration: 1, stagger: 0.1, ease: "power3.out" }
+            { opacity: 0, y: -10 },
+            { opacity: 1, y: 0, duration: 1, stagger: 0.08, ease: "expo.out" }
           );
         });
       }
@@ -149,11 +178,15 @@ class Dashboard extends Component {
 
   getFeaturedList() {
     const { movies } = this.props;
+    const hasValidPoster = (m) => m.poster && m.poster !== 'N/A' && m.poster !== '';
+    
     // Get high priority watchlist items first
-    const highPri = movies.filter(m => m.status === 'watchlist' && m.priority === 'high' && m.poster);
+    const highPri = movies.filter(m => m.status === 'watchlist' && m.priority === 'high' && hasValidPoster(m));
     if (highPri.length > 0) return highPri;
-    // Fallback to all posters
-    return movies.filter(m => m.poster);
+    
+    // Fallback to all movies with valid posters
+    const allWithPosters = movies.filter(hasValidPoster);
+    return allWithPosters;
   }
 
   getFeaturedMovie() {
@@ -196,7 +229,7 @@ class Dashboard extends Component {
 
     const upNext = movies
       .filter(m => m.status === 'watchlist')
-      .sort((a, b) => ({ high: 0, medium: 1, low: 2 }[a.priority] - { high: 0, medium: 1, low: 2 }[b.priority]))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 10);
 
     const highRated = movies
@@ -225,8 +258,10 @@ class Dashboard extends Component {
               <div className="hero-bg-placeholder" style={{ position: 'absolute', inset: 0, background: 'var(--bg-elevated)' }} />
               <div
                 className="hero-bg-blur"
-                style={{ backgroundImage: `url(${featured.poster})` }}
-                onError={(e) => { e.target.style.opacity = '0'; }}
+                style={{ 
+                    backgroundImage: featured.poster ? `url("${featured.poster}")` : 'none',
+                    opacity: featured.poster ? 0.6 : 0 
+                }}
               />
             </div>
 
@@ -238,21 +273,68 @@ class Dashboard extends Component {
                 <button className="btn btn-primary" onClick={() => navigate(`/movies/${featured._id}`)}>
                   View Details
                 </button>
-                <button className="btn btn-secondary glass-panel" onClick={() => this.setState({ showAddModal: true })}>
-                  Add to List
+                <button 
+                  className="btn btn-secondary glass-panel" 
+                  onClick={() => this.setState({ showRecommendModal: true, selectedMedia: featured })}
+                >
+                  Recommend to Friend
                 </button>
               </div>
             </div>
 
             <div className="hero-poster-side" onClick={() => navigate(`/movies/${featured._id}`)} style={{ cursor: 'pointer', position: 'relative' }}>
-              <div className="detail-poster-placeholder" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', background: 'rgba(255,255,255,0.05)', borderRadius: 'inherit' }}>🎬</div>
-              <img
-                src={featured.poster}
-                alt={featured.title}
-                style={{ position: 'relative', zIndex: 1 }}
-                onError={(e) => { e.target.style.opacity = '0'; }}
-              />
+              <div 
+                className="detail-poster-placeholder" 
+                style={{ 
+                  position: 'absolute', 
+                  inset: 0, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  textAlign: 'center', 
+                  padding: '20px', 
+                  background: '#0d1b31', 
+                  borderRadius: 'inherit',
+                  opacity: (featured.poster && featured.poster !== 'N/A') ? 0 : 1,
+                  transition: 'opacity 0.3s ease'
+                }}
+              >
+                <span style={{ fontSize: '48px', marginBottom: '16px' }}>🎬</span>
+                <div style={{ fontSize: '18px', fontWeight: '700', fontFamily: 'var(--font-display)', letterSpacing: '1px', textTransform: 'uppercase' }}>{featured.title}</div>
+              </div>
+              {featured.poster && featured.poster !== 'N/A' && (
+                <img
+                  src={featured.poster}
+                  alt={featured.title}
+                  style={{ position: 'relative', zIndex: 1, opacity: 1 }}
+                  onLoad={(e) => {
+                    e.target.style.opacity = '1'; // Reset opacity in case previous item failed
+                    const placeholder = e.target.parentElement.querySelector('.detail-poster-placeholder');
+                    if (placeholder) placeholder.style.opacity = '0';
+                  }}
+                  onError={(e) => { 
+                    e.target.style.opacity = '0'; 
+                    const placeholder = e.target.parentElement.querySelector('.detail-poster-placeholder');
+                    if (placeholder) placeholder.style.opacity = '1';
+                  }}
+                />
+              )}
             </div>
+
+            {/* Hero Pagination Dots */}
+            {this.getFeaturedList().length > 1 && (
+              <div className="hero-pagination">
+                {this.getFeaturedList().map((_, i) => (
+                  <button
+                    key={i}
+                    className={`hero-dot ${i === this.state.activeHeroIndex ? 'active' : ''}`}
+                    onClick={() => this.handleHeroDotClick(i)}
+                    title={`Slide ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -266,19 +348,27 @@ class Dashboard extends Component {
             </div>
             <div className="media-row">
               {recommendations.length > 0 ? (
-                recommendations.map(rec => (
-                  <MovieCard
-                    key={rec._id}
-                    movie={{
-                      _id: rec._id,
-                      title: rec.mediaTitle,
-                      poster: rec.poster,
-                      genre: `From ${rec.sender.name}`,
-                      mediaType: rec.mediaType,
-                      imdbID: rec.imdbID
-                    }}
-                  />
-                ))
+                recommendations.map(rec => {
+                  const existingInLibrary = movies.find(m => 
+                    (rec.imdbID && m.imdbID === rec.imdbID) || 
+                    (m.title.toLowerCase() === rec.mediaTitle.toLowerCase())
+                  );
+                  
+                  return (
+                    <MovieCard
+                      key={rec._id.toString()}
+                      movie={{
+                        _id: existingInLibrary ? existingInLibrary._id.toString() : rec._id.toString(),
+                        title: rec.mediaTitle,
+                        poster: rec.poster,
+                        genre: `From ${rec.sender.name}`,
+                        mediaType: rec.mediaType,
+                        imdbID: rec.imdbID,
+                        isRecommendation: !existingInLibrary
+                      }}
+                    />
+                  );
+                })
               ) : (
                 <div className="glass-panel" style={{ padding: '40px', borderRadius: 'var(--radius)', width: '100%', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)' }}>
                   Connect with friends to see their recommendations here!
@@ -287,8 +377,6 @@ class Dashboard extends Component {
             </div>
           </div>
 
-          {/* 2. Discover Recommendations (Always Visible with Fallback) */}
-          {this.renderRow('Discover Recommendations', discoveryItems, '/movies-list')}
 
           {/* 3. Your Personal Lists */}
           {recentlyWatched.length > 0 && this.renderRow('Recently Watched', recentlyWatched, '/watched')}
@@ -297,6 +385,16 @@ class Dashboard extends Component {
 
         {showAddModal && (
           <AddMovieModal onSubmit={this.handleAddMovie} onClose={() => this.setState({ showAddModal: false })} />
+        )}
+        {this.state.showRecommendModal && this.state.selectedMedia && (
+          <RecommendModal
+            movie={this.state.selectedMedia}
+            onClose={() => this.setState({ showRecommendModal: false, selectedMedia: null })}
+            onRecommend={() => {
+                this.setState({ showRecommendModal: false, selectedMedia: null });
+                this.showToast("Recommendation sent!");
+            }}
+          />
         )}
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => this.setState({ toast: null })} />}
       </div>
