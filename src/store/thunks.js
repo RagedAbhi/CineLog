@@ -113,3 +113,14 @@ export const logout = () => (dispatch) => {
   authService.logout();
   dispatch(logoutAction());
 };
+
+export const fetchCurrentUser = () => async (dispatch) => {
+    try {
+        const user = await authService.getMe();
+        if (user) {
+            dispatch(authSuccess({ user, token: localStorage.getItem('token') }));
+        }
+    } catch (error) {
+        console.error("Failed to fetch current user:", error);
+    }
+};

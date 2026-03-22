@@ -17,6 +17,19 @@ import FriendsPage from './pages/FriendsPage';
 
 import './styles/global.css';
 
+import { motion, AnimatePresence } from 'framer-motion';
+
+const PageWrapper = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+  >
+    {children}
+  </motion.div>
+);
+
 const App = () => {
   const [globalSearch, setGlobalSearch] = useState('');
   const { isAuthenticated } = useSelector(state => state.auth);
@@ -66,22 +79,24 @@ const App = () => {
           searchQuery={globalSearch}
           onSearchChange={q => setGlobalSearch(q)}
         />
-        <div className="app-body">
-          <main className="main-content" style={{ marginLeft: 0 }}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/movies-list" element={<MoviesPage />} />
-              <Route path="/tvshows" element={<TVShowsPage />} />
-              <Route path="/watchlist" element={<Watchlist />} />
-              <Route path="/watched" element={<Watched />} />
-              <Route path="/friends" element={<FriendsPage />} />
-              <Route path="/movies/:id" element={<MovieDetail />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/:id" element={<Profile />} />
-              <Route path="/auth" element={<Navigate to="/" replace />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+        <div className="app-body" style={{ paddingTop: 0 }}>
+          <main className="main-content">
+            <AnimatePresence mode="wait">
+              <Routes>
+                <Route path="/" element={<PageWrapper><Dashboard /></PageWrapper>} />
+                <Route path="/movies-list" element={<PageWrapper><MoviesPage /></PageWrapper>} />
+                <Route path="/tvshows" element={<PageWrapper><TVShowsPage /></PageWrapper>} />
+                <Route path="/watchlist" element={<PageWrapper><Watchlist /></PageWrapper>} />
+                <Route path="/watched" element={<PageWrapper><Watched /></PageWrapper>} />
+                <Route path="/friends" element={<PageWrapper><FriendsPage /></PageWrapper>} />
+                <Route path="/movies/:id" element={<PageWrapper><MovieDetail /></PageWrapper>} />
+                <Route path="/analytics" element={<PageWrapper><Analytics /></PageWrapper>} />
+                <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
+                <Route path="/profile/:id" element={<PageWrapper><Profile /></PageWrapper>} />
+                <Route path="/auth" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </AnimatePresence>
           </main>
         </div>
       </div>

@@ -35,15 +35,8 @@ const AuthPage = () => {
     };
 
     return (
-        <div className="auth-container" style={{
-            minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'radial-gradient(circle at top right, rgba(232, 197, 71, 0.05), transparent), radial-gradient(circle at bottom left, rgba(232, 197, 71, 0.05), transparent)'
-        }}>
-            <div className="auth-card" style={{
-                width: '100%', maxWidth: '400px', padding: '40px', borderRadius: '24px',
-                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
-            }}>
+        <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="auth-card glass-panel-premium" style={{ width: '100%', maxWidth: '400px' }}>
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--accent)', marginBottom: '8px' }}>CineLog</h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>

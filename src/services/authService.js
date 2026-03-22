@@ -21,3 +21,12 @@ export const login = async (credentials) => {
 export const logout = () => {
     localStorage.removeItem('token');
 };
+
+export const getMe = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    const response = await axios.get('http://localhost:5000/api/users/me', {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};

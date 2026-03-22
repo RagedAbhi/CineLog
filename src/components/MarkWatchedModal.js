@@ -65,17 +65,6 @@ class MarkWatchedModal extends Component {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Watched On</label>
-              <input
-                className="form-input"
-                type="date"
-                name="watchedOn"
-                value={watchedOn}
-                onChange={this.handleChange}
-              />
-            </div>
-
-            <div className="form-group">
               <label className="form-label">Review (optional)</label>
               <textarea
                 className="form-input"

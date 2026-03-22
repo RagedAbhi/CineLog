@@ -64,7 +64,7 @@ const Profile = () => {
     const isOwnProfile = !id || id === currentUser?.id;
 
     return (
-        <div className="container-fluid minimalist-page">
+        <div className="container-fluid">
             <div className="profile-minimal-header profile-anim">
                 <div className="profile-top-bar">
                     <div className="profile-badge">PRO</div>
