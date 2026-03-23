@@ -288,7 +288,25 @@ class MovieDetail extends Component {
 
   handleMarkWatched = async (watchData) => {
     const movie = this.getMovie();
-    await this.props.markAsWatched(movie._id, watchData);
+    if (movie.isExternalRec) {
+      // It's not in our library yet, so we use addMovie thunk
+      const movieToSave = {
+        title: movie.title,
+        year: movie.year,
+        genre: movie.genre,
+        director: movie.director,
+        poster: movie.poster,
+        imdbID: movie.imdbID,
+        mediaType: movie.mediaType || 'movie',
+        status: 'watched',
+        ...watchData
+      };
+      await this.props.addMovie(movieToSave);
+      // After adding, we should probably stay on the page but it might change ID
+      // The thunk handles refreshing the library.
+    } else {
+      await this.props.markAsWatched(movie._id, watchData);
+    }
     this.setState({ showMarkWatched: false });
     this.showToast('Marked as watched! 🎬');
   }
@@ -369,13 +387,13 @@ class MovieDetail extends Component {
                 </div>
 
                 <div className="detail-actions-premium">
-                  {!movie.isExternalRec && movie.status === 'watchlist' && (
+                  {(movie.isExternalRec || movie.status === 'watchlist') && (
                     <button className="btn btn-primary" onClick={() => this.setState({ showMarkWatched: true })}>
                       ✓ Mark as Watched
                     </button>
                   )}
                   {movie.isExternalRec && (
-                    <button className="btn btn-primary bio-luminescent" onClick={() => this.setState({ showAddModal: true })}>
+                    <button className="btn btn-secondary glass-panel" onClick={() => this.setState({ showAddModal: true })}>
                       + Add to Watchlist
                     </button>
                   )}
@@ -553,8 +571,7 @@ class MovieDetail extends Component {
             onSubmit={async (data) => {
                 await this.props.addMovie(data);
                 this.setState({ showAddModal: false });
-                this.props.navigate('/dashboard');
-                // Refresh movies is handled by thunk
+                this.showToast('Added to library!', 'success');
             }} 
             onClose={() => this.setState({ showAddModal: false })} 
           />

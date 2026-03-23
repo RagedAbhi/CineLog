@@ -121,6 +121,9 @@ export const fetchCurrentUser = () => async (dispatch) => {
             dispatch(authSuccess({ user, token: localStorage.getItem('token') }));
         }
     } catch (error) {
-        console.error("Failed to fetch current user:", error);
+        console.error("Failed to fetch current user, clearing session:", error);
+        // Token is stale/invalid — clear it so login page shows
+        authService.logout();
+        dispatch(logoutAction());
     }
 };

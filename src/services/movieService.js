@@ -37,16 +37,16 @@ export const deleteMovie = async (id) => {
 // ============================================================
 // SEARCH movie/series list from OMDB API
 // ============================================================
-export const searchMoviesExternal = async (title, mediaType = 'movie') => {
+export const searchMoviesExternal = async (title, mediaType = '') => {
   const OMDB_API_KEY = process.env.REACT_APP_OMDB_API_KEY;
 
   if (!OMDB_API_KEY || OMDB_API_KEY === 'your_free_key_here') {
     throw new Error('NO_API_KEY');
   }
 
-  const omdbType = mediaType === 'series' ? 'series' : 'movie';
+  const typeParam = mediaType ? `&type=${mediaType}` : '';
   const response = await axios.get(
-    `https://www.omdbapi.com/?s=${encodeURIComponent(title)}&type=${omdbType}&apikey=${OMDB_API_KEY}`
+    `https://www.omdbapi.com/?s=${encodeURIComponent(title)}${typeParam}&apikey=${OMDB_API_KEY}`
   );
 
   if (response.data.Response === 'False') {
@@ -58,7 +58,7 @@ export const searchMoviesExternal = async (title, mediaType = 'movie') => {
     year: item.Year?.match(/\d{4}/)?.[0] || item.Year,
     imdbID: item.imdbID,
     poster: item.Poster !== 'N/A' ? item.Poster : '',
-    mediaType
+    mediaType: item.Type === 'series' ? 'series' : 'movie'
   }));
 };
 
@@ -87,6 +87,7 @@ export const getMovieDetailsExternal = async (imdbID, mediaType = 'movie') => {
     director: response.data.Director !== 'N/A' ? response.data.Director : '',
     poster: response.data.Poster !== 'N/A' ? response.data.Poster : '',
     plot: response.data.Plot,
+    imdbID,
     mediaType
   };
 };

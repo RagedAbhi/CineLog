@@ -242,6 +242,16 @@ class Dashboard extends Component {
 
     return (
       <div className="dashboard-page">
+        {/* Full-Page Background (Fixed) */}
+        <div className="hero-bg">
+          <div
+            className="hero-bg-blur"
+            style={{ 
+                backgroundImage: featured?.poster ? `url("${featured.poster}")` : 'none',
+            }}
+          />
+        </div>
+
         {/* Floating Add Button for convenience */}
         <button
           className="btn btn-primary floating-add-btn bio-luminescent"
@@ -254,17 +264,6 @@ class Dashboard extends Component {
         {/* Hero Section */}
         {featured && (
           <div className="hero-section" ref={this.heroRef}>
-            <div className="hero-bg">
-              <div className="hero-bg-placeholder" style={{ position: 'absolute', inset: 0, background: 'var(--bg-elevated)' }} />
-              <div
-                className="hero-bg-blur"
-                style={{ 
-                    backgroundImage: featured.poster ? `url("${featured.poster}")` : 'none',
-                    opacity: featured.poster ? 0.6 : 0 
-                }}
-              />
-            </div>
-
             <div className="hero-content">
               <span className="hero-tag">Featured {featured.mediaType === 'series' ? 'Series' : 'Movie'}</span>
               <h1 className="hero-title">{featured.title}</h1>
@@ -309,7 +308,7 @@ class Dashboard extends Component {
                   alt={featured.title}
                   style={{ position: 'relative', zIndex: 1, opacity: 1 }}
                   onLoad={(e) => {
-                    e.target.style.opacity = '1'; // Reset opacity in case previous item failed
+                    e.target.style.opacity = '1';
                     const placeholder = e.target.parentElement.querySelector('.detail-poster-placeholder');
                     if (placeholder) placeholder.style.opacity = '0';
                   }}

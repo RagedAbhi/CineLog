@@ -58,7 +58,13 @@ class MovieCard extends Component {
       <div
         className="movie-card bio-luminescent" // Added bio-luminescent class
         ref={this.cardRef} // Added ref
-        onClick={() => movie._id ? navigate(`/movies/${movie._id}`) : null}
+        onClick={() => {
+          if (!movie._id) return;
+          const url = movie.isExternal 
+            ? `/movies/${movie._id}?external=true&mediaType=${movie.mediaType || 'movie'}` 
+            : `/movies/${movie._id}`;
+          navigate(url);
+        }}
         style={{ cursor: movie._id ? 'pointer' : 'default' }}
       >
 

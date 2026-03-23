@@ -78,13 +78,13 @@ const FriendsPage = () => {
     };
 
     return (
-        <div className="container-fluid social-container" style={{ maxWidth: '900px', margin: '0 auto', paddingTop: '40px' }}>
-            <div className="page-header" style={{ textAlign: 'center', marginBottom: '60px' }}>
-                <h1 style={{ fontSize: '48px', fontWeight: 900, letterSpacing: '-2px' }}>Social</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '18px' }}>Connect with fellow cinephiles</p>
+        <div className="container-fluid social-container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
+            <div className="page-header" style={{ textAlign: 'center', marginBottom: '80px' }}>
+                <h2>Social</h2>
+                <p>Connect with fellow cinephiles</p>
             </div>
 
-            <div className="glass-panel" style={{
+            <div className="glass-panel-premium" style={{
                 display: 'flex',
                 gap: '8px',
                 padding: '6px',
@@ -97,30 +97,12 @@ const FriendsPage = () => {
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        style={{
-                            flex: 1,
-                            padding: '12px',
-                            background: activeTab === tab ? 'var(--accent)' : 'transparent',
-                            color: activeTab === tab ? '#000' : 'var(--text-secondary)',
-                            border: 'none',
-                            borderRadius: '100px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            position: 'relative'
-                        }}
+                        className={`nav-item-premium ${activeTab === tab ? 'active' : ''}`}
+                        style={{ flex: 1, justifyContent: 'center' }}
                     >
                         {tab.charAt(0).toUpperCase() + tab.slice(1)}
                         {tab === 'requests' && requests.length > 0 && (
-                            <span style={{
-                                position: 'absolute', top: '-5px', right: '-5px',
-                                background: 'var(--accent)', color: '#000',
-                                fontSize: '10px', width: '18px', height: '18px',
-                                borderRadius: '50%', display: 'flex', alignItems: 'center',
-                                justifyContent: 'center', fontWeight: 'bold',
-                                border: '2px solid var(--bg)'
-                            }}>
+                            <span className="badge-premium" style={{ marginLeft: '8px', marginBottom: 0 }}>
                                 {requests.length}
                             </span>
                         )}
@@ -140,25 +122,18 @@ const FriendsPage = () => {
                             </div>
                         ) : (
                             friends.map(friend => (
-                                <Link to={`/profile/${friend._id}`} key={friend._id} className="glass-panel" style={{
-                                    padding: '24px',
+                                <Link to={`/profile/${friend._id}`} key={friend._id} className="stat-card clickable" style={{
+                                    padding: '32px',
                                     textDecoration: 'none',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
-                                    transition: 'transform 0.3s ease, border-color 0.3s ease'
-                                }} onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-                                    <div style={{
-                                        width: '64px', height: '64px', borderRadius: '50%',
-                                        background: 'linear-gradient(45deg, var(--accent), var(--accent-dim))',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '16px',
-                                        boxShadow: '0 10px 20px rgba(0,0,0,0.2)'
-                                    }}>
+                                }}>
+                                    <div className="avatar-wrapper" style={{ width: '80px', height: '80px', fontSize: '32px', marginBottom: '20px' }}>
                                         {friend.name.charAt(0)}
                                     </div>
-                                    <h4 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)' }}>{friend.name}</h4>
-                                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>@{friend.username}</p>
+                                    <h4 className="stat-value" style={{ fontSize: '24px', margin: '0 0 8px 0' }}>{friend.name}</h4>
+                                    <p className="stat-label">@{friend.username}</p>
                                 </Link>
                             ))
                         )}
@@ -198,17 +173,17 @@ const FriendsPage = () => {
 
                 {activeTab === 'search' && (
                     <div>
-                        <div className="glass-panel" style={{ padding: '8px', borderRadius: '100px', display: 'flex', gap: '10px', marginBottom: '40px' }}>
+                        <div className="glass-panel-premium" style={{ padding: '8px', borderRadius: '100px', display: 'flex', gap: '10px', marginBottom: '60px' }}>
                             <input
-                                className="form-input"
-                                style={{ border: 'none', background: 'transparent', padding: '12px 24px', flex: 1 }}
+                                className="global-search-input"
+                                style={{ border: 'none', background: 'transparent', padding: '12px 32px', flex: 1, fontSize: '16px' }}
                                 placeholder="Search by username..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
                             />
-                            <button className="btn btn-primary" style={{ borderRadius: '100px', padding: '0 30px' }} onClick={handleSearch} disabled={loading}>
-                                {loading ? 'Searching...' : 'Search'}
+                            <button className="btn btn-primary" onClick={handleSearch} disabled={loading}>
+                                {loading ? 'Searching...' : 'Search Users'}
                             </button>
                         </div>
 

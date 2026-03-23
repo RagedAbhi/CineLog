@@ -4,6 +4,7 @@ import { fetchMovies, addMovie, deleteMovie } from '../store/thunks';
 import { setFilter, setSearch, clearFilters } from '../store/actions';
 import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
+import CineSelect from '../components/CineSelect';
 import Toast from '../components/Toast';
 
 const GENRES = ['all', 'Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure', 'Biography'];
@@ -59,15 +60,35 @@ class TVShowsPage extends Component {
                 <div className="filters-bar">
                     <input className="search-input" placeholder="Search TV shows…" value={filters.search} onChange={(e) => this.props.setSearch(e.target.value)} />
 
-                    <select className="filter-select" value={statusFilter} onChange={(e) => this.setState({ statusFilter: e.target.value })}>
-                        <option value="all">All Status</option>
-                        <option value="watchlist">Watchlist</option>
-                        <option value="watched">Watched</option>
-                    </select>
+                    <div className="filter-toggle-group">
+                        <button 
+                            className={`filter-toggle-btn ${statusFilter === 'all' ? 'active' : ''}`}
+                            onClick={() => this.setState({ statusFilter: 'all' })}
+                        >
+                            All
+                        </button>
+                        <button 
+                            className={`filter-toggle-btn ${statusFilter === 'watchlist' ? 'active' : ''}`}
+                            onClick={() => this.setState({ statusFilter: 'watchlist' })}
+                        >
+                            Watchlist
+                        </button>
+                        <button 
+                            className={`filter-toggle-btn ${statusFilter === 'watched' ? 'active' : ''}`}
+                            onClick={() => this.setState({ statusFilter: 'watched' })}
+                        >
+                            Watched
+                        </button>
+                    </div>
 
-                    <select className="filter-select" value={filters.genre} onChange={(e) => this.props.setFilter('genre', e.target.value)}>
-                        {GENRES.map(g => <option key={g} value={g}>{g === 'all' ? 'All Genres' : g}</option>)}
-                    </select>
+                    <div style={{ width: '180px' }}>
+                        <CineSelect
+                            options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))}
+                            value={filters.genre}
+                            onChange={(val) => this.props.setFilter('genre', val)}
+                            placeholder="Genre"
+                        />
+                    </div>
                     {(filters.search || filters.genre !== 'all') && (
                         <button className="btn-clear" onClick={this.props.clearFilters}>Clear filters</button>
                     )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Lenis from 'lenis';
 
@@ -32,7 +32,12 @@ const PageWrapper = ({ children }) => (
 
 const App = () => {
   const [globalSearch, setGlobalSearch] = useState('');
+  const location = useLocation();
   const { isAuthenticated } = useSelector(state => state.auth);
+
+  const isHomePage = location.pathname === '/';
+  const isDetailPage = location.pathname.startsWith('/movies/');
+  const shouldHideBlobs = isHomePage || isDetailPage;
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -63,45 +68,64 @@ const App = () => {
 
   if (!isAuthenticated) {
     return (
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="*" element={<Navigate to="/auth" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="*" element={<Navigate to="/auth" replace />} />
+      </Routes>
     );
   }
 
   return (
-    <BrowserRouter>
-      <div className="app-layout lenis-scroll">
-        <Topbar
-          searchQuery={globalSearch}
-          onSearchChange={q => setGlobalSearch(q)}
-        />
-        <div className="app-body" style={{ paddingTop: 0 }}>
-          <main className="main-content">
-            <AnimatePresence mode="wait">
-              <Routes>
-                <Route path="/" element={<PageWrapper><Dashboard /></PageWrapper>} />
-                <Route path="/movies-list" element={<PageWrapper><MoviesPage /></PageWrapper>} />
-                <Route path="/tvshows" element={<PageWrapper><TVShowsPage /></PageWrapper>} />
-                <Route path="/watchlist" element={<PageWrapper><Watchlist /></PageWrapper>} />
-                <Route path="/watched" element={<PageWrapper><Watched /></PageWrapper>} />
-                <Route path="/friends" element={<PageWrapper><FriendsPage /></PageWrapper>} />
-                <Route path="/movies/:id" element={<PageWrapper><MovieDetail /></PageWrapper>} />
-                <Route path="/analytics" element={<PageWrapper><Analytics /></PageWrapper>} />
-                <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
-                <Route path="/profile/:id" element={<PageWrapper><Profile /></PageWrapper>} />
-                <Route path="/auth" element={<Navigate to="/" replace />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </AnimatePresence>
-          </main>
+    <div className="app-layout lenis-scroll">
+      {/* Liquid Background Refinement (Hidden on Home) */}
+      {!shouldHideBlobs && (
+        <div className="liquid-bg-wrapper">
+          <div className="blob blob-1"></div>
+          <div className="blob blob-2"></div>
+          <div className="blob blob-3"></div>
         </div>
+      )}
+
+      {/* SVG Gooey Filter */}
+      <svg style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}> {/* pointerEvents added */}
+        <filter id="gooey">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="40" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="gooey" />
+          <feComposite in="SourceGraphic" in2="gooey" operator="atop" />
+        </filter>
+      </svg>
+
+      <Topbar
+        searchQuery={globalSearch}
+        onSearchChange={q => setGlobalSearch(q)}
+      />
+      <div className="app-body">
+        <main className="main-content">
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/auth" element={<Navigate to="/" replace />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:id" element={<Profile />} />
+              <Route path="/movies-list" element={<MoviesPage />} />
+              <Route path="/movies/:id" element={<MovieDetail />} />
+              <Route path="/tvshows" element={<TVShowsPage />} />
+              <Route path="/friends" element={<FriendsPage />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/watched" element={<Watched />} />
+              <Route path="/watchlist" element={<Watchlist />} />
+            </Routes>
+          </AnimatePresence>
+        </main>
       </div>
-    </BrowserRouter>
+    </div>
   );
 };
 
-export default App;
+const AppWrapper = () => (
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+);
+
+export default AppWrapper;

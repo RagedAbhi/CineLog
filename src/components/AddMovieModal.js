@@ -1,5 +1,7 @@
 import { Component } from 'react';
-import { searchMoviesExternal, getMovieDetailsExternal } from '../services/movieService';
+import axios from 'axios';
+import CineSelect from './CineSelect';
+import { searchMoviesExternal, getMovieDetailsExternal as getMovieDetails } from '../services/movieService';
 
 const GENRES = ['Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure', 'Biography', 'History'];
 
@@ -37,8 +39,23 @@ class AddMovieModal extends Component {
   }
 
   async componentDidMount() {
+    document.body.classList.add('modal-open');
     if (this.props.initialData && this.props.initialData.imdbID) {
-        this.handleSelectMovie(this.props.initialData);
+        this.fetchDetails(this.props.initialData.imdbID, this.props.initialData.mediaType);
+    }
+  }
+
+  componentWillUnmount() {
+    document.body.classList.remove('modal-open');
+  }
+
+  fetchDetails = async (imdbID, mediaType) => {
+    this.setState({ searching: true });
+    try {
+      const details = await getMovieDetails(imdbID, mediaType);
+      this.setState({ fetchedMovie: details, searching: false });
+    } catch (err) {
+      this.setState({ searching: false, searchError: `Details fetch failed: ${err.message}` });
     }
   }
 
@@ -62,17 +79,15 @@ class AddMovieModal extends Component {
     }
   }
 
-  handleSelectMovie = async (movie) => {
-    this.setState({ searching: true, searchError: '', searchResults: [] });
-    try {
-      const details = await getMovieDetailsExternal(movie.imdbID, movie.mediaType);
-      this.setState({ fetchedMovie: details, searching: false });
-    } catch (err) {
-      this.setState({
-        searching: false,
-        searchError: `Failed to fetch details: ${err.message}`
-      });
-    }
+  handleSelectMovie = (movie) => {
+    this.props.onClose();
+    // Navigate to detail page. If it's a new movie, the detail page handles it via 'external=true'
+    // We use window.location or a passed navigate prop. Since this is a class component, 
+    // it's better to use a prop or just window.location.
+    // Actually, AddMovieModal is often used in Dashboard which has access to navigate.
+    // I'll check if navigate is passed, if not I'll use window.location.
+    const url = `/movies/${movie.imdbID}?external=true`;
+    window.location.href = url; 
   }
 
   handleKeyDown = (e) => {
@@ -107,7 +122,7 @@ class AddMovieModal extends Component {
       director: fetchedMovie.director,
       poster: fetchedMovie.poster,
       imdbID: fetchedMovie.imdbID,
-      mediaType,
+      mediaType: fetchedMovie.mediaType,
       status,
       rating: status === 'watched' && rating ? parseInt(rating) : null,
       review: status === 'watched' ? review.trim() : '',
@@ -135,276 +150,167 @@ class AddMovieModal extends Component {
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div className="modal" style={{ maxWidth: '540px' }}>
           <div className="modal-header">
-            <h3>Add {label}</h3>
+            <h3>Add to Library</h3>
             <button className="modal-close" onClick={onClose}>✕</button>
-          </div>
-
-          {/* Media Type Toggle */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-            {['movie', 'series'].map(type => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => this.setMediaType(type)}
-                style={{
-                  flex: 1, padding: '9px', borderRadius: '8px', fontSize: '14px', fontWeight: 600,
-                  border: `1px solid ${mediaType === type ? 'var(--accent)' : 'var(--border)'}`,
-                  background: mediaType === type ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-                  color: mediaType === type ? 'var(--accent)' : 'var(--text-secondary)',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-              >
-                {type === 'movie' ? '🎬 Movie' : '📺 TV Show / Series'}
-              </button>
-            ))}
-          </div>
-
-          {/* Search Bar */}
-          <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label className="form-label">Search {label}</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                className="form-input"
-                value={query}
-                onChange={this.handleQueryChange}
-                onKeyDown={this.handleKeyDown}
-                placeholder={`Type a ${label.toLowerCase()} title…`}
-                style={{ flex: 1 }}
-                autoFocus
-              />
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={this.handleSearch}
-                disabled={searching || !query.trim()}
-                style={{ whiteSpace: 'nowrap' }}
-              >
-                {searching ? '⏳' : '🔍'} {searching ? 'Searching…' : 'Search'}
-              </button>
-            </div>
-
-            {/* Error states */}
-            {searchError === 'NO_API_KEY' ? (
-              <div style={{
-                background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.35)',
-                borderRadius: '10px', padding: '14px', marginTop: '8px', fontSize: '13px', lineHeight: '1.7'
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: '6px' }}>⚙️ OMDB API Key Required</div>
-                <ol style={{ paddingLeft: '18px', margin: 0, color: 'var(--text-secondary)' }}>
-                  <li>Get a free key at <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noreferrer" style={{ color: '#f5c518' }}>omdbapi.com</a></li>
-                  <li>Add it to <code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 4px', borderRadius: '3px' }}>.env</code> as <code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 4px', borderRadius: '3px' }}>REACT_APP_OMDB_API_KEY=yourkey</code></li>
-                  <li>Restart the dev server</li>
-                </ol>
+          </div>          <div className="modal-body" data-lenis-prevent style={{ overflowX: 'visible', paddingBottom: '120px' }}>
+            {/* 1. Loading State */}
+            {searching && !searchResults.length && !fetchedMovie && (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <div className="spinner" style={{ margin: '0 auto 16px' }} />
+                <div style={{ color: 'var(--text-muted)' }}>Fetching details...</div>
               </div>
-            ) : searchError ? (
-              <div style={{ marginTop: '10px' }}>
-                <small style={{ color: '#ff6b6b', display: 'block', marginBottom: '8px' }}>
-                  ⚠ {searchError} — enter details manually instead:
-                </small>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ width: '100%', justifyContent: 'center' }}
-                  onClick={() => this.setState({ manualMode: true, manualTitle: query, searchError: '' })}
-                >
-                  ✏️ Add manually
-                </button>
-              </div>
-            ) : null}
-          </div>
+            )}
 
-          {/* Search Results List */}
-          {searchResults.length > 0 && !fetchedMovie && !manualMode && (
-            <div style={{
-              maxHeight: '300px', overflowY: 'auto', marginBottom: '20px',
-              border: '1px solid var(--border)', borderRadius: '10px', background: 'var(--bg-elevated)'
-            }}>
-              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                Found {searchResults.length} results:
-              </div>
-              {searchResults.map(res => (
-                <div
-                  key={res.imdbID}
-                  onClick={() => this.handleSelectMovie(res)}
-                  style={{
-                    display: 'flex', gap: '12px', padding: '10px 14px', borderBottom: '1px solid var(--border)',
-                    cursor: 'pointer', transition: 'all 0.2s'
-                  }}
-                  className="search-result-item"
-                >
-                  {res.poster ? (
-                    <img src={res.poster} alt={res.title} style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
-                  ) : (
-                    <div style={{ width: '40px', height: '60px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-                      {mediaType === 'series' ? '📺' : '🎬'}
-                    </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{res.title}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{res.year}</div>
-                  </div>
-                  <div style={{ color: 'var(--accent)', fontSize: '12px', alignSelf: 'center' }}>Select →</div>
-                </div>
-              ))}
-              <div
-                onClick={() => this.setState({ manualMode: true, manualTitle: query, searchResults: [] })}
-                style={{ padding: '12px 14px', textAlign: 'center', cursor: 'pointer', fontSize: '13px', color: 'var(--accent)' }}
-              >
-                + None of these? Add manually
-              </div>
-            </div>
-          )}
-
-          {/* Fetched Movie Preview */}
-          {fetchedMovie && !manualMode && (
-            <div style={{
-              display: 'flex', gap: '16px', padding: '14px', borderRadius: '10px',
-              background: 'rgba(232, 197, 71, 0.05)', border: '1px solid var(--accent-dim)',
-              marginBottom: '20px'
-            }}>
-              {fetchedMovie.poster ? (
-                <img src={fetchedMovie.poster} alt={fetchedMovie.title} style={{ width: '72px', height: '107px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: '72px', height: '107px', borderRadius: '6px', flexShrink: 0, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>
-                  {mediaType === 'series' ? '📺' : '🎬'}
-                </div>
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>{fetchedMovie.title}</div>
+            {/* 2. Search Bar (only if no result yet) */}
+            {!hasResult && !searching && (
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label className="form-label">Search Movies or Shows</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    className="form-input"
+                    value={query}
+                    onChange={this.handleQueryChange}
+                    onKeyDown={this.handleKeyDown}
+                    placeholder="Type a title…"
+                    style={{ flex: 1 }}
+                    autoFocus
+                  />
                   <button
                     type="button"
-                    onClick={() => this.setState({ fetchedMovie: null, searchResults: [] })}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px' }}
+                    className="btn btn-primary"
+                    onClick={this.handleSearch}
+                    disabled={searching || !query.trim()}
+                    style={{ whiteSpace: 'nowrap' }}
                   >
-                    Change
+                    🔍 Search
                   </button>
                 </div>
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  {fetchedMovie.year} · {fetchedMovie.genre}
-                </div>
-                {fetchedMovie.director && (
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                    🎬 {fetchedMovie.director}
-                  </div>
-                )}
-                {fetchedMovie.plot && (
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {fetchedMovie.plot}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
-          {/* Manual Entry Form */}
-          {manualMode && (
-            <div style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', marginBottom: '24px' }}>
-              <div style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '16px' }}>
-                ✏️ Manual Entry
+                {searchError === 'NO_API_KEY' ? (
+                  <div style={{
+                    background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.35)',
+                    borderRadius: '10px', padding: '14px', marginTop: '8px', fontSize: '13px', lineHeight: '1.7'
+                  }}>
+                    <div style={{ fontWeight: 600, marginBottom: '6px' }}>⚙️ OMDB API Key Required</div>
+                    <ol style={{ paddingLeft: '18px', margin: 0, color: 'var(--text-secondary)' }}>
+                      <li>Get a free key at <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noreferrer" style={{ color: '#f5c518' }}>omdbapi.com</a></li>
+                      <li>Add key to <code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 4px' }}>.env</code> as <code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 4px' }}>REACT_APP_OMDB_API_KEY</code></li>
+                    </ol>
+                  </div>
+                ) : searchError ? (
+                  <div style={{ marginTop: '10px' }}>
+                    <small style={{ color: '#ff6b6b', display: 'block', marginBottom: '8px' }}>⚠ {searchError}</small>
+                    <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={() => this.setState({ manualMode: true, manualTitle: query, searchError: '' })}>
+                      ✏️ Add manually
+                    </button>
+                  </div>
+                ) : null}
               </div>
-              <div className="form-group">
-                <label className="form-label">Title *</label>
-                <input className="form-input" value={manualTitle} onChange={(e) => this.setState({ manualTitle: e.target.value })} placeholder={`${label} title`} required />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Genre *</label>
-                  <select className="form-input" value={manualGenre} onChange={(e) => this.setState({ manualGenre: e.target.value })}>
-                    {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Year</label>
-                  <input className="form-input" type="number" value={manualYear} onChange={(e) => this.setState({ manualYear: e.target.value })} placeholder="2024" min="1900" max={new Date().getFullYear() + 2} />
-                </div>
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Director / Creator</label>
-                <input className="form-input" value={manualDirector} onChange={(e) => this.setState({ manualDirector: e.target.value })} placeholder="Optional" />
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* User Preferences (shown only when there's a result) */}
-          {hasResult && (
-            <form onSubmit={this.handleSubmit}>
-              <div className="movie-preview-premium" style={{ 
-                display: 'flex', gap: '20px', padding: '16px', background: 'var(--bg-elevated)', 
-                borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '24px' 
+            {/* 3. Search Results (only if no result yet) */}
+            {!hasResult && searchResults.length > 0 && (
+              <div style={{
+                maxHeight: '400px', overflowY: 'auto', marginBottom: '20px',
+                border: '1px solid var(--border)', borderRadius: '10px', background: 'var(--bg-elevated)'
               }}>
-                <img 
-                  src={(manualMode ? '' : fetchedMovie.poster) || 'https://via.placeholder.com/150'} 
-                  alt="poster" 
-                  style={{ width: '80px', height: '120px', objectFit: 'cover', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }} 
-                />
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#fff', marginBottom: '4px' }}>
-                    {manualMode ? manualTitle : fetchedMovie.title}
-                  </h4>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                    {manualMode ? manualYear : fetchedMovie.year} • {mediaType.toUpperCase()}
-                  </p>
-                  {fetchedMovie?.genre && !manualMode && (
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '6px' }}>
-                      <span className="detail-tag-outline" style={{ fontSize: '10px', padding: '2px 8px' }}>{fetchedMovie.genre}</span>
+                <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Found {searchResults.length} results:
+                </div>
+                {searchResults.map(res => (
+                  <div key={res.imdbID} onClick={() => this.handleSelectMovie(res)} className="search-result-item" style={{ display: 'flex', gap: '12px', padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                    <img src={res.poster || 'https://via.placeholder.com/150'} alt="poster" style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: '#fff' }}>{res.title}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{res.year} • {res.mediaType}</div>
+                    </div>
+                  </div>
+                ))}
+                <div onClick={() => this.setState({ manualMode: true, manualTitle: query, searchResults: [] })} style={{ padding: '12px 14px', textAlign: 'center', cursor: 'pointer', fontSize: '13px', color: 'var(--accent)' }}>
+                  + None of these? Add manually
+                </div>
+              </div>
+            )}
+
+            {/* 4. The Form (Manual Entry or Preferences) */}
+            {hasResult && (
+              <form onSubmit={this.handleSubmit}>
+                {manualMode && (
+                  <div style={{ padding: '16px', borderRadius: '16px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', marginBottom: '24px' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '16px' }}>✏️ Manual Entry</div>
+                    <div className="form-group">
+                      <label className="form-label">Title *</label>
+                      <input className="form-input" value={manualTitle} onChange={(e) => this.setState({ manualTitle: e.target.value })} required />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                      <CineSelect
+                        label="Genre"
+                        options={GENRES.map(g => ({ value: g, label: g }))}
+                        value={manualGenre}
+                        onChange={(val) => this.setState({ manualGenre: val })}
+                      />
+                    </div>
+                      <div className="form-group">
+                        <label className="form-label">Year</label>
+                        <input className="form-input" type="number" value={manualYear} onChange={(e) => this.setState({ manualYear: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {fetchedMovie && (
+                   <div style={{ 
+                    display: 'flex', gap: '20px', padding: '16px', background: 'var(--bg-elevated)', 
+                    borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '24px' 
+                  }}>
+                    <img src={fetchedMovie.poster} alt="poster" style={{ width: '70px', height: '100px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: '16px', color: '#fff' }}>{fetchedMovie.title}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{fetchedMovie.year} • {fetchedMovie.mediaType}</div>
+                      <button type="button" onClick={() => this.setState({ fetchedMovie: null, searchResults: [] })} style={{ color: 'var(--accent)', fontSize: '12px', background: 'none', border: 'none', padding: 0, marginTop: '8px', cursor: 'pointer' }}>Change</button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <CineSelect
+                      label="Status"
+                      options={[
+                        { value: 'watchlist', label: 'Watchlist' },
+                        { value: 'watched', label: 'Watched' }
+                      ]}
+                      value={status}
+                      onChange={(val) => this.setState({ status: val })}
+                    />
+                  </div>
+                  {status === 'watched' && (
+                    <div className="form-group">
+                      <label className="form-label">Rating (1-10)</label>
+                      <input className="form-input" type="number" min="1" max="10" value={rating} onChange={(e) => this.setState({ rating: e.target.value })} />
                     </div>
                   )}
                 </div>
-              </div>
 
-              <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select 
-                    className="form-input"
-                    value={this.state.status} 
-                    onChange={(e) => this.setState({ status: e.target.value })}
-                  >
-                    <option value="watchlist">Watchlist</option>
-                    <option value="watched">Watched</option>
-                  </select>
+                  <label className="form-label">Note / Review</label>
+                  <textarea className="form-input" value={review} onChange={(e) => this.setState({ review: e.target.value })} rows={3} />
                 </div>
 
-                {this.state.status === 'watched' && (
-                  <div className="form-group">
-                    <label className="form-label">Rating (1-10)</label>
-                    <input 
-                      className="form-input"
-                      type="number" 
-                      min="1" max="10" 
-                      placeholder="Optional"
-                      value={this.state.rating}
-                      onChange={(e) => this.setState({ rating: e.target.value })}
-                    />
-                  </div>
-                )}
-              </div>
+                <div className="form-actions">
+                  <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Add to Library</button>
+                </div>
+              </form>
+            )}
 
-              <div className="form-group">
-                <label className="form-label">Note / Review</label>
-                <textarea 
-                  className="form-input"
-                  placeholder="What's on your mind?"
-                  value={this.state.review}
-                  onChange={(e) => this.setState({ review: e.target.value })}
-                  rows={3}
-                />
+            {!hasResult && !searching && searchResults.length === 0 && (
+              <div className="form-actions" style={{ marginTop: '20px' }}>
+                <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={onClose}>Cancel</button>
               </div>
-
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Add {label}</button>
-              </div>
-            </form>
-          )}
-
-          {!hasResult && (
-            <div className="form-actions">
-              <button type="button" className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={onClose}>Cancel</button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     );

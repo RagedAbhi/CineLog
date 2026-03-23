@@ -46,18 +46,30 @@
   position: relative;
   overflow: hidden;
   border-radius: var(--radius);
-  padding: 24px;
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 32px;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--bouncy);
   background: var(--bg-card);
+  box-shadow: var(--shadow-premium);
+}
+
+.redesign-stat-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--glass-noise);
+    opacity: 0.02;
+    pointer-events: none;
 }
 
 .redesign-stat-card.active {
   border-color: var(--accent);
-  box-shadow: 0 10px 30px -10px var(--accent-dim);
-  transform: scale(1.05);
+  box-shadow: 0 10px 40px -10px var(--accent-glow);
+  transform: scale(1.04) translateY(-4px);
+  background: var(--bg-elevated);
 }
 
 .redesign-stat-card:hover:not(.active) {
@@ -140,12 +152,25 @@
 
 /* Glass Panels */
 .glass-panel-redesign {
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 32px;
-  backdrop-filter: blur(8px);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 40px;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   height: 100%;
+  box-shadow: var(--shadow-premium);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-panel-redesign::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--glass-noise);
+    opacity: 0.02;
+    pointer-events: none;
 }
 
 .top-picks-grid {

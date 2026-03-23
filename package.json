@@ -20,7 +20,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "server": "json-server --watch db.json --port 3001",
+    "server": "npm run dev --prefix server",
     "dev": "concurrently \"npm run server\" \"npm start\""
   },
   "devDependencies": {

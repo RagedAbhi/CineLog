@@ -14,6 +14,16 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({ name: '', bio: '' });
 
+    // Decode JWT to get current user ID reliably (works on page refresh when Redux state is empty)
+    const getTokenUserId = () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return null;
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.id;
+        } catch { return null; }
+    };
+
     useEffect(() => {
         fetchProfile();
     }, [id]);
@@ -61,7 +71,8 @@ const Profile = () => {
     if (loading) return <div className="loading">Loading profile...</div>;
     if (!profile) return <div className="error">Profile not found.</div>;
 
-    const isOwnProfile = !id || id === currentUser?.id;
+    const currentUserId = currentUser?.id || currentUser?._id?.toString() || getTokenUserId();
+    const isOwnProfile = !id || id === currentUserId;
 
     return (
         <div className="container-fluid">
@@ -127,6 +138,7 @@ const Profile = () => {
                     <div className="picks-line"></div>
                 </div>
 
+
                 {profile.topPicks?.length > 0 ? (
                     <div className="media-grid-minimal">
                         {profile.topPicks.map((media, index) => (
@@ -138,6 +150,108 @@ const Profile = () => {
                         <p>Discover and add your favorites to this collection.</p>
                     </div>
                 )}
+            </div>
+
+            {/* Recommendations Received SECTION */}
+            <div className="top-picks-container profile-anim" style={{ marginTop: '60px' }}>
+                <div className="picks-header">
+                    <h2 className="picks-title">
+                        {isOwnProfile ? "Recommended by Friends" : `Recommended to me (by ${profile.name || profile.username})`}
+                    </h2>
+                    <div className="picks-line"></div>
+                </div>
+
+                {(() => {
+                    const profileId = profile._id?.toString();
+
+                    const filtered = profile.recommendations?.filter(r => {
+                        const recReceiverId = (r.receiver?._id || r.receiver)?.toString();
+                        const recSenderId = (r.sender?._id || r.sender)?.toString();
+
+                        if (isOwnProfile) return recReceiverId === profileId;
+                        
+                        // For friend's profile: SHOW ONLY friend -> me
+                        return recSenderId === profileId && recReceiverId === currentUserId;
+                    }) || [];
+
+                    return filtered.length > 0 ? (
+                        <div className="media-grid-minimal">
+                            {filtered.map((rec, index) => (
+                                <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible' }}>
+                                    <MovieCard 
+                                        movie={{
+                                            _id: rec.imdbID,
+                                            title: rec.mediaTitle,
+                                            poster: rec.poster,
+                                            imdbID: rec.imdbID,
+                                            mediaType: rec.mediaType,
+                                            isExternal: true
+                                        }} 
+                                        index={index} 
+                                    />
+                                    <div className="rec-attribution" style={{ marginTop: '10px' }}>
+                                        {isOwnProfile ? `From @${rec.sender?.username || 'friend'}` : 'To you'}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="picks-empty-minimal">
+                            <p>{isOwnProfile ? "No recommendations received yet." : `No recommendations from ${profile.name || profile.username} yet.`}</p>
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* Recommendations Sent SECTION */}
+            <div className="top-picks-container profile-anim" style={{ marginTop: '60px' }}>
+                <div className="picks-header">
+                    <h2 className="picks-title">
+                        {isOwnProfile ? "Recommended to Friends" : `Recommended by me (to ${profile.name || profile.username})`}
+                    </h2>
+                    <div className="picks-line"></div>
+                </div>
+
+                {(() => {
+                    const profileId = profile._id?.toString();
+
+                    const filtered = profile.recommendations?.filter(r => {
+                        const recSenderId = (r.sender?._id || r.sender)?.toString();
+                        const recReceiverId = (r.receiver?._id || r.receiver)?.toString();
+
+                        if (isOwnProfile) return recSenderId === profileId;
+
+                        // For friend's profile: SHOW ONLY me -> friend
+                        return recSenderId === currentUserId && recReceiverId === profileId;
+                    }) || [];
+
+                    return filtered.length > 0 ? (
+                        <div className="media-grid-minimal">
+                            {filtered.map((rec, index) => (
+                                <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible' }}>
+                                    <MovieCard 
+                                        movie={{
+                                            _id: rec.imdbID,
+                                            title: rec.mediaTitle,
+                                            poster: rec.poster,
+                                            imdbID: rec.imdbID,
+                                            mediaType: rec.mediaType,
+                                            isExternal: true
+                                        }} 
+                                        index={index} 
+                                    />
+                                    <div className="rec-attribution" style={{ marginTop: '10px' }}>
+                                        {isOwnProfile ? `To @${rec.receiver?.username || 'friend'}` : 'By you'}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="picks-empty-minimal">
+                            <p>{isOwnProfile ? "Start sharing your favorites with friends!" : `You haven't recommended anything to ${profile.name || profile.username} yet.`}</p>
+                        </div>
+                    );
+                })()}
             </div>
         </div>
     );

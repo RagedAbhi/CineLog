@@ -36,15 +36,15 @@ const AuthPage = () => {
 
     return (
         <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div className="auth-card glass-panel-premium" style={{ width: '100%', maxWidth: '400px' }}>
-                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--accent)', marginBottom: '8px' }}>CineLog</h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+            <div className="auth-card glass-panel-premium" style={{ width: '100%', maxWidth: '440px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                    <h1 className="auth-logo">CineLog</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '15px', fontWeight: 500 }}>
                         {isLogin ? 'Welcome back! Ready for a movie?' : 'Start your personal movie diary today.'}
                     </p>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {!isLogin && (
                         <>
                             <div className="form-group">
@@ -58,7 +58,7 @@ const AuthPage = () => {
                         </>
                     )}
                     <div className="form-group">
-                        <label className="form-label">Email</label>
+                        <label className="form-label">Email Address</label>
                         <input className="form-input" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="hello@example.com" required />
                     </div>
                     <div className="form-group">
@@ -67,21 +67,21 @@ const AuthPage = () => {
                     </div>
 
                     {(error || authError) && (
-                        <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(255, 107, 107, 0.1)', border: '1px solid rgba(255, 107, 107, 0.3)', color: '#ff6b6b', fontSize: '13px' }}>
+                        <div style={{ padding: '14px', borderRadius: '12px', background: 'rgba(255, 59, 48, 0.1)', border: '1px solid rgba(255, 59, 48, 0.2)', color: 'var(--red)', fontSize: '14px', fontWeight: 500 }}>
                             {error || authError}
                         </div>
                     )}
 
-                    <button className="btn btn-primary" type="submit" disabled={loading} style={{ height: '48px', marginTop: '10px', fontSize: '16px', fontWeight: 600 }}>
-                        {loading ? 'Processing...' : (isLogin ? 'Log In' : 'Create Account')}
+                    <button className="btn btn-primary" type="submit" disabled={loading} style={{ height: '54px', marginTop: '8px' }}>
+                        {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
                     </button>
                 </form>
 
-                <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                <div style={{ textAlign: 'center', marginTop: '32px', fontSize: '15px', color: 'var(--text-secondary)' }}>
                     {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
                     <button
                         onClick={() => setIsLogin(!isLogin)}
-                        style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                        className="auth-btn-toggle"
                     >
                         {isLogin ? 'Sign Up' : 'Log In'}
                     </button>
