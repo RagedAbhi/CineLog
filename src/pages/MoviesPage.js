@@ -26,8 +26,27 @@ class MoviesPage extends Component {
     }
 
     getFiltered() {
-        const { movies, filters } = this.props;
+        const { movies, filters, user } = this.props;
         const { statusFilter } = this.state;
+
+        if (statusFilter === 'recommendations') {
+            if (!user || !user.recommendations) return [];
+            let list = user.recommendations.filter(r => !r.mediaType || r.mediaType === 'movie');
+            if (filters.search) {
+                const q = filters.search.toLowerCase();
+                list = list.filter(m => m.mediaTitle && m.mediaTitle.toLowerCase().includes(q));
+            }
+            return list.map(rec => ({
+                _id: rec.imdbID,
+                title: rec.mediaTitle,
+                poster: rec.poster,
+                imdbID: rec.imdbID,
+                mediaType: rec.mediaType || 'movie',
+                isExternal: true,
+                isRecommendation: true
+            }));
+        }
+
         let list = movies.filter(m => !m.mediaType || m.mediaType === 'movie');
 
         if (statusFilter !== 'all') {
@@ -79,6 +98,12 @@ class MoviesPage extends Component {
                         >
                             Watched
                         </button>
+                        <button 
+                            className={`filter-toggle-btn ${statusFilter === 'recommendations' ? 'active' : ''}`}
+                            onClick={() => this.setState({ statusFilter: 'recommendations' })}
+                        >
+                            Recommendations
+                        </button>
                     </div>
 
                     <div style={{ width: '180px' }}>
@@ -115,6 +140,6 @@ class MoviesPage extends Component {
     }
 }
 
-const mapStateToProps = (state) => ({ movies: state.movies.items, loading: state.movies.loading, filters: state.filters });
+const mapStateToProps = (state) => ({ movies: state.movies.items, loading: state.movies.loading, filters: state.filters, user: state.auth.user });
 const mapDispatchToProps = { fetchMovies, addMovie, deleteMovie, setFilter, setSearch, clearFilters };
 export default connect(mapStateToProps, mapDispatchToProps)(MoviesPage);

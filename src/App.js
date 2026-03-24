@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Lenis from 'lenis';
+import blobBg from './assets/blob.jpeg';
 
 import Topbar from './components/Topbar';
 import Dashboard from './pages/Dashboard';
@@ -77,23 +78,11 @@ const App = () => {
 
   return (
     <div className="app-layout lenis-scroll">
-      {/* Liquid Background Refinement (Hidden on Home) */}
-      {!shouldHideBlobs && (
-        <div className="liquid-bg-wrapper">
-          <div className="blob blob-1"></div>
-          <div className="blob blob-2"></div>
-          <div className="blob blob-3"></div>
-        </div>
-      )}
+      {/* Image Based Background */}
+      <div className="liquid-bg-wrapper">
+        <div className="image-blob-bg" style={{ backgroundImage: `url(${blobBg})` }}></div>
+      </div>
 
-      {/* SVG Gooey Filter */}
-      <svg style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}> {/* pointerEvents added */}
-        <filter id="gooey">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="40" result="blur" />
-          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="gooey" />
-          <feComposite in="SourceGraphic" in2="gooey" operator="atop" />
-        </filter>
-      </svg>
 
       <Topbar
         searchQuery={globalSearch}

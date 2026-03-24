@@ -156,7 +156,7 @@ const Profile = () => {
             <div className="top-picks-container profile-anim" style={{ marginTop: '60px' }}>
                 <div className="picks-header">
                     <h2 className="picks-title">
-                        {isOwnProfile ? "Recommended by Friends" : `Recommended to me (by ${profile.name || profile.username})`}
+                        {isOwnProfile ? "Recommended by Friends" : "Recommended to me"}
                     </h2>
                     <div className="picks-line"></div>
                 </div>
@@ -207,7 +207,7 @@ const Profile = () => {
             <div className="top-picks-container profile-anim" style={{ marginTop: '60px' }}>
                 <div className="picks-header">
                     <h2 className="picks-title">
-                        {isOwnProfile ? "Recommended to Friends" : `Recommended by me (to ${profile.name || profile.username})`}
+                        {isOwnProfile ? "Recommended to Friends" : "Recommended by me"}
                     </h2>
                     <div className="picks-line"></div>
                 </div>
