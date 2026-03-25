@@ -1,28 +1,29 @@
 import { Component } from 'react';
 import { connect } from 'react-redux';
-import { fetchMovies, addMovie, deleteMovie } from '../store/thunks';
-import { setFilter, setSearch, clearFilters } from '../store/actions';
+import { fetchMovies, addMovie, deleteMovie, fetchRecommendations } from '../store/thunks';
+import { setFilter, setSearch, clearFilters, showToast, showConfirmModal } from '../store/actions';
 import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import CineSelect from '../components/CineSelect';
-import Toast from '../components/Toast';
 
 const GENRES = ['all', 'Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure'];
 
 class MoviesPage extends Component {
     constructor(props) {
         super(props);
-        this.state = { showAddModal: false, toast: null, statusFilter: 'all' };
+        this.state = { showAddModal: false, statusFilter: 'all' };
     }
 
     componentDidMount() {
         if (this.props.movies.length === 0) this.props.fetchMovies();
+        this.props.fetchRecommendations();
         this.props.clearFilters();
     }
 
     handleAddMovie = async (movieData) => {
         await this.props.addMovie(movieData);
-        this.setState({ showAddModal: false, toast: { message: 'Movie added!', type: 'success' } });
+        this.setState({ showAddModal: false });
+        this.props.showToast('Movie added!', 'success');
     }
 
     getFiltered() {
@@ -30,8 +31,9 @@ class MoviesPage extends Component {
         const { statusFilter } = this.state;
 
         if (statusFilter === 'recommendations') {
-            if (!user || !user.recommendations) return [];
-            let list = user.recommendations.filter(r => !r.mediaType || r.mediaType === 'movie');
+            const { recommendations } = this.props;
+            if (!recommendations) return [];
+            let list = recommendations.filter(r => !r.mediaType || r.mediaType === 'movie');
             if (filters.search) {
                 const q = filters.search.toLowerCase();
                 list = list.filter(m => m.mediaTitle && m.mediaTitle.toLowerCase().includes(q));
@@ -47,7 +49,7 @@ class MoviesPage extends Component {
             }));
         }
 
-        let list = movies.filter(m => !m.mediaType || m.mediaType === 'movie');
+        let list = movies.filter(m => m.mediaType === 'movie' || !m.mediaType);
 
         if (statusFilter !== 'all') {
             list = list.filter(m => m.status === statusFilter);
@@ -134,12 +136,16 @@ class MoviesPage extends Component {
                 )}
 
                 {showAddModal && <AddMovieModal onSubmit={this.handleAddMovie} onClose={() => this.setState({ showAddModal: false })} defaultType="movie" />}
-                {toast && <Toast message={toast.message} type={toast.type} onClose={() => this.setState({ toast: null })} />}
             </div>
         );
     }
 }
 
-const mapStateToProps = (state) => ({ movies: state.movies.items, loading: state.movies.loading, filters: state.filters, user: state.auth.user });
-const mapDispatchToProps = { fetchMovies, addMovie, deleteMovie, setFilter, setSearch, clearFilters };
+const mapStateToProps = (state) => ({ 
+    movies: state.movies.items, 
+    loading: state.movies.loading, 
+    filters: state.filters, 
+    recommendations: state.auth.recommendations 
+});
+const mapDispatchToProps = { fetchMovies, addMovie, deleteMovie, setFilter, setSearch, clearFilters, fetchRecommendations, showToast, showConfirmModal };
 export default connect(mapStateToProps, mapDispatchToProps)(MoviesPage);

@@ -8,6 +8,7 @@ router.use(protect);
 
 router.get('/me', userController.getMe);
 router.patch('/profile', userController.updateProfile);
+router.patch('/profile/password', userController.changePassword);
 router.patch('/profile/top-picks', userController.toggleTopPick);
 router.get('/search', userController.searchUsers);
 router.get('/:id', userController.getUserProfile);

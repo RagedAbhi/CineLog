@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchCurrentUser } from '../store/thunks';
+import { showToast } from '../store/actions';
 import gsap from 'gsap';
 import MovieCard from '../components/MovieCard';
 import '../styles/global.css';
 
 const Profile = () => {
     const { id } = useParams();
+    const dispatch = useDispatch();
     const { user: currentUser } = useSelector(state => state.auth);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({ name: '', bio: '' });
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [formData, setFormData] = useState({ name: '', bio: '', username: '' });
+    const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '' });
 
     // Decode JWT to get current user ID reliably (works on page refresh when Redux state is empty)
     const getTokenUserId = () => {
@@ -46,7 +51,11 @@ const Profile = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setProfile(response.data);
-            setFormData({ name: response.data.name, bio: response.data.bio });
+            setFormData({ 
+                name: response.data.name, 
+                bio: response.data.bio,
+                username: response.data.username
+            });
         } catch (error) {
             console.error('Error fetching profile:', error);
         } finally {
@@ -63,8 +72,29 @@ const Profile = () => {
             });
             setIsEditing(false);
             fetchProfile();
+            dispatch(fetchCurrentUser()); // Sync Redux state (username, name)
+            dispatch(showToast('Profile updated successfully!', 'success'));
         } catch (error) {
             console.error('Error updating profile:', error);
+            const msg = error.response?.data?.message || 'Error updating profile';
+            dispatch(showToast(msg, 'error'));
+        }
+    };
+
+    const handlePasswordUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            const token = localStorage.getItem('token');
+            await axios.patch('http://localhost:5000/api/users/profile/password', passwordData, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setIsChangingPassword(false);
+            setPasswordData({ currentPassword: '', newPassword: '' });
+            dispatch(showToast('Password updated successfully!', 'success'));
+        } catch (error) {
+            console.error('Error changing password:', error);
+            const msg = error.response?.data?.message || 'Error updating password';
+            dispatch(showToast(msg, 'error'));
         }
     };
 
@@ -120,12 +150,54 @@ const Profile = () => {
                                 <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                             </div>
                             <div className="form-group-minimal">
+                                <label>Username</label>
+                                <input value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} required />
+                            </div>
+                            <div className="form-group-minimal">
                                 <label>Bio</label>
                                 <textarea value={formData.bio} onChange={e => setFormData({ ...formData, bio: e.target.value })} rows={3} />
                             </div>
                             <div className="form-actions-minimal">
                                 <button type="submit" className="btn-minimal-save">Save</button>
                                 <button type="button" className="btn-minimal-cancel" onClick={() => setIsEditing(false)}>Cancel</button>
+                            </div>
+                        </form>
+                    )}
+
+                    {isOwnProfile && !isEditing && !isChangingPassword && (
+                        <button 
+                            className="minimal-edit-btn" 
+                            style={{ marginTop: '12px', opacity: 0.7 }}
+                            onClick={() => setIsChangingPassword(true)}
+                        >
+                            Change Password
+                        </button>
+                    )}
+
+                    {isChangingPassword && (
+                        <form onSubmit={handlePasswordUpdate} className="minimal-edit-form" style={{ marginTop: '20px' }}>
+                            <h4>Change Password</h4>
+                            <div className="form-group-minimal">
+                                <label>Current Password</label>
+                                <input 
+                                    type="password"
+                                    value={passwordData.currentPassword} 
+                                    onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })} 
+                                    required 
+                                />
+                            </div>
+                            <div className="form-group-minimal">
+                                <label>New Password</label>
+                                <input 
+                                    type="password"
+                                    value={passwordData.newPassword} 
+                                    onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })} 
+                                    required 
+                                />
+                            </div>
+                            <div className="form-actions-minimal">
+                                <button type="submit" className="btn-minimal-save">Update Password</button>
+                                <button type="button" className="btn-minimal-cancel" onClick={() => setIsChangingPassword(false)}>Cancel</button>
                             </div>
                         </form>
                     )}

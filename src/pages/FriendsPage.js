@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../store/actions';
 import gsap from 'gsap';
 import '../styles/global.css';
 
@@ -11,6 +13,7 @@ const FriendsPage = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
+    const dispatch = useDispatch();
 
     const token = localStorage.getItem('token');
     const apiHeader = { headers: { Authorization: `Bearer ${token}` } };
@@ -65,8 +68,10 @@ const FriendsPage = () => {
     const sendRequest = async (recipientId) => {
         try {
             await axios.post('http://localhost:5000/api/friends/request', { recipientId }, apiHeader);
-            alert('Request sent!');
-        } catch (err) { alert(err.response?.data?.message || 'Error'); }
+            dispatch(showToast('Request sent!', 'success'));
+        } catch (err) { 
+            dispatch(showToast(err.response?.data?.message || 'Error sending request', 'error')); 
+        }
     };
 
     const acceptRequest = async (requestId) => {
@@ -163,7 +168,7 @@ const FriendsPage = () => {
                                     </div>
                                     <div style={{ display: 'flex', gap: '12px' }}>
                                         <button className="btn btn-primary" onClick={() => acceptRequest(req._id)}>Accept</button>
-                                        <button className="btn-clear" style={{ color: 'var(--text-muted)' }} onClick={() => rejectRequest(req._id)}>Decline</button>
+                                        <button className="btn-clear" style={{ color: 'var(--text-muted)' }} onClick={() => console.log('Reject functionality not yet in backend')}>Decline</button>
                                     </div>
                                 </div>
                             ))

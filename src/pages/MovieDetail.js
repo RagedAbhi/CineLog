@@ -4,10 +4,9 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie } from '../store/thunks';
 import MarkWatchedModal from '../components/MarkWatchedModal';
 import AddMovieModal from '../components/AddMovieModal';
-import Toast from '../components/Toast';
 import { fetchStreamingAvailability } from '../services/tmdbService';
 import { getMovieDetailsExternal } from '../services/movieService';
-import RecommendModal from '../components/RecommendModal';
+import { showToast, showRecommendModal, showConfirmModal } from '../store/actions';
 import axios from 'axios';
 import gsap from 'gsap';
 
@@ -16,7 +15,8 @@ function MovieDetailWrapper(props) {
   const { id } = useParams();
   const location = useLocation();
   const isExternal = new URLSearchParams(location.search).get('external') === 'true';
-  return <MovieDetail {...props} navigate={navigate} movieId={id} isExternal={isExternal} />;
+  const autoRecommend = new URLSearchParams(location.search).get('recommend') === 'true';
+  return <MovieDetail {...props} navigate={navigate} movieId={id} isExternal={isExternal} autoRecommend={autoRecommend} />;
 }
 
 class MovieDetail extends Component {
@@ -41,6 +41,10 @@ class MovieDetail extends Component {
     }
     
     this.loadInitialData();
+
+    if (this.props.autoRecommend) {
+        this.handleRecommendClick();
+    }
   }
 
   loadInitialData = () => {
@@ -220,7 +224,8 @@ class MovieDetail extends Component {
   getMovie() {
     if (!this.props.movies || !this.props.movieId) return this.state.externalMovie;
     const movie = this.props.movies.find(m => 
-        (m._id && m._id.toString() === this.props.movieId.toString())
+        (m._id && m._id.toString() === this.props.movieId.toString()) ||
+        (m.imdbID && m.imdbID === this.props.movieId)
     );
     return movie || this.state.externalMovie;
   }
@@ -235,22 +240,25 @@ class MovieDetail extends Component {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      this.showToast(movie.isTopPick ? 'Removed from Top Picks' : 'Added to Top Picks!');
-      this.props.fetchMovies(); // Refresh to get updated isTopPick status if we had it in the model, 
-      // but actually User model stores the array. Let's assume we need to refresh or update local state.
-      // Better: The media model itself could have as reference or we just refresh the profile later.
+      this.props.showToast(movie.isTopPick ? 'Removed from Top Picks' : 'Added to Top Picks!');
+      
+      // Update local state immediately if it's the externalMovie being displayed
+      if (this.state.externalMovie && this.state.externalMovie._id === movie._id) {
+          this.setState({
+              externalMovie: { ...this.state.externalMovie, isTopPick: !movie.isTopPick }
+          });
+      }
+
+      this.props.fetchMovies(); 
     } catch (error) {
       console.error('Error toggling top pick:', error);
+      this.props.showToast('Failed to toggle Top Pick', 'error');
     }
   }
 
-  handleRecommend = () => {
-    this.setState({ showRecommend: false });
-    this.showToast('Recommendation sent! 🚀');
-  }
-
-  showToast = (message, type = 'success') => {
-    this.setState({ toast: { message, type } });
+  handleRecommendClick = () => {
+    const movie = this.getMovie();
+    this.props.showRecommendModal(movie);
   }
 
   startEditing = () => {
@@ -283,7 +291,7 @@ class MovieDetail extends Component {
       rating: editForm.rating ? parseInt(editForm.rating) : movie.rating
     });
     this.setState({ editing: false });
-    this.showToast('Changes saved!');
+    this.props.showToast('Changes saved!');
   }
 
   handleMarkWatched = async (watchData) => {
@@ -308,14 +316,20 @@ class MovieDetail extends Component {
       await this.props.markAsWatched(movie._id, watchData);
     }
     this.setState({ showMarkWatched: false });
-    this.showToast('Marked as watched! 🎬');
+    this.props.showToast('Marked as watched! 🎬');
   }
 
   handleDelete = async () => {
-    if (!window.confirm('Remove this movie from your list?')) return;
     const movie = this.getMovie();
-    await this.props.deleteMovie(movie._id);
-    this.props.navigate(-1);
+    this.props.showConfirmModal({
+      title: 'Remove from Library',
+      message: `Are you sure you want to remove "${movie.title}" from your library?`,
+      onConfirm: async () => {
+        await this.props.deleteMovie(movie._id);
+        this.props.showToast('Removed from library', 'info');
+        this.props.navigate(-1);
+      }
+    });
   }
 
   renderStars(rating) {
@@ -397,7 +411,7 @@ class MovieDetail extends Component {
                       + Add to Watchlist
                     </button>
                   )}
-                  <button className="btn btn-secondary glass-panel" onClick={() => this.setState({ showRecommend: true })}>
+                  <button className="btn btn-secondary glass-panel" onClick={this.handleRecommendClick}>
                     ✉ Recommend to Friend
                   </button>
                   {!movie.isExternalRec && (
@@ -423,9 +437,9 @@ class MovieDetail extends Component {
                     <button
                       onClick={this.handleToggleTopPick}
                       className={`top-pick-btn ${movie.isTopPick ? 'active' : ''}`}
-                      title="Toggle Top Pick"
+                      title={movie.isTopPick ? "Remove from Top Picks" : "Add to Top Picks"}
                     >
-                      {movie.isTopPick ? '⭐ Top Pick' : '☆ Add to Top Picks'}
+                      {movie.isTopPick ? '⭐ Remove from Top Picks' : '☆ Add to Top Picks'}
                     </button>
                   </div>
                   <h1 className="detail-title-premium">{movie.title}</h1>
@@ -450,8 +464,8 @@ class MovieDetail extends Component {
                     <div className="detail-stat-group">
                       <div className="detail-stat-small">
                         <div className="stat-label">Status</div>
-                        <div className="stat-value" style={{ color: movie.status === 'watched' ? 'var(--accent)' : 'var(--text-primary)' }}>
-                          {movie.status === 'watched' ? '✓ Completed' : '👁 On Watchlist'}
+                        <div className="stat-value" style={{ color: movie.status === 'watched' ? 'var(--accent)' : (movie.status === 'watchlist' ? 'var(--text-primary)' : 'var(--text-muted)') }}>
+                          {movie.status === 'watched' ? '✓ Completed' : (movie.status === 'watchlist' ? '👁 On Watchlist' : '❓ Unknown')}
                         </div>
                       </div>
                       <div className="detail-stat-small">
@@ -474,6 +488,27 @@ class MovieDetail extends Component {
                     <p className="detail-review-premium">
                       "{movie.review}"
                     </p>
+                  </div>
+                )}
+
+                {(movie.plot || movie.cast) && (
+                  <div className="detail-glass-card reveal">
+                    {movie.plot && (
+                      <div style={{ marginBottom: movie.cast ? '24px' : '0' }}>
+                        <div className="stat-label" style={{ marginBottom: '12px' }}>Storyline</div>
+                        <p className="detail-description-full" style={{ color: 'var(--text-secondary)', lineHeight: '1.7', fontSize: '1.1rem' }}>
+                          {movie.plot}
+                        </p>
+                      </div>
+                    )}
+                    {movie.cast && (
+                      <div>
+                        <div className="stat-label" style={{ marginBottom: '12px' }}>Cast</div>
+                        <p className="detail-cast-list" style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
+                          {movie.cast}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -544,7 +579,7 @@ class MovieDetail extends Component {
             </div>
           )}
 
-          {showMarkWatched && (
+          {this.state.showMarkWatched && (
             <MarkWatchedModal
               movie={movie}
               onSubmit={this.handleMarkWatched}
@@ -552,36 +587,20 @@ class MovieDetail extends Component {
             />
           )}
 
-          {this.state.showRecommend && (
-            <RecommendModal
-              movie={movie}
-              onRecommend={this.handleRecommend}
-              onClose={() => this.setState({ showRecommend: false })}
-            />
-          )}
-
           {this.state.showAddModal && (
-          <AddMovieModal 
-            initialData={{
-                title: movie.title,
-                mediaType: movie.mediaType,
-                poster: movie.poster,
-                imdbID: movie.imdbID
-            }}
-            onSubmit={async (data) => {
-                await this.props.addMovie(data);
-                this.setState({ showAddModal: false });
-                this.showToast('Added to library!', 'success');
-            }} 
-            onClose={() => this.setState({ showAddModal: false })} 
-          />
-        )}
-
-        {toast && (
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={() => this.setState({ toast: null })}
+            <AddMovieModal 
+              initialData={{
+                  title: movie.title,
+                  mediaType: movie.mediaType,
+                  poster: movie.poster,
+                  imdbID: movie.imdbID
+              }}
+              onSubmit={async (data) => {
+                  await this.props.addMovie(data);
+                  this.setState({ showAddModal: false });
+                  this.props.showToast('Added to library!', 'success');
+              }} 
+              onClose={() => this.setState({ showAddModal: false })} 
             />
           )}
         </div>
@@ -595,6 +614,6 @@ const mapStateToProps = (state) => ({
   loading: state.movies.loading
 });
 
-const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie };
+const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie, showToast, showRecommendModal, showConfirmModal };
 
 export default connect(mapStateToProps, mapDispatchToProps)(MovieDetailWrapper);

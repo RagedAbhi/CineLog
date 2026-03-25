@@ -87,7 +87,8 @@ export const getMovieDetailsExternal = async (imdbID, mediaType = 'movie') => {
     director: response.data.Director !== 'N/A' ? response.data.Director : '',
     poster: response.data.Poster !== 'N/A' ? response.data.Poster : '',
     plot: response.data.Plot,
+    cast: response.data.Actors !== 'N/A' ? response.data.Actors : '',
     imdbID,
-    mediaType
+    mediaType: mediaType || (response.data.Type === 'series' ? 'series' : 'movie')
   };
 };

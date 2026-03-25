@@ -5,8 +5,10 @@ import {
   addMovieRequest, addMovieSuccess, addMovieFailure,
   updateMovieRequest, updateMovieSuccess, updateMovieFailure,
   deleteMovieRequest, deleteMovieSuccess, deleteMovieFailure,
-  authRequest, authSuccess, authFailure, logout as logoutAction
+  authRequest, authSuccess, authFailure, logout as logoutAction,
+  fetchRecsRequest, fetchRecsSuccess, fetchRecsFailure
 } from './actions';
+import axios from 'axios';
 
 // ============================================================
 // THUNK: Fetch all movies
@@ -17,7 +19,11 @@ export const fetchMovies = () => async (dispatch) => {
     const movies = await movieService.getAllMovies();
     dispatch(fetchMoviesSuccess(movies));
   } catch (error) {
-    dispatch(fetchMoviesFailure(error.message));
+    if (error.response?.status === 401) {
+      dispatch(fetchCurrentUser()); // This will trigger logout/clear
+    } else {
+      dispatch(fetchMoviesFailure(error.message));
+    }
   }
 };
 
@@ -125,5 +131,22 @@ export const fetchCurrentUser = () => async (dispatch) => {
         // Token is stale/invalid — clear it so login page shows
         authService.logout();
         dispatch(logoutAction());
+    }
+};
+
+export const fetchRecommendations = () => async (dispatch) => {
+    dispatch(fetchRecsRequest());
+    try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get('http://localhost:5000/api/recommendations', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        dispatch(fetchRecsSuccess(res.data));
+    } catch (error) {
+        if (error.response?.status === 401) {
+            dispatch(fetchCurrentUser());
+        } else {
+            dispatch(fetchRecsFailure(error.message));
+        }
     }
 };

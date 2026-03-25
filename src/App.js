@@ -5,6 +5,9 @@ import Lenis from 'lenis';
 import blobBg from './assets/blob.jpeg';
 
 import Topbar from './components/Topbar';
+import Toast from './components/Toast';
+import RecommendModal from './components/RecommendModal';
+import ConfirmModal from './components/ConfirmModal';
 import Dashboard from './pages/Dashboard';
 import MoviesPage from './pages/MoviesPage';
 import TVShowsPage from './pages/TVShowsPage';
@@ -15,6 +18,8 @@ import Analytics from './pages/Analytics';
 import AuthPage from './pages/AuthPage';
 import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
+import { useDispatch } from 'react-redux';
+import { hideRecommendModal, showToast, hideConfirmModal } from './store/actions';
 
 import './styles/global.css';
 
@@ -34,7 +39,9 @@ const PageWrapper = ({ children }) => (
 const App = () => {
   const [globalSearch, setGlobalSearch] = useState('');
   const location = useLocation();
+  const dispatch = useDispatch();
   const { isAuthenticated } = useSelector(state => state.auth);
+  const { recommend, confirm } = useSelector(state => state.ui);
 
   const isHomePage = location.pathname === '/';
   const isDetailPage = location.pathname.startsWith('/movies/');
@@ -78,6 +85,27 @@ const App = () => {
 
   return (
     <div className="app-layout lenis-scroll">
+      <Toast />
+      
+      <ConfirmModal 
+        visible={confirm.visible}
+        title={confirm.title}
+        message={confirm.message}
+        onConfirm={confirm.onConfirm}
+        onClose={() => dispatch(hideConfirmModal())}
+      />
+      
+      {recommend?.visible && recommend.movie && (
+        <RecommendModal 
+          movie={recommend.movie}
+          onClose={() => dispatch(hideRecommendModal())}
+          onRecommend={() => {
+            dispatch(hideRecommendModal());
+            dispatch(showToast('Recommendation sent! 🚀', 'success'));
+          }}
+        />
+      )}
+
       {/* Image Based Background */}
       <div className="liquid-bg-wrapper">
         <div className="image-blob-bg" style={{ backgroundImage: `url(${blobBg})` }}></div>

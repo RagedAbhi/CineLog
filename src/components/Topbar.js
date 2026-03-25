@@ -95,12 +95,6 @@ const Topbar = () => {
                         >
                             <item.icon className="nav-icon" size={18} />
                             <span>{item.label}</span>
-                            <motion.div 
-                                className="nav-underline"
-                                initial={false}
-                                animate={{ scaleX: 0 }}
-                                whileHover={{ scaleX: 1 }}
-                            />
                         </NavLink>
                     ))}
                 </nav>

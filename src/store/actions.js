@@ -17,6 +17,10 @@ export const DELETE_MOVIE_REQUEST = 'DELETE_MOVIE_REQUEST';
 export const DELETE_MOVIE_SUCCESS = 'DELETE_MOVIE_SUCCESS';
 export const DELETE_MOVIE_FAILURE = 'DELETE_MOVIE_FAILURE';
 
+export const FETCH_RECS_REQUEST = 'FETCH_RECS_REQUEST';
+export const FETCH_RECS_SUCCESS = 'FETCH_RECS_SUCCESS';
+export const FETCH_RECS_FAILURE = 'FETCH_RECS_FAILURE';
+
 export const SET_FILTER = 'SET_FILTER';
 export const SET_SEARCH = 'SET_SEARCH';
 export const CLEAR_FILTERS = 'CLEAR_FILTERS';
@@ -25,6 +29,13 @@ export const AUTH_REQUEST = 'AUTH_REQUEST';
 export const AUTH_SUCCESS = 'AUTH_SUCCESS';
 export const AUTH_FAILURE = 'AUTH_FAILURE';
 export const LOGOUT = 'LOGOUT';
+
+export const SHOW_TOAST = 'SHOW_TOAST';
+export const HIDE_TOAST = 'HIDE_TOAST';
+export const SHOW_RECOMMEND_MODAL = 'SHOW_RECOMMEND_MODAL';
+export const HIDE_RECOMMEND_MODAL = 'HIDE_RECOMMEND_MODAL';
+export const SHOW_CONFIRM_MODAL = 'SHOW_CONFIRM_MODAL';
+export const HIDE_CONFIRM_MODAL = 'HIDE_CONFIRM_MODAL';
 
 // ============================================================
 // ACTION CREATORS
@@ -45,6 +56,10 @@ export const deleteMovieRequest = () => ({ type: DELETE_MOVIE_REQUEST });
 export const deleteMovieSuccess = (id) => ({ type: DELETE_MOVIE_SUCCESS, payload: id });
 export const deleteMovieFailure = (error) => ({ type: DELETE_MOVIE_FAILURE, payload: error });
 
+export const fetchRecsRequest = () => ({ type: FETCH_RECS_REQUEST });
+export const fetchRecsSuccess = (recs) => ({ type: FETCH_RECS_SUCCESS, payload: recs });
+export const fetchRecsFailure = (error) => ({ type: FETCH_RECS_FAILURE, payload: error });
+
 export const setFilter = (filterType, value) => ({ type: SET_FILTER, payload: { filterType, value } });
 export const setSearch = (query) => ({ type: SET_SEARCH, payload: query });
 export const clearFilters = () => ({ type: CLEAR_FILTERS });
@@ -53,3 +68,28 @@ export const authRequest = () => ({ type: AUTH_REQUEST });
 export const authSuccess = (data) => ({ type: AUTH_SUCCESS, payload: data });
 export const authFailure = (error) => ({ type: AUTH_FAILURE, payload: error });
 export const logout = () => ({ type: LOGOUT });
+
+export const showToast = (message, toastType = 'info') => (dispatch) => {
+  dispatch({ type: SHOW_TOAST, payload: { message, type: toastType } });
+  setTimeout(() => dispatch({ type: HIDE_TOAST }), 5000);
+};
+
+export const showRecommendModal = (movie) => ({
+  type: SHOW_RECOMMEND_MODAL,
+  payload: movie
+});
+
+export const hideRecommendModal = () => ({
+  type: HIDE_RECOMMEND_MODAL
+});
+
+export const showConfirmModal = (config) => ({
+  type: SHOW_CONFIRM_MODAL,
+  payload: config // { title, message, onConfirm }
+});
+
+export const hideConfirmModal = () => ({
+  type: HIDE_CONFIRM_MODAL
+});
+
+export const hideToast = () => ({ type: HIDE_TOAST });

@@ -94,9 +94,8 @@ body {
   position: absolute;
   width: 110vw;
   height: 110vh;
+  background: url('../assets/bubble-bg.jpg') no-repeat center center fixed;
   background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   animation: bgDrift 20s ease-in-out infinite alternate;
   opacity: 0.8;
 }
@@ -160,7 +159,7 @@ img {
 .app-body {
   display: flex;
   flex: 1;
-  padding-top: 140px; /* Account for floating TopBar + spacing */
+  padding-top: 126px; /* Adjusted for 1.5 line spacing from search bar */
 }
 
 .main-content {
@@ -234,7 +233,7 @@ img {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 40px;
+  gap: 20px; /* Reduced to match nav items spacing */
 }
 
 .topbar-logo-premium {
@@ -291,17 +290,6 @@ img {
   color: #fff;
   box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.nav-item-premium.active::before {
-    content: '';
-    position: absolute;
-    bottom: 6px;
-    left: 20px;
-    right: 20px;
-    height: 2px;
-    background: #fff;
-    border-radius: 2px;
 }
 
 .topbar-actions-premium {
@@ -840,9 +828,10 @@ img {
 }
 
 .filter-toggle-btn.active {
-  background: var(--accent);
-  color: #03050a;
-  box-shadow: 0 4px 15px var(--accent-glow);
+  background: rgba(255, 255, 255, 0.15); /* Universal glass look */
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .btn-clear {
@@ -923,13 +912,13 @@ img {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(0, 0, 0, 0.85); /* More opaque as requested */
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000; /* Increased z-index */
   padding: 24px;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px); /* slightly more blur */
 }
 
 .modal {
@@ -1605,13 +1594,13 @@ textarea.form-input {
 .hero-section {
   position: relative;
   width: 100%;
-  height: 90vh;
+  height: 80vh; /* Reduced from 90vh */
   margin-bottom: 20px;
   overflow: visible;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Move content to top of container */
   justify-content: space-between;
-  padding: 0 6%;
+  padding: 0 8%; /* Increased horizontal padding */
   background: transparent; /* Let the fixed background show through */
 }
 
@@ -1644,14 +1633,18 @@ textarea.form-input {
 .hero-poster-side {
   position: relative;
   z-index: 3;
-  width: 320px;
-  height: 480px;
+  width: 360px; /* Increased size */
+  height: 540px; /* Increased size (維持 2:3 ratio) */
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 242, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 50px 100px rgba(0, 0, 0, 0.9), 
+    0 0 50px rgba(0, 242, 255, 0.3), 
+    0 0 100px rgba(0, 242, 255, 0.1); /* Layered glow for more pop */
+  border: 1px solid rgba(255, 255, 255, 0.2);
   transform: perspective(1000px) rotateY(-5deg);
-  transition: transform 0.6s ease;
+  transition: transform 0.6s ease, box-shadow 0.6s ease;
+  margin-right: 60px; /* Space from right edge/arrow */
 }
 
 .hero-poster-side img {
@@ -1668,6 +1661,7 @@ textarea.form-input {
   position: relative;
   z-index: 2;
   max-width: 650px;
+  padding-left: 100px; /* Further increased indentation */
 }
 
 .hero-tag {
@@ -1681,10 +1675,46 @@ textarea.form-input {
   text-shadow: 0 0 15px rgba(232, 197, 71, 0.4);
 }
 
+.hero-nav-btn-side {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #fff;
+    z-index: 30;
+    opacity: 0.15; /* Transparent until hovered */
+}
+
+.hero-nav-btn-side.prev { left: 20px; }
+.hero-nav-btn-side.next { right: 20px; }
+
+.hero-nav-btn-side:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-50%) scale(1.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 30px rgba(232, 197, 71, 0.2);
+    opacity: 1; /* Opaque on hover */
+}
+
+.hero-nav-btn-side svg {
+    stroke-width: 2.5px;
+}
+
 .hero-title {
   font-family: var(--font-display);
-  font-size: 84px;
-  line-height: 0.85;
+  font-size: 72px; /* Reduced font size (2 sizes down) */
+  line-height: 1.1; /* Increased line spacing */
   letter-spacing: 3px;
   margin-bottom: 24px;
   color: #fff;
@@ -1696,6 +1726,11 @@ textarea.form-input {
   font-size: 19px;
   margin-bottom: 36px;
   line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Auth Page Enhancements */
@@ -2221,6 +2256,65 @@ html.lenis {
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
 }
 
+.action-icons-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.action-icon-btn {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-muted);
+}
+
+.action-icon-btn svg {
+    stroke-width: 2.5px;
+}
+
+.action-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--text-secondary);
+    transform: translateY(-2px);
+}
+
+.action-icon-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+}
+
+.btn-execute-actions {
+    background: var(--accent);
+    color: #03050a;
+    border: none;
+    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s var(--bouncy);
+    box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+}
+
+.btn-execute-actions:hover {
+    transform: scale(1.1);
+    background: #fff;
+}
+
 .search-no-results {
   padding: 20px;
   text-align: center;
@@ -2677,4 +2771,171 @@ html.lenis {
     height: 1px;
     flex: 1;
     background: linear-gradient(to right, var(--border), transparent);
+}
+
+/* ============================================================
+   TOAST (CENTERED)
+   ============================================================ */
+.toast-centered {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 9999;
+  padding: 16px 32px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast-icon {
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.toast-centered.success .toast-icon {
+  background: var(--green);
+  color: #000;
+}
+
+.toast-centered.error .toast-icon {
+  background: var(--red);
+  color: #fff;
+}
+
+/* ============================================================
+   DASHBOARD EDIT MODE
+   ============================================================ */
+.dashboard-actions-float {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 1000;
+}
+
+.edit-layout-btn {
+  padding: 12px 24px !important;
+  border-radius: 100px !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.media-row-container.editing {
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 30px;
+  background: rgba(129, 140, 248, 0.05);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.section-edit-controls {
+  position: absolute;
+  top: -15px;
+  left: 30px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  z-index: 20;
+}
+
+.btn-edit-move {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-edit-move:hover:not(:disabled) {
+  transform: scale(1.1);
+  background: #fff;
+}
+
+.btn-edit-move:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.section-label-edit {
+  background: var(--accent);
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.edit-mode-footer-bar {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 800px;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2000;
+  border-radius: 100px;
+  background: rgba(10, 25, 47, 0.9) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--accent) !important;
+  box-shadow: 0 0 50px rgba(129, 140, 248, 0.3) !important;
+  color: #fff;
+}
+
+.empty-row-placeholder, .glass-panel-empty {
+  padding: 40px;
+  border-radius: var(--radius);
+  width: 100%;
+  text-align: center;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed var(--border);
+  font-style: italic;
+  font-size: 14px;
 }

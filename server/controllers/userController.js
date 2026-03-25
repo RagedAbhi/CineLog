@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Media = require('../models/Media');
 const Recommendation = require('../models/Recommendation');
 const mongoose = require('mongoose');
 
@@ -34,15 +35,22 @@ exports.getMe = async (req, res) => {
 
 // Update user profile (name, bio)
 exports.updateProfile = async (req, res) => {
+    const { name, bio, username } = req.body;
+    
     try {
-        const { name, bio } = req.body;
-        const user = await User.findByIdAndUpdate(
-            req.user.id,
-            { name, bio },
-            { new: true, runValidators: true }
-        );
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (name) user.name = name;
+        if (bio !== undefined) user.bio = bio;
+        if (username) user.username = username;
+
+        await user.save();
         res.status(200).json(user);
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'Username already taken' });
+        }
         res.status(400).json({ message: 'Error updating profile', error: error.message });
     }
 };
@@ -112,17 +120,50 @@ exports.toggleTopPick = async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const index = user.topPicks.indexOf(mediaId);
+        let isTopPick = false;
         if (index === -1) {
             // Add if not present
             user.topPicks.push(mediaId);
+            isTopPick = true;
         } else {
             // Remove if present
             user.topPicks.splice(index, 1);
+            isTopPick = false;
         }
 
         await user.save();
+
+        // Also update the Media document itself
+        await Media.findByIdAndUpdate(mediaId, { isTopPick });
+
         res.status(200).json(user);
     } catch (error) {
         res.status(500).json({ message: 'Error toggling top pick', error: error.message });
+    }
+};
+// Change password
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: 'Both current and new passwords are required' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Check current password
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Incorrect current password' });
+        }
+
+        // Set new password (will be hashed by pre-save middleware)
+        user.password = newPassword;
+        await user.save();
+
+        res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error changing password', error: error.message });
     }
 };

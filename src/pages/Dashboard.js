@@ -1,7 +1,8 @@
 import { Component, createRef } from 'react';
 import { connect } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { fetchMovies, addMovie } from '../store/thunks';
+import { fetchMovies, addMovie, fetchRecommendations } from '../store/thunks';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import RecommendModal from '../components/RecommendModal';
@@ -26,7 +27,9 @@ class Dashboard extends Component {
       recommendations: [],
       activeHeroIndex: 0,
       showRecommendModal: false,
-      selectedMedia: null
+      selectedMedia: null,
+      isEditingOrder: false,
+      sectionOrder: ['recent_movies', 'recent_shows', 'watchlist', 'recommendations']
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
@@ -35,9 +38,36 @@ class Dashboard extends Component {
 
   componentDidMount() {
     if (this.props.movies.length === 0) this.props.fetchMovies();
-    this.fetchRecommendations();
+    this.props.fetchRecommendations();
     this.initAnimations();
     this.startHeroRotation();
+    this.loadSectionOrder();
+  }
+
+  loadSectionOrder = () => {
+    const saved = localStorage.getItem('dashboard_section_order');
+    if (saved) {
+      try {
+        this.setState({ sectionOrder: JSON.parse(saved) });
+      } catch (e) {
+        console.error("Failed to load section order", e);
+      }
+    }
+  }
+
+  saveSectionOrder = () => {
+    localStorage.setItem('dashboard_section_order', JSON.stringify(this.state.sectionOrder));
+    this.setState({ isEditingOrder: false });
+    this.showToast("Dashboard layout saved!");
+  }
+
+  moveSection = (index, direction) => {
+    const newOrder = [...this.state.sectionOrder];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+    
+    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+    this.setState({ sectionOrder: newOrder });
   }
 
   componentWillUnmount() {
@@ -99,17 +129,7 @@ class Dashboard extends Component {
     });
   }
 
-  fetchRecommendations = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/recommendations', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      this.setState({ recommendations: res.data }, () => {
-        this.initAnimations(); // Re-init after recommendations load
-      });
-    } catch (err) { console.error(err); }
-  }
+  // fetchRecommendations moved to Redux thunk
 
   showToast = (message, type = 'success') => this.setState({ toast: { message, type } });
 
@@ -126,13 +146,19 @@ class Dashboard extends Component {
     }, 8000); // Rotate every 8 seconds
   }
 
-  handleHeroDotClick = (index) => {
-    if (index === this.state.activeHeroIndex) return;
-    
+  handleHeroNav = (direction) => {
+    const featuredList = this.getFeaturedList();
+    if (featuredList.length <= 1) return;
+
+    let nextIndex;
+    if (direction === 'next') {
+        nextIndex = (this.state.activeHeroIndex + 1) % featuredList.length;
+    } else {
+        nextIndex = (this.state.activeHeroIndex - 1 + featuredList.length) % featuredList.length;
+    }
+
     // Reset timer on manual click
     this.startHeroRotation();
-    
-    const featuredList = this.getFeaturedList();
     
     // Transition Out
     gsap.to([".hero-content", ".hero-poster-side", ".hero-bg-blur"], {
@@ -141,7 +167,7 @@ class Dashboard extends Component {
       duration: 0.5,
       ease: "power2.in",
       onComplete: () => {
-        this.setState({ activeHeroIndex: index }, () => {
+        this.setState({ activeHeroIndex: nextIndex }, () => {
           // Transition In
           gsap.fromTo([".hero-content", ".hero-poster-side", ".hero-bg-blur"],
             { opacity: 0, y: -10 },
@@ -195,19 +221,43 @@ class Dashboard extends Component {
     return list[this.state.activeHeroIndex % list.length];
   }
 
-  renderRow(title, items, path) {
-    if (!items || items.length === 0) return null;
+  renderRow(title, items, path, id, index) {
+    const { isEditingOrder, sectionOrder } = this.state;
+    if ((!items || items.length === 0) && !isEditingOrder) return null;
 
     return (
-      <div className="media-row-container reveal" key={title}>
+      <div className={`media-row-container ${isEditingOrder ? 'editing' : 'reveal'}`} key={id}>
+        {isEditingOrder && (
+          <div className="section-edit-controls">
+            <button 
+              className="btn-edit-move" 
+              onClick={() => this.moveSection(index, -1)}
+              disabled={index === 0}
+            >
+              ↑
+            </button>
+            <button 
+              className="btn-edit-move" 
+              onClick={() => this.moveSection(index, 1)}
+              disabled={index === sectionOrder.length - 1}
+            >
+              ↓
+            </button>
+            <div className="section-label-edit">{title}</div>
+          </div>
+        )}
         <div className="row-header">
           <h3>{title}</h3>
-          {path && <button className="btn-clear" onClick={() => this.props.navigate(path)}>View All</button>}
+          {path && !isEditingOrder && <button className="btn-clear" onClick={() => this.props.navigate(path)}>View All</button>}
         </div>
         <div className="media-row">
-          {items.map((movie, index) => (
-            <MovieCard key={movie._id || index} movie={movie} index={index} />
-          ))}
+          {items && items.length > 0 ? (
+            items.map((movie, index) => (
+              <MovieCard key={movie._id || index} movie={movie} index={index} />
+            ))
+          ) : (
+             <div className="empty-row-placeholder">No items to show here.</div>
+          )}
         </div>
       </div>
     );
@@ -222,23 +272,20 @@ class Dashboard extends Component {
       return <div className="loading-spinner"><div className="spinner" /><span>Loading your cinema...</span></div>;
     }
 
-    const recentlyWatched = movies
-      .filter(m => m.status === 'watched' && m.watchedOn)
+    const recentlyWatchedMovies = movies
+      .filter(m => m.status === 'watched' && m.watchedOn && (m.mediaType === 'movie' || !m.mediaType))
       .sort((a, b) => new Date(b.watchedOn) - new Date(a.watchedOn))
       .slice(0, 10);
 
-    const upNext = movies
+    const recentlyWatchedShows = movies
+      .filter(m => m.status === 'watched' && m.watchedOn && m.mediaType === 'series')
+      .sort((a, b) => new Date(b.watchedOn) - new Date(a.watchedOn))
+      .slice(0, 10);
+
+    const watchlistItems = movies
       .filter(m => m.status === 'watchlist')
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 10);
-
-    const highRated = movies
-      .filter(m => m.rating >= 8)
-      .sort((a, b) => b.rating - a.rating)
-      .slice(0, 10);
-
-    // Fallback for Discover Recommendations
-    const discoveryItems = highRated.length > 0 ? highRated : [...movies].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
+      .slice(0, 15);
 
     return (
       <div className="dashboard-page">
@@ -252,14 +299,22 @@ class Dashboard extends Component {
           />
         </div>
 
-        {/* Floating Add Button for convenience */}
-        <button
-          className="btn btn-primary floating-add-btn bio-luminescent"
-          onClick={() => this.setState({ showAddModal: true })}
-          style={{ position: 'fixed', bottom: '40px', right: '40px', zIndex: 100, borderRadius: '50%', width: '60px', height: '60px', fontSize: '24px', padding: 0, justifyContent: 'center' }}
-        >
-          +
-        </button>
+        {/* Global Action Buttons */}
+        <div className="dashboard-actions-float">
+          <button
+            className="btn btn-secondary edit-layout-btn glass-panel"
+            onClick={() => this.state.isEditingOrder ? this.saveSectionOrder() : this.setState({ isEditingOrder: true })}
+          >
+            {this.state.isEditingOrder ? '💾 Save Layout' : '⚙️ Edit Home'}
+          </button>
+          
+          <button
+            className="btn btn-primary floating-add-btn bio-luminescent"
+            onClick={() => this.setState({ showAddModal: true })}
+          >
+            +
+          </button>
+        </div>
 
         {/* Hero Section */}
         {featured && (
@@ -321,70 +376,88 @@ class Dashboard extends Component {
               )}
             </div>
 
-            {/* Hero Pagination Dots */}
             {this.getFeaturedList().length > 1 && (
-              <div className="hero-pagination">
-                {this.getFeaturedList().map((_, i) => (
-                  <button
-                    key={i}
-                    className={`hero-dot ${i === this.state.activeHeroIndex ? 'active' : ''}`}
-                    onClick={() => this.handleHeroDotClick(i)}
-                    title={`Slide ${i + 1}`}
-                  />
-                ))}
-              </div>
+              <>
+                <button className="hero-nav-btn-side prev glass-panel" onClick={() => this.handleHeroNav('prev')}><ChevronLeft size={32} /></button>
+                <button className="hero-nav-btn-side next glass-panel" onClick={() => this.handleHeroNav('next')}><ChevronRight size={32} /></button>
+              </>
             )}
           </div>
         )}
 
-        {/* Rows Layout */}
+        {/* Dynamic Rows Layout */}
         <div style={{ padding: '0 4%', marginTop: '-40px', position: 'relative', zIndex: 10 }}>
-          {/* 1. Friend Suggestions (Always Visible) */}
-          <div className="media-row-container reveal">
-            <div className="row-header">
-              <h3>Friend Suggestions</h3>
-              <button className="btn-clear" onClick={() => navigate('/friends')}>Social</button>
-            </div>
-            <div className="media-row">
-              {recommendations.length > 0 ? (
-                recommendations.map(rec => {
-                  const existingInLibrary = movies.find(m => 
-                    (rec.imdbID && m.imdbID === rec.imdbID) || 
-                    (m.title.toLowerCase() === rec.mediaTitle.toLowerCase())
-                  );
-                  
-                  return (
-                    <MovieCard
-                      key={rec._id.toString()}
-                      movie={{
-                        _id: existingInLibrary ? existingInLibrary._id.toString() : rec._id.toString(),
-                        title: rec.mediaTitle,
-                        poster: rec.poster,
-                        genre: `From ${rec.sender.name}`,
-                        mediaType: rec.mediaType,
-                        imdbID: rec.imdbID,
-                        isRecommendation: !existingInLibrary
-                      }}
-                    />
-                  );
-                })
-              ) : (
-                <div className="glass-panel" style={{ padding: '40px', borderRadius: 'var(--radius)', width: '100%', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)' }}>
-                  Connect with friends to see their recommendations here!
-                </div>
-              )}
-            </div>
-          </div>
-
-
-          {/* 3. Your Personal Lists */}
-          {recentlyWatched.length > 0 && this.renderRow('Recently Watched', recentlyWatched, '/watched')}
-          {upNext.length > 0 && this.renderRow('Jump Back In', upNext, '/watchlist')}
+          {this.state.sectionOrder.map((sectionId, index) => {
+            switch (sectionId) {
+              case 'recent_movies':
+                return this.renderRow('Recently Watched Movies', recentlyWatchedMovies, '/watched', 'recent_movies', index);
+              case 'recent_shows':
+                return this.renderRow('Recently Watched TV Shows', recentlyWatchedShows, '/watched', 'recent_shows', index);
+              case 'watchlist':
+                return this.renderRow('My Watchlist', watchlistItems, '/watchlist', 'watchlist', index);
+              case 'recommendations':
+                return (
+                  <div className={`media-row-container ${this.state.isEditingOrder ? 'editing' : 'reveal'}`} key="recommendations">
+                    {this.state.isEditingOrder && (
+                      <div className="section-edit-controls">
+                        <button className="btn-edit-move" onClick={() => this.moveSection(index, -1)} disabled={index === 0}>↑</button>
+                        <button className="btn-edit-move" onClick={() => this.moveSection(index, 1)} disabled={index === this.state.sectionOrder.length - 1}>↓</button>
+                        <div className="section-label-edit">Friend Suggestions</div>
+                      </div>
+                    )}
+                    <div className="row-header">
+                      <h3>Friend Suggestions</h3>
+                      {!this.state.isEditingOrder && <button className="btn-clear" onClick={() => navigate('/friends')}>Social</button>}
+                    </div>
+                    <div className="media-row">
+                      {recommendations.length > 0 ? (
+                        recommendations.map(rec => {
+                          const existingInLibrary = movies.find(m => 
+                            (rec.imdbID && m.imdbID === rec.imdbID) || 
+                            (m.title.toLowerCase() === rec.mediaTitle.toLowerCase())
+                          );
+                          return (
+                            <MovieCard
+                              key={rec._id.toString()}
+                              movie={{
+                                _id: existingInLibrary ? existingInLibrary._id.toString() : rec._id.toString(),
+                                title: rec.mediaTitle,
+                                poster: rec.poster,
+                                genre: `From ${rec.sender.name}`,
+                                mediaType: rec.mediaType,
+                                imdbID: rec.imdbID,
+                                isRecommendation: !existingInLibrary
+                              }}
+                            />
+                          );
+                        })
+                      ) : (
+                        <div className="glass-panel-empty">Connect with friends to see recommendations here!</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              default:
+                return null;
+            }
+          })}
         </div>
 
-        {showAddModal && (
-          <AddMovieModal onSubmit={this.handleAddMovie} onClose={() => this.setState({ showAddModal: false })} />
+        {this.state.isEditingOrder && (
+          <div className="edit-mode-footer-bar glass-panel bio-luminescent">
+            <span>Rearrange your home sections using the arrows.</span>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn btn-secondary" onClick={() => this.setState({ isEditingOrder: false, sectionOrder: JSON.parse(localStorage.getItem('dashboard_section_order') || '["recent_movies", "recent_shows", "watchlist", "recommendations"]') })}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={this.saveSectionOrder}>
+                Save Changes
+              </button>
+            </div>
+          </div>
         )}
+
+        {showAddModal && <AddMovieModal onSubmit={this.handleAddMovie} onClose={() => this.setState({ showAddModal: false })} />}
         {this.state.showRecommendModal && this.state.selectedMedia && (
           <RecommendModal
             movie={this.state.selectedMedia}
@@ -401,6 +474,10 @@ class Dashboard extends Component {
   }
 }
 
-const mapStateToProps = (state) => ({ movies: state.movies.items, loading: state.movies.loading });
-const mapDispatchToProps = { fetchMovies, addMovie };
+const mapStateToProps = (state) => ({ 
+    movies: state.movies.items, 
+    loading: state.movies.loading,
+    recommendations: state.auth.recommendations 
+});
+const mapDispatchToProps = { fetchMovies, addMovie, fetchRecommendations };
 export default connect(mapStateToProps, mapDispatchToProps)(DashboardWrapper);

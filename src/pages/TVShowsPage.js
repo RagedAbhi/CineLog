@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import { connect } from 'react-redux';
-import { fetchMovies, addMovie, deleteMovie } from '../store/thunks';
+import { fetchMovies, addMovie, deleteMovie, fetchRecommendations } from '../store/thunks';
 import { setFilter, setSearch, clearFilters } from '../store/actions';
 import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
@@ -17,6 +17,7 @@ class TVShowsPage extends Component {
 
     componentDidMount() {
         if (this.props.movies.length === 0) this.props.fetchMovies();
+        this.props.fetchRecommendations();
         this.props.clearFilters();
     }
 
@@ -30,8 +31,9 @@ class TVShowsPage extends Component {
         const { statusFilter } = this.state;
 
         if (statusFilter === 'recommendations') {
-            if (!user || !user.recommendations) return [];
-            let list = user.recommendations.filter(r => r.mediaType === 'series');
+            const { recommendations } = this.props;
+            if (!recommendations) return [];
+            let list = recommendations.filter(r => r.mediaType === 'series');
             if (filters.search) {
                 const q = filters.search.toLowerCase();
                 list = list.filter(m => m.mediaTitle && m.mediaTitle.toLowerCase().includes(q));
@@ -140,6 +142,11 @@ class TVShowsPage extends Component {
     }
 }
 
-const mapStateToProps = (state) => ({ movies: state.movies.items, loading: state.movies.loading, filters: state.filters, user: state.auth.user });
-const mapDispatchToProps = { fetchMovies, addMovie, deleteMovie, setFilter, setSearch, clearFilters };
+const mapStateToProps = (state) => ({ 
+    movies: state.movies.items, 
+    loading: state.movies.loading, 
+    filters: state.filters, 
+    recommendations: state.auth.recommendations 
+});
+const mapDispatchToProps = { fetchMovies, addMovie, deleteMovie, setFilter, setSearch, clearFilters, fetchRecommendations };
 export default connect(mapStateToProps, mapDispatchToProps)(TVShowsPage);

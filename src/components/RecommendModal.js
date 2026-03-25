@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import axios from 'axios';
+import { showToast } from '../store/actions';
 import CineSelect from './CineSelect';
 import '../styles/global.css';
 
@@ -8,6 +10,7 @@ const RecommendModal = ({ movie, onClose, onRecommend }) => {
     const [selectedFriend, setSelectedFriend] = useState('');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(true);
+    const dispatch = useDispatch();
 
     useEffect(() => {
         document.body.classList.add('modal-open');
@@ -56,7 +59,7 @@ const RecommendModal = ({ movie, onClose, onRecommend }) => {
             onRecommend();
         } catch (err) {
             console.error('Error sending recommendation:', err);
-            alert('Failed to send recommendation');
+            dispatch(showToast('Failed to send recommendation', 'error'));
         }
     };
 

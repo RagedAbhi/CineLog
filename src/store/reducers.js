@@ -5,7 +5,8 @@ import {
   UPDATE_MOVIE_SUCCESS,
   DELETE_MOVIE_SUCCESS,
   SET_FILTER, SET_SEARCH, CLEAR_FILTERS,
-  AUTH_REQUEST, AUTH_SUCCESS, AUTH_FAILURE, LOGOUT
+  AUTH_REQUEST, AUTH_SUCCESS, AUTH_FAILURE, LOGOUT,
+  FETCH_RECS_REQUEST, FETCH_RECS_SUCCESS, FETCH_RECS_FAILURE
 } from './actions';
 
 // ============================================================
@@ -35,14 +36,14 @@ const moviesReducer = (state = initialMoviesState, action) => {
       return {
         ...state,
         items: state.items.map(movie =>
-          movie.id === action.payload.id ? action.payload : movie
+          movie._id === action.payload._id ? action.payload : movie
         )
       };
 
     case DELETE_MOVIE_SUCCESS:
       return {
         ...state,
-        items: state.items.filter(movie => movie.id !== action.payload)
+        items: state.items.filter(movie => movie._id !== action.payload)
       };
 
     default:
@@ -84,7 +85,8 @@ const initialAuthState = {
   user: null,
   isAuthenticated: !!localStorage.getItem('token'),
   loading: false,
-  error: null
+  error: null,
+  recommendations: []
 };
 
 const authReducer = (state = initialAuthState, action) => {
@@ -112,9 +114,44 @@ const authReducer = (state = initialAuthState, action) => {
         user: null,
         isAuthenticated: false,
         loading: false,
-        error: null
+        error: null,
+        recommendations: []
       };
+    
+    case FETCH_RECS_REQUEST:
+      return { ...state, loading: true };
+    
+    case FETCH_RECS_SUCCESS:
+      return { ...state, loading: false, recommendations: action.payload };
+    
+    case FETCH_RECS_FAILURE:
+      return { ...state, loading: false, error: action.payload };
 
+    default:
+      return state;
+  }
+};
+
+const initialUIState = {
+  toast: { message: null, type: null, visible: false },
+  recommend: { movie: null, visible: false },
+  confirm: { visible: false, title: '', message: '', onConfirm: null }
+};
+
+const uiReducer = (state = initialUIState, action) => {
+  switch (action.type) {
+    case 'SHOW_TOAST':
+      return { ...state, toast: { ...action.payload, visible: true } };
+    case 'HIDE_TOAST':
+      return { ...state, toast: { ...state.toast, visible: false } };
+    case 'SHOW_RECOMMEND_MODAL':
+      return { ...state, recommend: { visible: true, movie: action.payload } };
+    case 'HIDE_RECOMMEND_MODAL':
+      return { ...state, recommend: { visible: false, movie: null } };
+    case 'SHOW_CONFIRM_MODAL':
+      return { ...state, confirm: { ...action.payload, visible: true } };
+    case 'HIDE_CONFIRM_MODAL':
+      return { ...state, confirm: { ...state.confirm, visible: false, onConfirm: null } };
     default:
       return state;
   }
@@ -126,7 +163,8 @@ const authReducer = (state = initialAuthState, action) => {
 const rootReducer = combineReducers({
   movies: moviesReducer,
   filters: filterReducer,
-  auth: authReducer
+  auth: authReducer,
+  ui: uiReducer
 });
 
 export default rootReducer;
