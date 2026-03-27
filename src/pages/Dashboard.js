@@ -49,7 +49,11 @@ class Dashboard extends Component {
     const saved = localStorage.getItem('dashboard_section_order');
     if (saved) {
       try {
-        this.setState({ sectionOrder: JSON.parse(saved) });
+        let order = JSON.parse(saved);
+        if (!order.includes('social_pulse')) {
+            order = ['social_pulse', ...order];
+        }
+        this.setState({ sectionOrder: order });
       } catch (e) {
         console.error("Failed to load section order", e);
       }
