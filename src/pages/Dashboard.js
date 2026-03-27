@@ -395,7 +395,7 @@ class Dashboard extends Component {
             <div className="hero-content">
               <span className="hero-tag">Featured {featured.mediaType === 'series' ? 'Series' : 'Movie'}</span>
               <h1 className="hero-title">{featured.title}</h1>
-              <p className="hero-description">{featured.plot || featured.genre || 'Start watching your latest addition.'}</p>
+              <p className="hero-description">{featured.plot || `${featured.genre} · ${featured.director !== 'N/A' ? `Directed by ${featured.director}` : 'Start watching your latest addition.'}`}</p>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <button className="btn btn-primary" onClick={() => navigate(`/movies/${featured._id}`)}>
                   View Details

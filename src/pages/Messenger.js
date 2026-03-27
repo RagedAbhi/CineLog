@@ -5,7 +5,7 @@ import { markChatRead } from '../store/actions';
 import axios from 'axios';
 import { Send, Plus, X, Film, Tv, User, ArrowLeft } from 'lucide-react';
 import AddMovieModal from '../components/AddMovieModal';
-import './Chat.css';
+import './Messenger.css';
 
 const Chat = () => {
     const { friendId } = useParams();

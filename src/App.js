@@ -18,7 +18,7 @@ import Analytics from './pages/Analytics';
 import AuthPage from './pages/AuthPage';
 import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
-import Chat from './pages/Chat';
+import Messenger from './pages/Messenger.js';
 import { useDispatch } from 'react-redux';
 import { hideRecommendModal, showToast, hideConfirmModal } from './store/actions';
 import { fetchCurrentUser, fetchRecommendations, fetchRecentChats } from './store/thunks';
@@ -161,7 +161,7 @@ const App = () => {
               <Route path="/" element={<Dashboard />} />
               <Route path="/auth" element={<Navigate to="/" replace />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/chat/:friendId" element={<Chat />} />
+              <Route path="/chat/:friendId" element={<Messenger />} />
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/movies-list" element={<MoviesPage />} />
               <Route path="/movies/:id" element={<MovieDetail />} />
