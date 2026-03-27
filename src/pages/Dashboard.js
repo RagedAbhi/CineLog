@@ -540,7 +540,7 @@ class Dashboard extends Component {
           <div className="edit-mode-footer-bar glass-panel bio-luminescent">
             <span>Rearrange your home sections using the arrows.</span>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn btn-secondary" onClick={() => this.setState({ isEditingOrder: false, sectionOrder: JSON.parse(localStorage.getItem('dashboard_section_order') || '["recent_movies", "recent_shows", "watchlist", "recommendations"]') })}>
+              <button className="btn btn-secondary" onClick={() => this.setState({ isEditingOrder: false, sectionOrder: JSON.parse(localStorage.getItem('dashboard_section_order') || '["social_pulse", "recent_movies", "recent_shows", "watchlist", "recommendations"]') })}>
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={this.saveSectionOrder}>
