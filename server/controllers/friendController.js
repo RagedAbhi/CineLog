@@ -81,7 +81,7 @@ exports.getFriends = async (req, res) => {
                 { requester: req.user.id, status: 'accepted' },
                 { recipient: req.user.id, status: 'accepted' }
             ]
-        }).populate('requester recipient', 'username name bio');
+        }).populate('requester recipient', 'username name bio profilePicture');
 
         // Extract the friend's data from the friendship object
         const friends = friendships.map(f => {

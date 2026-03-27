@@ -49,6 +49,7 @@ const RecommendModal = ({ movie, onClose, onRecommend }) => {
                 receiverId: selectedFriend,
                 mediaTitle: movie.title,
                 mediaType: movie.mediaType || 'movie',
+                genre: movie.genre || '',
                 imdbID: movie.imdbID,
                 poster: movie.poster,
                 message: message

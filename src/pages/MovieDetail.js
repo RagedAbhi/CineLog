@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie } from '../store/thunks';
@@ -16,7 +16,8 @@ function MovieDetailWrapper(props) {
   const location = useLocation();
   const isExternal = new URLSearchParams(location.search).get('external') === 'true';
   const autoRecommend = new URLSearchParams(location.search).get('recommend') === 'true';
-  return <MovieDetail {...props} navigate={navigate} movieId={id} isExternal={isExternal} autoRecommend={autoRecommend} />;
+  const mediaType = new URLSearchParams(location.search).get('type');
+  return <MovieDetail {...props} navigate={navigate} movieId={id} isExternal={isExternal} autoRecommend={autoRecommend} mediaType={mediaType} />;
 }
 
 class MovieDetail extends Component {
@@ -63,7 +64,7 @@ class MovieDetail extends Component {
   fetchExternalMovie = async () => {
     this.setState({ localLoading: true });
     try {
-        const details = await getMovieDetailsExternal(this.props.movieId);
+        const details = await getMovieDetailsExternal(this.props.movieId, this.props.mediaType);
         this.setState({ 
             externalMovie: { ...details, isExternalRec: true, imdbID: this.props.movieId }, 
             localLoading: false 
@@ -505,7 +506,20 @@ class MovieDetail extends Component {
                       <div>
                         <div className="stat-label" style={{ marginBottom: '12px' }}>Cast</div>
                         <p className="detail-cast-list" style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
-                          {movie.cast}
+                          {movie.cast.split(', ').map((actor, i, arr) => (
+                            <React.Fragment key={actor}>
+                              <span 
+                                className="clickable-cast-member" 
+                                onClick={() => {
+                                    this.props.navigate(`/?search=${encodeURIComponent(actor)}`);
+                                }}
+                                style={{ cursor: 'pointer', color: 'var(--accent)', transition: 'all 0.2s' }}
+                              >
+                                {actor}
+                              </span>
+                              {i < arr.length - 1 ? ', ' : ''}
+                            </React.Fragment>
+                          ))}
                         </p>
                       </div>
                     )}

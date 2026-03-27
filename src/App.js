@@ -18,8 +18,10 @@ import Analytics from './pages/Analytics';
 import AuthPage from './pages/AuthPage';
 import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
+import Chat from './pages/Chat';
 import { useDispatch } from 'react-redux';
 import { hideRecommendModal, showToast, hideConfirmModal } from './store/actions';
+import { fetchCurrentUser, fetchRecommendations, fetchRecentChats } from './store/thunks';
 
 import './styles/global.css';
 
@@ -74,6 +76,42 @@ const App = () => {
     };
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchCurrentUser());
+      dispatch(fetchRecommendations());
+      dispatch(fetchRecentChats());
+
+      // Heartbeat pulse every 30 seconds
+      const sendHeartbeat = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            await fetch('http://localhost:5000/api/users/heartbeat', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+          }
+        } catch (err) {
+          console.error('Heartbeat failed:', err);
+        }
+      };
+
+      sendHeartbeat(); // Initial beat
+      const heartbeatInterval = setInterval(sendHeartbeat, 30000);
+      
+      // Poll for recent chats every 10 seconds for notifications
+      const chatInterval = setInterval(() => {
+        dispatch(fetchRecentChats());
+      }, 10000);
+
+      return () => {
+        clearInterval(heartbeatInterval);
+        clearInterval(chatInterval);
+      };
+    }
+  }, [isAuthenticated, dispatch]);
+
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -123,6 +161,7 @@ const App = () => {
               <Route path="/" element={<Dashboard />} />
               <Route path="/auth" element={<Navigate to="/" replace />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/chat/:friendId" element={<Chat />} />
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/movies-list" element={<MoviesPage />} />
               <Route path="/movies/:id" element={<MovieDetail />} />

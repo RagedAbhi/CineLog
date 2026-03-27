@@ -1,23 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchCurrentUser } from '../store/thunks';
+import { fetchCurrentUser, fetchRecommendations, fetchMovies } from '../store/thunks';
 import { showToast } from '../store/actions';
 import gsap from 'gsap';
 import MovieCard from '../components/MovieCard';
+import CineSelect from '../components/CineSelect';
 import '../styles/global.css';
+
+const GENRES = ['all', 'Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure', 'Biography'];
 
 const Profile = () => {
     const { id } = useParams();
     const dispatch = useDispatch();
-    const { user: currentUser } = useSelector(state => state.auth);
+    const { user: currentUser, recommendations } = useSelector(state => state.auth);
+    const { items: myMovies } = useSelector(state => state.movies);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
-    const [formData, setFormData] = useState({ name: '', bio: '', username: '' });
+    const [formData, setFormData] = useState({ name: '', bio: '', username: '', profilePicture: '' });
     const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '' });
+    const [recGenreFilter, setRecGenreFilter] = useState('all');
+    const [recSortOrder, setRecSortOrder] = useState('latest');
+    const [sentGenreFilter, setSentGenreFilter] = useState('all');
+    const [sentSortOrder, setSentSortOrder] = useState('latest');
+    const fileInputRef = useRef(null);
 
     // Decode JWT to get current user ID reliably (works on page refresh when Redux state is empty)
     const getTokenUserId = () => {
@@ -31,6 +40,7 @@ const Profile = () => {
 
     useEffect(() => {
         fetchProfile();
+        dispatch(fetchMovies());
     }, [id]);
 
     useEffect(() => {
@@ -54,12 +64,64 @@ const Profile = () => {
             setFormData({ 
                 name: response.data.name, 
                 bio: response.data.bio,
-                username: response.data.username
+                username: response.data.username,
+                profilePicture: response.data.profilePicture || ''
             });
         } catch (error) {
             console.error('Error fetching profile:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!loading && profile && !isEditing) {
+            markReadIfNeeded();
+        }
+    }, [loading, profile, isEditing, id, currentUser]);
+
+    const markReadIfNeeded = async () => {
+        const token = localStorage.getItem('token');
+        const currentUserId = (currentUser?._id || currentUser?.id)?.toString();
+        const profileId = id?.toString();
+        
+        console.log(`[markReadIfNeeded] currentUserId: ${currentUserId}, profileId: ${profileId}`);
+
+        // Check if there are actually any unread recommendations from this friend to avoid infinite loops
+        const hasUnread = recommendations?.some(r => {
+            const senderId = (r.sender?._id || r.sender)?.toString();
+            const receiverId = (r.receiver?._id || r.receiver)?.toString();
+            return senderId === profileId && receiverId === currentUserId && !r.read;
+        });
+
+        if (profileId && profileId !== currentUserId && hasUnread) {
+            console.log(`[markReadIfNeeded] Marking all from sender ${profileId} as read`);
+            try {
+                const res = await axios.patch(`http://localhost:5000/api/recommendations/mark-all-read/${profileId}`, {}, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                console.log(`[markReadIfNeeded] Backend response:`, res.data);
+                dispatch(fetchCurrentUser());
+                dispatch(fetchRecommendations()); // Ensure notifications clear
+            } catch (err) { console.error('Error marking read:', err); }
+        }
+    };
+
+    const dismissRecommendation = async (recId, e) => {
+        if (e) e.stopPropagation();
+        console.log(`[Profile] Dismissing recommendation: ${recId}`);
+        const token = localStorage.getItem('token');
+        try {
+            await axios.delete(`http://localhost:5000/api/recommendations/${recId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            console.log(`[Profile] Dismiss success for: ${recId}`);
+            dispatch(showToast('Recommendation dismissed', 'success'));
+            dispatch(fetchRecommendations());
+            dispatch(fetchCurrentUser());
+        } catch (err) { 
+            console.error('[Profile] Error dismissing recommendation:', err);
+            dispatch(showToast('Failed to dismiss recommendation', 'error'));
         }
     };
 
@@ -98,6 +160,32 @@ const Profile = () => {
         }
     };
 
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.post('http://localhost:5000/api/users/upload-avatar', formData, {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            // Update local state and sync Redux
+            setProfile({ ...profile, profilePicture: response.data.profilePicture });
+            dispatch(fetchCurrentUser());
+            dispatch(showToast('Profile picture updated!', 'success'));
+        } catch (error) {
+            console.error('Error uploading avatar:', error);
+            dispatch(showToast('Failed to upload image', 'error'));
+        }
+    };
+
     if (loading) return <div className="loading">Loading profile...</div>;
     if (!profile) return <div className="error">Profile not found.</div>;
 
@@ -120,8 +208,28 @@ const Profile = () => {
                 </div>
 
                 <div className="profile-main-content">
-                    <div className="profile-avatar-circle">
-                        {profile.name?.charAt(0) || profile.username?.charAt(0) || '?'}
+                    <div 
+                        className={`profile-avatar-circle ${isOwnProfile ? 'editable' : ''}`} 
+                        style={{ overflow: 'hidden', position: 'relative', cursor: isOwnProfile ? 'pointer' : 'default' }}
+                        onClick={() => isOwnProfile && fileInputRef.current.click()}
+                    >
+                        {profile.profilePicture ? (
+                            <img src={profile.profilePicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            profile.name?.charAt(0) || profile.username?.charAt(0) || '?'
+                        )}
+                        {isOwnProfile && (
+                            <div className="avatar-edit-overlay">
+                                <span>📷</span>
+                            </div>
+                        )}
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            style={{ display: 'none' }} 
+                            onChange={handleFileChange} 
+                            accept="image/*"
+                        />
                     </div>
 
                     {!isEditing ? (
@@ -135,8 +243,18 @@ const Profile = () => {
                                 </div>
                                 <div className="stat-divider"></div>
                                 <div className="stat-item">
-                                    <span className="stat-value">Active</span>
-                                    <span className="stat-label">Member</span>
+                                    {(() => {
+                                        const lastSeen = profile.lastSeen;
+                                        const isOnline = lastSeen && (new Date() - new Date(lastSeen)) < 120000; // 2 minutes
+                                        return (
+                                            <>
+                                                <span className={`stat-value ${isOnline ? 'status-active' : 'status-away'}`}>
+                                                    {isOnline ? 'Active' : 'Away'}
+                                                </span>
+                                                <span className="stat-label">Status</span>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                             <div className="profile-bio-minimal">
@@ -146,7 +264,6 @@ const Profile = () => {
                     ) : (
                         <form onSubmit={handleUpdate} className="minimal-edit-form">
                             <div className="form-group-minimal">
-                                <label>Name</label>
                                 <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                             </div>
                             <div className="form-group-minimal">
@@ -236,41 +353,165 @@ const Profile = () => {
                 {(() => {
                     const profileId = profile._id?.toString();
 
-                    const filtered = profile.recommendations?.filter(r => {
+                    let filtered = profile.recommendations?.filter(r => {
                         const recReceiverId = (r.receiver?._id || r.receiver)?.toString();
                         const recSenderId = (r.sender?._id || r.sender)?.toString();
 
-                        if (isOwnProfile) return recReceiverId === profileId;
+                        // 1. Filter by profile context
+                        let isValidContext = false;
+                        if (isOwnProfile) isValidContext = (recReceiverId === profileId);
+                        else isValidContext = (recSenderId === profileId && recReceiverId === currentUserId);
                         
-                        // For friend's profile: SHOW ONLY friend -> me
-                        return recSenderId === profileId && recReceiverId === currentUserId;
+                        if (!isValidContext) return false;
+
+                        // 2. Filter out if already in watchlist/watched
+                        const alreadyAdded = myMovies?.some(m => m.imdbID === r.imdbID && (m.status === 'watchlist' || m.status === 'watched'));
+                        if (alreadyAdded) return false;
+
+                        return true;
                     }) || [];
 
-                    return filtered.length > 0 ? (
-                        <div className="media-grid-minimal">
-                            {filtered.map((rec, index) => (
-                                <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible' }}>
-                                    <MovieCard 
-                                        movie={{
-                                            _id: rec.imdbID,
-                                            title: rec.mediaTitle,
-                                            poster: rec.poster,
-                                            imdbID: rec.imdbID,
-                                            mediaType: rec.mediaType,
-                                            isExternal: true
-                                        }} 
-                                        index={index} 
+                    // 3. Remove duplicates (no show repeats twice)
+                    const uniqueFiltered = [];
+                    const seenIds = new Set();
+                    filtered.forEach(r => {
+                        if (!seenIds.has(r.imdbID)) {
+                            uniqueFiltered.push(r);
+                            seenIds.add(r.imdbID);
+                        }
+                    });
+                    
+                    filtered = uniqueFiltered;
+
+                    // 4. Apply Genre Filter
+                    if (recGenreFilter !== 'all') {
+                        filtered = filtered.filter(r => r.genre && r.genre.toLowerCase().includes(recGenreFilter.toLowerCase()));
+                    }
+
+                    // 5. Apply Sort
+                    filtered = [...filtered].sort((a, b) => {
+                        const dateA = new Date(a.createdAt);
+                        const dateB = new Date(b.createdAt);
+                        return recSortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+                    });
+
+                    return (
+                        <>
+                            <div className="profile-rec-controls" style={{ 
+                                display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', 
+                                flexWrap: 'wrap', padding: '0 4px' 
+                            }}>
+                                <div style={{ width: '160px' }}>
+                                    <CineSelect
+                                        options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))}
+                                        value={recGenreFilter}
+                                        onChange={setRecGenreFilter}
+                                        placeholder="Genre"
                                     />
-                                    <div className="rec-attribution" style={{ marginTop: '10px' }}>
-                                        {isOwnProfile ? `From @${rec.sender?.username || 'friend'}` : 'To you'}
-                                    </div>
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="picks-empty-minimal">
-                            <p>{isOwnProfile ? "No recommendations received yet." : `No recommendations from ${profile.name || profile.username} yet.`}</p>
-                        </div>
+                                <div className="filter-toggle-group" style={{ margin: 0 }}>
+                                    <button 
+                                        className={`filter-toggle-btn ${recSortOrder === 'latest' ? 'active' : ''}`}
+                                        onClick={() => setRecSortOrder('latest')}
+                                    >
+                                        Latest
+                                    </button>
+                                    <button 
+                                        className={`filter-toggle-btn ${recSortOrder === 'oldest' ? 'active' : ''}`}
+                                        onClick={() => setRecSortOrder('oldest')}
+                                    >
+                                        Oldest
+                                    </button>
+                                </div>
+                                {recGenreFilter !== 'all' && (
+                                    <button className="btn-clear" onClick={() => setRecGenreFilter('all')}>Clear</button>
+                                )}
+                            </div>
+
+                            {filtered.length > 0 ? (
+                                <div className="media-grid-minimal">
+                                    {filtered.map((rec, index) => {
+                                        const isUnseen = !rec.read && (rec.receiver?._id || rec.receiver)?.toString() === currentUserId;
+                                        
+                                        return (
+                                        <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible', position: 'relative' }}>
+                                            <MovieCard 
+                                                movie={{
+                                                    _id: rec.imdbID,
+                                                    title: rec.mediaTitle,
+                                                    poster: rec.poster,
+                                                    imdbID: rec.imdbID,
+                                                    mediaType: rec.mediaType,
+                                                    genre: rec.genre,
+                                                    isExternal: true
+                                                }} 
+                                                index={index} 
+                                            />
+                                            {isUnseen && (
+                                                <div className="rec-unseen-badge" style={{
+                                                    position: 'absolute',
+                                                    top: '-10px',
+                                                    right: '-10px',
+                                                    background: 'linear-gradient(135deg, rgba(255, 59, 48, 0.9), rgba(200, 20, 20, 0.9))',
+                                                    color: 'white',
+                                                    fontSize: '11px',
+                                                    fontWeight: '800',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                                    backdropFilter: 'blur(8px)',
+                                                    WebkitBackdropFilter: 'blur(8px)',
+                                                    boxShadow: '0 4px 15px rgba(255, 59, 48, 0.4)',
+                                                    zIndex: 5,
+                                                    letterSpacing: '1px'
+                                                }}>
+                                                    NEW
+                                                </div>
+                                            )}
+                                            {isOwnProfile && (
+                                                <button
+                                                    onClick={(e) => dismissRecommendation(rec._id, e)}
+                                                    title="Dismiss recommendation"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '-10px',
+                                                        left: '-10px',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '50%',
+                                                        background: 'rgba(30, 30, 40, 0.85)',
+                                                        border: '1px solid rgba(255,255,255,0.15)',
+                                                        backdropFilter: 'blur(10px)',
+                                                        WebkitBackdropFilter: 'blur(10px)',
+                                                        color: 'rgba(255,255,255,0.7)',
+                                                        fontSize: '14px',
+                                                        lineHeight: '1',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        zIndex: 10,
+                                                        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,59,48,0.85)'; e.currentTarget.style.color='white'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background='rgba(30,30,40,0.85)'; e.currentTarget.style.color='rgba(255,255,255,0.7)'; }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                            <div className="rec-attribution" style={{ marginTop: '10px' }}>
+                                                {isOwnProfile ? `From @${rec.sender?.username || 'friend'}` : 'To you'}
+                                            </div>
+                                        </div>
+                                    );})}
+                                </div>
+                            ) : (
+                                <div className="picks-empty-minimal">
+                                    <p>{isOwnProfile ? "No recommendations received yet." : `No recommendations from ${profile.name || profile.username} yet.`}</p>
+                                </div>
+                            )}
+                        </>
                     );
                 })()}
             </div>
@@ -287,7 +528,7 @@ const Profile = () => {
                 {(() => {
                     const profileId = profile._id?.toString();
 
-                    const filtered = profile.recommendations?.filter(r => {
+                    let filtered = profile.recommendations?.filter(r => {
                         const recSenderId = (r.sender?._id || r.sender)?.toString();
                         const recReceiverId = (r.receiver?._id || r.receiver)?.toString();
 
@@ -297,31 +538,123 @@ const Profile = () => {
                         return recSenderId === currentUserId && recReceiverId === profileId;
                     }) || [];
 
-                    return filtered.length > 0 ? (
-                        <div className="media-grid-minimal">
-                            {filtered.map((rec, index) => (
-                                <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible' }}>
-                                    <MovieCard 
-                                        movie={{
-                                            _id: rec.imdbID,
-                                            title: rec.mediaTitle,
-                                            poster: rec.poster,
-                                            imdbID: rec.imdbID,
-                                            mediaType: rec.mediaType,
-                                            isExternal: true
-                                        }} 
-                                        index={index} 
+                    // Remove duplicates
+                    const uniqueFiltered = [];
+                    const seenIds = new Set();
+                    filtered.forEach(r => {
+                        if (!seenIds.has(r.imdbID)) {
+                            uniqueFiltered.push(r);
+                            seenIds.add(r.imdbID);
+                        }
+                    });
+                    
+                    filtered = uniqueFiltered;
+
+                    // 4. Apply Genre Filter
+                    if (sentGenreFilter !== 'all') {
+                        filtered = filtered.filter(r => r.genre && r.genre.toLowerCase().includes(sentGenreFilter.toLowerCase()));
+                    }
+
+                    // 5. Apply Sort
+                    filtered = [...filtered].sort((a, b) => {
+                        const dateA = new Date(a.createdAt);
+                        const dateB = new Date(b.createdAt);
+                        return sentSortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+                    });
+
+                    return (
+                        <>
+                            <div className="profile-rec-controls" style={{ 
+                                display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', 
+                                flexWrap: 'wrap', padding: '0 4px' 
+                            }}>
+                                <div style={{ width: '160px' }}>
+                                    <CineSelect
+                                        options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))}
+                                        value={sentGenreFilter}
+                                        onChange={setSentGenreFilter}
+                                        placeholder="Genre"
                                     />
-                                    <div className="rec-attribution" style={{ marginTop: '10px' }}>
-                                        {isOwnProfile ? `To @${rec.receiver?.username || 'friend'}` : 'By you'}
-                                    </div>
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="picks-empty-minimal">
-                            <p>{isOwnProfile ? "Start sharing your favorites with friends!" : `You haven't recommended anything to ${profile.name || profile.username} yet.`}</p>
-                        </div>
+                                <div className="filter-toggle-group" style={{ margin: 0 }}>
+                                    <button 
+                                        className={`filter-toggle-btn ${sentSortOrder === 'latest' ? 'active' : ''}`}
+                                        onClick={() => setSentSortOrder('latest')}
+                                    >
+                                        Latest
+                                    </button>
+                                    <button 
+                                        className={`filter-toggle-btn ${sentSortOrder === 'oldest' ? 'active' : ''}`}
+                                        onClick={() => setSentSortOrder('oldest')}
+                                    >
+                                        Oldest
+                                    </button>
+                                </div>
+                                {sentGenreFilter !== 'all' && (
+                                    <button className="btn-clear" onClick={() => setSentGenreFilter('all')}>Clear</button>
+                                )}
+                            </div>
+
+                            {filtered.length > 0 ? (
+                                <div className="media-grid-minimal">
+                                    {filtered.map((rec, index) => (
+                                        <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible', position: 'relative' }}>
+                                            <MovieCard 
+                                                movie={{
+                                                    _id: rec.imdbID,
+                                                    title: rec.mediaTitle,
+                                                    poster: rec.poster,
+                                                    imdbID: rec.imdbID,
+                                                    mediaType: rec.mediaType,
+                                                    genre: rec.genre,
+                                                    isExternal: true
+                                                }} 
+                                                index={index} 
+                                            />
+                                            {isOwnProfile && (
+                                                <button
+                                                    onClick={(e) => dismissRecommendation(rec._id, e)}
+                                                    title="Retract recommendation"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '-10px',
+                                                        left: '-10px',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '50%',
+                                                        background: 'rgba(30, 30, 40, 0.85)',
+                                                        border: '1px solid rgba(255,255,255,0.15)',
+                                                        backdropFilter: 'blur(10px)',
+                                                        WebkitBackdropFilter: 'blur(10px)',
+                                                        color: 'rgba(255,255,255,0.7)',
+                                                        fontSize: '14px',
+                                                        lineHeight: '1',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        zIndex: 10,
+                                                        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,59,48,0.85)'; e.currentTarget.style.color='white'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background='rgba(30,30,40,0.85)'; e.currentTarget.style.color='rgba(255,255,255,0.7)'; }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                            <div className="rec-attribution" style={{ marginTop: '10px' }}>
+                                                {isOwnProfile ? `To @${rec.receiver?.username || 'friend'}` : 'From you'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="picks-empty-minimal">
+                                    <p>{isOwnProfile ? "Start sharing your favorites with friends!" : `You haven't recommended anything to ${profile.name || profile.username} yet.`}</p>
+                                </div>
+                            )}
+                        </>
                     );
                 })()}
             </div>

@@ -150,3 +150,16 @@ export const fetchRecommendations = () => async (dispatch) => {
         }
     }
 };
+
+export const fetchRecentChats = () => async (dispatch) => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await axios.get('http://localhost:5000/api/messages/recent', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        dispatch(fetchChatsSuccess(res.data));
+    } catch (error) {
+        console.error("Failed to fetch recent chats:", error);
+    }
+};

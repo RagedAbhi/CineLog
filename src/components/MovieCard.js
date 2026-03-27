@@ -1,22 +1,28 @@
 import { Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStreamingAvailability } from '../services/tmdbService';
-import React from 'react'; // Added for React.createRef()
-import gsap from 'gsap'; // Added for GSAP animations
+import React from 'react';
+import gsap from 'gsap';
+import { useDispatch, useSelector } from 'react-redux';
+import { Plus, Check, Send, Trash2, Clock } from 'lucide-react';
+import { addMovie, deleteMovie, markAsWatched } from '../store/thunks';
+import { showRecommendModal, showToast } from '../store/actions';
 
-// Wrapper to provide navigate to class component
+// Wrapper to provide navigate and redux to class component
 function MovieCardWrapper(props) {
   const navigate = useNavigate();
-  return <MovieCard {...props} navigate={navigate} />;
+  const dispatch = useDispatch();
+  const userMovies = useSelector(state => state.movies.items);
+  return <MovieCard {...props} navigate={navigate} dispatch={dispatch} userMovies={userMovies} />;
 }
 
 class MovieCard extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      streamingProviders: [] // Changed from null to empty array
+      streamingProviders: []
     };
-    this.cardRef = React.createRef(); // Added ref
+    this.cardRef = React.createRef();
   }
 
   async componentDidMount() {
@@ -30,7 +36,7 @@ class MovieCard extends Component {
         scale: 1,
         y: 0,
         duration: 0.6,
-        delay: (this.props.index % 10) * 0.05, // Staggered delay
+        delay: (this.props.index % 10) * 0.05,
         ease: "power2.out"
       }
     );
@@ -43,30 +49,120 @@ class MovieCard extends Component {
     }
   }
 
-  // renderStars method removed as per instruction snippet
-
   handlePlatformClick = (e, link) => {
-    e.stopPropagation(); // Don't navigate to detail page
+    e.stopPropagation();
     window.open(link, '_blank');
-  }; // Added semicolon
+  };
+
+  handleWatchlistToggle = (e) => {
+    e.stopPropagation();
+    const { movie, dispatch, userMovies } = this.props;
+    const existing = userMovies.find(m => (m.imdbID === movie.imdbID && movie.imdbID) || m._id === movie._id);
+
+    if (existing) {
+      if (existing.status === 'watchlist') {
+        dispatch(deleteMovie(existing._id));
+        dispatch(showToast('Removed from watchlist', 'info'));
+      } else {
+        dispatch(showToast('Already in your collection', 'info'));
+      }
+    } else {
+      dispatch(addMovie({
+        title: movie.title,
+        year: movie.year,
+        poster: movie.poster,
+        imdbID: movie.imdbID,
+        mediaType: movie.mediaType || 'movie',
+        genre: movie.genre || 'Unknown',
+        status: 'watchlist'
+      }));
+      dispatch(showToast('Added to watchlist', 'success'));
+    }
+  };
+
+  handleMarkWatched = (e) => {
+    e.stopPropagation();
+    const { movie, dispatch, userMovies } = this.props;
+    const existing = userMovies.find(m => (m.imdbID === movie.imdbID && movie.imdbID) || m._id === movie._id);
+
+    if (existing) {
+      if (existing.status === 'watched') {
+        dispatch(deleteMovie(existing._id));
+        dispatch(showToast('Removed from watched list', 'info'));
+      } else {
+        dispatch(markAsWatched(existing._id, existing));
+        dispatch(showToast('Marked as watched! 🍿', 'success'));
+      }
+    } else {
+      dispatch(addMovie({
+        title: movie.title,
+        year: movie.year,
+        poster: movie.poster,
+        imdbID: movie.imdbID,
+        mediaType: movie.mediaType || 'movie',
+        genre: movie.genre || 'Unknown',
+        status: 'watched',
+        watchedOn: new Date().toISOString().split('T')[0]
+      }));
+      dispatch(showToast('Added to Watched list! 🍿', 'success'));
+    }
+  };
+
+  handleRecommend = (e) => {
+    e.stopPropagation();
+    const { movie, dispatch } = this.props;
+    dispatch(showRecommendModal(movie));
+  };
 
   render() {
-    const { movie, navigate } = this.props;
+    const { movie, navigate, userMovies } = this.props;
     const { streamingProviders } = this.state;
+
+    const userCopy = userMovies.find(m => (m.imdbID === movie.imdbID && movie.imdbID) || m._id === movie._id);
+    const inWatchlist = userCopy?.status === 'watchlist';
+    const isWatched = userCopy?.status === 'watched';
 
     return (
       <div
-        className="movie-card bio-luminescent" // Added bio-luminescent class
-        ref={this.cardRef} // Added ref
+        className="movie-card bio-luminescent"
+        ref={this.cardRef}
         onClick={() => {
-          if (!movie._id) return;
-          const url = movie.isExternal 
-            ? `/movies/${movie._id}?external=true&mediaType=${movie.mediaType || 'movie'}` 
-            : `/movies/${movie._id}`;
-          navigate(url);
+            const idToUse = movie._id || movie.imdbID;
+            if (idToUse) {
+                const url = (movie.isExternal || !movie._id)
+                    ? `/movies/${idToUse}?external=true` 
+                    : `/movies/${idToUse}`;
+                navigate(url);
+            }
         }}
-        style={{ cursor: movie._id ? 'pointer' : 'default' }}
+        style={{ cursor: (movie._id || movie.imdbID) ? 'pointer' : 'default' }}
       >
+        {/* Quick Actions Overlay */}
+        <div className="movie-card-quick-actions">
+          <button 
+            className={`card-action-btn ${inWatchlist ? 'remove' : ''}`} 
+            onClick={this.handleWatchlistToggle}
+            title={inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+          >
+            {inWatchlist ? <Trash2 size={18} /> : <Plus size={18} />}
+          </button>
+          
+          <button 
+            className={`card-action-btn watched ${isWatched ? 'active remove' : ''}`} 
+            onClick={this.handleMarkWatched}
+            title={isWatched ? "Remove from Watched" : "Mark as Watched"}
+          >
+            {isWatched ? <Trash2 size={18} /> : <Check size={18} />}
+          </button>
+
+          <button 
+            className="card-action-btn" 
+            onClick={this.handleRecommend}
+            title="Recommend to Friend"
+          >
+            <Send size={18} />
+          </button>
+        </div>
 
         <div className="movie-card-poster-container">
           <div className="movie-card-poster-placeholder" style={{ opacity: (movie.poster && movie.poster !== 'N/A') ? 0 : 1 }}>
@@ -96,10 +192,10 @@ class MovieCard extends Component {
             <div className="movie-card-meta">
               {movie.genre ? `${movie.genre} · ` : ''}{movie.year} · {movie.mediaType === 'series' ? 'TV' : 'Movie'}
             </div>
-            {movie.rating && (
+            {(movie.rating || userCopy?.userRating) && (
               <div className="movie-card-rating">
                 <span>★</span>
-                <span>{movie.rating}/10</span>
+                <span>{userCopy?.userRating || movie.rating}/10</span>
               </div>
             )}
 

@@ -11,12 +11,13 @@ const Topbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    const { user } = useSelector(state => state.auth);
+    const { user, recommendations, unreadMessages } = useSelector(state => state.auth);
     const { scrollY } = useScroll();
 
     const [scrolled, setScrolled] = useState(false);
     const [hidden, setHidden] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const dropdownRef = useRef(null);
 
     useMotionValueEvent(scrollY, "change", (latest) => {
@@ -32,8 +33,15 @@ const Topbar = () => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 20);
         };
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleResize);
+        };
     }, []);
 
     useEffect(() => {
@@ -64,6 +72,7 @@ const Topbar = () => {
     if (isMovieDetail) return null;
 
     return (
+        <>
         <motion.header 
             className={`topbar-premium ${scrolled ? 'scrolled' : ''}`}
             variants={{
@@ -86,17 +95,34 @@ const Topbar = () => {
 
                 {/* Center: Nav */}
                 <nav className="topnav-premium">
-                    {navItems.map((item) => (
-                        <NavLink 
-                            key={item.path} 
-                            to={item.path} 
-                            end={item.end}
-                            className={({ isActive }) => `nav-item-premium ${isActive ? 'active' : ''}`}
-                        >
-                            <item.icon className="nav-icon" size={18} />
-                            <span>{item.label}</span>
-                        </NavLink>
-                    ))}
+                    {navItems.map((item) => {
+                        const recs = recommendations || user?.recommendations || [];
+                        const unreadRecs = recs.filter(r => {
+                            const receiverId = (r.receiver?._id || r.receiver)?.toString();
+                            const currentUserId = (user?._id || user?.id)?.toString();
+                            return receiverId === currentUserId && !r.read;
+                        }).length;
+                        
+                        const unreadMsgCount = unreadMessages?.length || 0;
+                        const totalUnreadSocial = unreadRecs + unreadMsgCount;
+
+                        return (
+                            <NavLink 
+                                key={item.path} 
+                                to={item.path} 
+                                end={item.end}
+                                className={({ isActive }) => `nav-item-premium ${isActive ? 'active' : ''}`}
+                            >
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <item.icon className="nav-icon" size={18} />
+                                    {item.label === 'Social' && totalUnreadSocial > 0 && (
+                                        <span className="dot-notification-nav">{totalUnreadSocial}</span>
+                                    )}
+                                </div>
+                                <span>{item.label}</span>
+                            </NavLink>
+                        );
+                    })}
                 </nav>
 
                 {/* Right: Actions */}
@@ -105,10 +131,14 @@ const Topbar = () => {
                         className={`profile-trigger ${dropdownOpen ? 'active' : ''}`}
                         onClick={() => setDropdownOpen(!dropdownOpen)}
                     >
-                        <div className="avatar-wrapper">
-                            <span className="avatar-icon">👤</span>
+                        <div className="avatar-wrapper" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {user?.profilePicture ? (
+                                <img src={user.profilePicture} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                <span className="avatar-icon">👤</span>
+                            )}
                         </div>
-                        <span className="user-name-compact">{user?.name || user?.username || 'Profile'}</span>
+                        <span className="user-name-compact">{user?.username || 'Profile'}</span>
                     </div>
 
                     <AnimatePresence>
@@ -147,6 +177,49 @@ const Topbar = () => {
                 </div>
             </div>
         </motion.header>
+
+        {/* Mobile Bottom Navigation (Moved outside header to handle fixed positioning better) */}
+        <AnimatePresence>
+            {isMobile && (
+                <motion.nav 
+                    className="mobile-nav-premium"
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 100, opacity: 0 }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                >
+                    {navItems.map((item) => {
+                        const recs = recommendations || user?.recommendations || [];
+                        const unreadRecs = recs.filter(r => {
+                            const receiverId = (r.receiver?._id || r.receiver)?.toString();
+                            const currentUserId = (user?._id || user?.id)?.toString();
+                            return receiverId === currentUserId && !r.read;
+                        }).length;
+
+                        const unreadMsgCount = unreadMessages?.length || 0;
+                        const totalUnreadSocial = unreadRecs + unreadMsgCount;
+
+                        return (
+                            <NavLink 
+                                key={item.path} 
+                                to={item.path} 
+                                end={item.end}
+                                className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
+                            >
+                                <div style={{ position: 'relative' }}>
+                                    <item.icon size={22} />
+                                    {item.label === 'Social' && totalUnreadSocial > 0 && (
+                                        <span className="dot-notification-mobile">{totalUnreadSocial}</span>
+                                    )}
+                                </div>
+                                <span>{item.label}</span>
+                            </NavLink>
+                        );
+                    })}
+                </motion.nav>
+            )}
+        </AnimatePresence>
+        </>
     );
 };
 

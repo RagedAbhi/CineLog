@@ -1,4 +1,4 @@
-import { Component, createRef } from 'react';
+import React, { Component, createRef } from 'react';
 import { connect } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchMovies, addMovie, fetchRecommendations } from '../store/thunks';
@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import RecommendModal from '../components/RecommendModal';
+import SocialPulse from '../components/SocialPulse';
 import Toast from '../components/Toast';
 import axios from 'axios';
 import gsap from 'gsap';
@@ -29,7 +30,7 @@ class Dashboard extends Component {
       showRecommendModal: false,
       selectedMedia: null,
       isEditingOrder: false,
-      sectionOrder: ['recent_movies', 'recent_shows', 'watchlist', 'recommendations']
+      sectionOrder: ['social_pulse', 'recent_movies', 'recent_shows', 'watchlist', 'expertise_stats', 'recommendations']
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
@@ -221,6 +222,86 @@ class Dashboard extends Component {
     return list[this.state.activeHeroIndex % list.length];
   }
 
+  renderExpertiseStats(index) {
+    const { movies } = this.props;
+    const { isEditingOrder } = this.state;
+    if (movies.length === 0 && !isEditingOrder) return null;
+
+    const genreCounts = {};
+    const directorCounts = {};
+    
+    movies.forEach(m => {
+        if (m.genre) {
+            m.genre.split(', ').forEach(g => {
+                genreCounts[g] = (genreCounts[g] || 0) + 1;
+            });
+        }
+        if (m.director && m.director !== 'N/A') {
+            directorCounts[m.director] = (directorCounts[m.director] || 0) + 1;
+        }
+    });
+
+    const topGenres = Object.entries(genreCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+    
+    const topDirector = Object.entries(directorCounts)
+        .sort((a, b) => b[1] - a[1])[0];
+
+    const getRank = (count) => {
+        if (count >= 30) return { name: 'Cinephile Master', color: '#ffd700' };
+        if (count >= 15) return { name: 'Expert', color: 'var(--accent)' };
+        if (count >= 5) return { name: 'Enthusiast', color: '#00e676' };
+        return { name: 'Novice', color: '#90a4ae' };
+    };
+
+    const rank = getRank(movies.length);
+
+    return (
+        <div className={`media-row-container ${isEditingOrder ? 'editing' : 'reveal'}`} key="expertise_stats">
+            {isEditingOrder && (
+                <div className="section-edit-controls">
+                    <button className="btn-edit-move" onClick={() => this.moveSection(index, -1)} disabled={index === 0}>↑</button>
+                    <button className="btn-edit-move" onClick={() => this.moveSection(index, 1)} disabled={index === this.state.sectionOrder.length - 1}>↓</button>
+                    <div className="section-label-edit">Cinema Expertise</div>
+                </div>
+            )}
+            <div className="row-header">
+                <h3>Cinema Expertise</h3>
+            </div>
+            <div className="expertise-grid">
+                <div className="expertise-card glass-panel main-rank">
+                    <div className="rank-badge" style={{ borderColor: rank.color, color: rank.color }}>{rank.name}</div>
+                    <div className="rank-sub">{movies.length} Titles in Collection</div>
+                </div>
+                
+                <div className="expertise-card glass-panel">
+                    <h4>Top Genres</h4>
+                    <div className="stats-list">
+                        {topGenres.map(([name, count]) => (
+                            <div key={name} className="stat-item">
+                                <span className="stat-name">{name}</span>
+                                <div className="stat-bar-bg"><div className="stat-bar-fill" style={{ width: `${Math.min((count/15)*100, 100)}%` }}></div></div>
+                                <span className="stat-count">{count}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {topDirector && (
+                    <div className="expertise-card glass-panel">
+                        <h4>Director Focus</h4>
+                        <div className="director-highlight">
+                            <div className="director-name">{topDirector[0]}</div>
+                            <div className="director-count">{topDirector[1]} Works Logged</div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+  }
+
   renderRow(title, items, path, id, index) {
     const { isEditingOrder, sectionOrder } = this.state;
     if ((!items || items.length === 0) && !isEditingOrder) return null;
@@ -264,8 +345,8 @@ class Dashboard extends Component {
   }
 
   render() {
-    const { loading, navigate, movies } = this.props;
-    const { showAddModal, toast, recommendations } = this.state;
+    const { loading, navigate, movies, recommendations } = this.props;
+    const { showAddModal, toast } = this.state;
     const featured = this.getFeaturedMovie();
 
     if (loading && movies.length === 0) {
@@ -299,15 +380,7 @@ class Dashboard extends Component {
           />
         </div>
 
-        {/* Global Action Buttons */}
         <div className="dashboard-actions-float">
-          <button
-            className="btn btn-secondary edit-layout-btn glass-panel"
-            onClick={() => this.state.isEditingOrder ? this.saveSectionOrder() : this.setState({ isEditingOrder: true })}
-          >
-            {this.state.isEditingOrder ? '💾 Save Layout' : '⚙️ Edit Home'}
-          </button>
-          
           <button
             className="btn btn-primary floating-add-btn bio-luminescent"
             onClick={() => this.setState({ showAddModal: true })}
@@ -389,12 +462,20 @@ class Dashboard extends Component {
         <div style={{ padding: '0 4%', marginTop: '-40px', position: 'relative', zIndex: 10 }}>
           {this.state.sectionOrder.map((sectionId, index) => {
             switch (sectionId) {
+              case 'social_pulse':
+                return (
+                  <div className="reveal" key="social_pulse" style={{ marginBottom: '40px' }}>
+                    <SocialPulse />
+                  </div>
+                );
               case 'recent_movies':
                 return this.renderRow('Recently Watched Movies', recentlyWatchedMovies, '/watched', 'recent_movies', index);
               case 'recent_shows':
                 return this.renderRow('Recently Watched TV Shows', recentlyWatchedShows, '/watched', 'recent_shows', index);
               case 'watchlist':
                 return this.renderRow('My Watchlist', watchlistItems, '/watchlist', 'watchlist', index);
+              case 'expertise_stats':
+                return this.renderExpertiseStats(index);
               case 'recommendations':
                 return (
                   <div className={`media-row-container ${this.state.isEditingOrder ? 'editing' : 'reveal'}`} key="recommendations">
@@ -442,6 +523,18 @@ class Dashboard extends Component {
             }
           })}
         </div>
+
+        {!this.state.isEditingOrder && (
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '60px 0 40px' }}>
+            <button
+              className="btn btn-secondary edit-layout-btn glass-panel"
+              onClick={() => this.setState({ isEditingOrder: true })}
+              style={{ padding: '12px 32px', borderRadius: '30px', fontSize: '15px' }}
+            >
+              ⚙️ Edit Home Layout
+            </button>
+          </div>
+        )}
 
         {this.state.isEditingOrder && (
           <div className="edit-mode-footer-bar glass-panel bio-luminescent">

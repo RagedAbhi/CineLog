@@ -137,3 +137,200 @@ export const fetchStreamingAvailability = async (title, type, year, imdbID = nul
         return null;
     }
 };
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
+const getCachedData = (key) => {
+    const cached = localStorage.getItem(`cinelog_cache_${key}`);
+    if (!cached) return null;
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_TTL) {
+        localStorage.removeItem(`cinelog_cache_${key}`);
+        return null;
+    }
+    return data;
+};
+
+const setCachedData = (key, data) => {
+    localStorage.setItem(`cinelog_cache_${key}`, JSON.stringify({
+        data,
+        timestamp: Date.now()
+    }));
+};
+
+export const searchMultiTMDB = async (query) => {
+    if (!TMDB_API_KEY) return [];
+    
+    const cacheKey = `multi_${query.toLowerCase()}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+
+    try {
+        const response = await axios.get(`${BASE_URL}/search/multi`, {
+            params: {
+                api_key: TMDB_API_KEY,
+                query: query,
+                include_adult: false,
+                language: 'en-US',
+                page: 1
+            }
+        });
+
+        let results = [];
+        const personResults = response.data.results.filter(item => item.media_type === 'person');
+        const mediaResults = response.data.results.filter(item => item.media_type !== 'person');
+
+        // Map initial media results
+        results = mediaResults.map(item => ({
+            id: item.id,
+            title: item.title || item.name,
+            year: (item.release_date || item.first_air_date || '').split('-')[0],
+            poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
+            backdrop: item.backdrop_path ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}` : '',
+            mediaType: item.media_type === 'tv' ? 'series' : 'movie',
+            rating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
+            overview: item.overview,
+            genreIds: item.genre_ids || [],
+            popularity: item.popularity
+        }));
+
+        // If a person is found, fetch their top movies/shows
+        if (personResults.length > 0) {
+            const topPerson = personResults[0];
+            const creditsResponse = await axios.get(`${BASE_URL}/person/${topPerson.id}/combined_credits`, {
+                params: { api_key: TMDB_API_KEY }
+            });
+
+            const topCredits = creditsResponse.data.cast
+                .sort((a, b) => b.popularity - a.popularity)
+                .slice(0, 8)
+                .map(item => ({
+                    id: item.id,
+                    title: item.title || item.name,
+                    year: (item.release_date || item.first_air_date || '').split('-')[0],
+                    poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
+                    mediaType: item.media_type === 'tv' ? 'series' : 'movie',
+                    rating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
+                    overview: item.overview,
+                    genreIds: item.genre_ids || [],
+                    popularity: item.popularity,
+                    subtitle: `Starring ${topPerson.name}`
+                }));
+
+            // Merge and de-duplicate
+            const existingIds = new Set(results.map(r => r.id));
+            topCredits.forEach(c => {
+                if (!existingIds.has(c.id)) {
+                    results.push(c);
+                    existingIds.add(c.id);
+                }
+            });
+        }
+
+        // If results are sparse, try keyword/theme discovery
+        if (results.length < 5) {
+            const themeResults = await searchThematicTMDB(query);
+            const existingIds = new Set(results.map(r => r.id));
+            themeResults.forEach(t => {
+                if (!existingIds.has(t.id)) {
+                    results.push({ ...t, subtitle: `Related to "${query}"` });
+                    existingIds.add(t.id);
+                }
+            });
+        }
+
+        const sortedResults = results.sort((a, b) => b.popularity - a.popularity);
+        setCachedData(cacheKey, sortedResults);
+        return sortedResults;
+    } catch (error) {
+        console.error('TMDB Multi-Search Error:', error);
+        return [];
+    }
+};
+
+export const searchThematicTMDB = async (query) => {
+    const cacheKey = `theme_${query.toLowerCase()}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+
+    try {
+        // 1. Find keywords for the query
+        const kwResponse = await axios.get(`${BASE_URL}/search/keyword`, {
+            params: { api_key: TMDB_API_KEY, query: query }
+        });
+
+        if (kwResponse.data.results.length === 0) return [];
+
+        // 2. Discover movies using the top keyword
+        const kwId = kwResponse.data.results[0].id;
+        const discoverResponse = await axios.get(`${BASE_URL}/discover/movie`, {
+            params: {
+                api_key: TMDB_API_KEY,
+                with_keywords: kwId,
+                sort_by: 'popularity.desc',
+                include_adult: false
+            }
+        });
+
+        const mapped = discoverResponse.data.results.slice(0, 5).map(item => ({
+            id: item.id,
+            title: item.title,
+            year: (item.release_date || '').split('-')[0],
+            poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
+            mediaType: 'movie',
+            rating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
+            overview: item.overview,
+            genreIds: item.genre_ids || [],
+            popularity: item.popularity
+        }));
+        setCachedData(cacheKey, mapped);
+        return mapped;
+    } catch (e) { return []; }
+};
+
+export const getTrendingTMDB = async () => {
+    if (!TMDB_API_KEY) return [];
+    try {
+        const response = await axios.get(`${BASE_URL}/trending/all/day`, {
+            params: { api_key: TMDB_API_KEY }
+        });
+        return response.data.results.slice(0, 5).map(item => ({
+            title: item.title || item.name,
+            year: (item.release_date || item.first_air_date || '').split('-')[0],
+            poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
+            mediaType: item.media_type === 'tv' ? 'series' : 'movie'
+        }));
+    } catch (error) { return []; }
+};
+
+export const GENRE_MAP = {
+    28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+    99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+    27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Sci-Fi",
+    10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+    10759: "Action & Adventure", 10762: "Kids", 10763: "News", 10764: "Reality",
+    10765: "Sci-Fi & Fantasy", 10766: "Soap", 10767: "Talk", 10768: "War & Politics"
+};
+
+export const getBatchProvidersTMDB = async (items) => {
+    try {
+        const results = await Promise.all(items.slice(0, 8).map(async (item) => {
+            const type = item.mediaType === 'series' ? 'tv' : 'movie';
+            try {
+                const res = await axios.get(`${BASE_URL}/${type}/${item.id}/watch/providers`, {
+                    params: { api_key: TMDB_API_KEY }
+                });
+                const providers = res.data.results?.IN?.flatrate || [];
+                return { id: item.id, providers: providers.slice(0, 3).map(p => ({
+                    name: p.provider_name,
+                    logo: `https://image.tmdb.org/t/p/original${p.logo_path}`
+                })) };
+            } catch (err) {
+                return { id: item.id, providers: [] };
+            }
+        }));
+        return results;
+    } catch (err) {
+        console.error('Batch Provider Error:', err);
+        return [];
+    }
+};

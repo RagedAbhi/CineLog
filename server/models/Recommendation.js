@@ -5,6 +5,7 @@ const recommendationSchema = new mongoose.Schema({
     receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     mediaTitle: { type: String, required: true },
     mediaType: { type: String, enum: ['movie', 'series'], required: true },
+    genre: { type: String, default: '' },
     imdbID: { type: String }, // Optional but helpful for linking back
     poster: { type: String },
     message: { type: String },

@@ -20,6 +20,8 @@ export const DELETE_MOVIE_FAILURE = 'DELETE_MOVIE_FAILURE';
 export const FETCH_RECS_REQUEST = 'FETCH_RECS_REQUEST';
 export const FETCH_RECS_SUCCESS = 'FETCH_RECS_SUCCESS';
 export const FETCH_RECS_FAILURE = 'FETCH_RECS_FAILURE';
+export const FETCH_CHATS_SUCCESS = 'FETCH_CHATS_SUCCESS';
+export const MARK_CHAT_READ = 'MARK_CHAT_READ';
 
 export const SET_FILTER = 'SET_FILTER';
 export const SET_SEARCH = 'SET_SEARCH';
@@ -59,6 +61,8 @@ export const deleteMovieFailure = (error) => ({ type: DELETE_MOVIE_FAILURE, payl
 export const fetchRecsRequest = () => ({ type: FETCH_RECS_REQUEST });
 export const fetchRecsSuccess = (recs) => ({ type: FETCH_RECS_SUCCESS, payload: recs });
 export const fetchRecsFailure = (error) => ({ type: FETCH_RECS_FAILURE, payload: error });
+export const fetchChatsSuccess = (messages) => ({ type: FETCH_CHATS_SUCCESS, payload: messages });
+export const markChatRead = (friendId) => ({ type: MARK_CHAT_READ, payload: friendId });
 
 export const setFilter = (filterType, value) => ({ type: SET_FILTER, payload: { filterType, value } });
 export const setSearch = (query) => ({ type: SET_SEARCH, payload: query });

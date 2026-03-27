@@ -6,7 +6,9 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, trim: true },
     password: { type: String, required: true },
     name: { type: String, required: true },
+    profilePicture: { type: String, default: '' },
     bio: { type: String, default: '' },
+    lastSeen: { type: Date, default: null },
     topPicks: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Media'

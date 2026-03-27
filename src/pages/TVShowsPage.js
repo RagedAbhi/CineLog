@@ -1,5 +1,6 @@
-import { Component } from 'react';
+import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import axios from 'axios';
 import { fetchMovies, addMovie, deleteMovie, fetchRecommendations } from '../store/thunks';
 import { setFilter, setSearch, clearFilters } from '../store/actions';
 import MovieCard from '../components/MovieCard';
@@ -12,7 +13,7 @@ const GENRES = ['all', 'Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horro
 class TVShowsPage extends Component {
     constructor(props) {
         super(props);
-        this.state = { showAddModal: false, toast: null, statusFilter: 'all' };
+        this.state = { showAddModal: false, toast: null, statusFilter: 'all', dismissedIds: new Set() };
     }
 
     componentDidMount() {
@@ -26,27 +27,54 @@ class TVShowsPage extends Component {
         this.setState({ showAddModal: false, toast: { message: 'TV Show added!', type: 'success' } });
     }
 
+    handleDismissRec = async (recId, e) => {
+        if (e) e.stopPropagation();
+        const token = localStorage.getItem('token');
+        try {
+            await axios.delete(`http://localhost:5000/api/recommendations/${recId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            this.setState(prev => ({ 
+                dismissedIds: new Set([...prev.dismissedIds, recId.toString()]),
+                toast: { message: 'Recommendation dismissed', type: 'success' }
+            }));
+            this.props.fetchRecommendations();
+        } catch (err) { 
+            console.error('Error dismissing:', err);
+            this.setState({ toast: { message: 'Failed to dismiss recommendation', type: 'error' } });
+        }
+    }
+
     getFiltered() {
-        const { movies, filters, user } = this.props;
+        const { movies, filters } = this.props;
         const { statusFilter } = this.state;
 
         if (statusFilter === 'recommendations') {
-            const { recommendations } = this.props;
+            const { recommendations, filters } = this.props;
+            const { sortOrder = 'latest' } = this.state; // Default to latest
             if (!recommendations) return [];
-            let list = recommendations.filter(r => r.mediaType === 'series');
+            
+            let list = recommendations.filter(r => r.mediaType === 'series' && !this.state.dismissedIds.has(r._id?.toString()));
+            
+            // Apply Genre Filter
+            if (filters.genre && filters.genre !== 'all') {
+                list = list.filter(r => r.genre && r.genre.toLowerCase().includes(filters.genre.toLowerCase()));
+            }
+            
+            // Apply Search Filter
             if (filters.search) {
                 const q = filters.search.toLowerCase();
                 list = list.filter(m => m.mediaTitle && m.mediaTitle.toLowerCase().includes(q));
             }
-            return list.map(rec => ({
-                _id: rec.imdbID,
-                title: rec.mediaTitle,
-                poster: rec.poster,
-                imdbID: rec.imdbID,
-                mediaType: 'series',
-                isExternal: true,
-                isRecommendation: true
-            }));
+
+            // Apply Sort
+            list = [...list].sort((a, b) => {
+                const dateA = new Date(a.createdAt);
+                const dateB = new Date(b.createdAt);
+                return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+            });
+
+            return list;
         }
 
         let list = movies.filter(m => m.mediaType === 'series');
@@ -59,7 +87,9 @@ class TVShowsPage extends Component {
             const q = filters.search.toLowerCase();
             list = list.filter(m => m.title.toLowerCase().includes(q) || (m.director && m.director.toLowerCase().includes(q)));
         }
-        if (filters.genre !== 'all') list = list.filter(m => m.genre === filters.genre);
+        if (filters.genre !== 'all') {
+            list = list.filter(m => m.genre && m.genre.toLowerCase().includes(filters.genre.toLowerCase()));
+        }
         return list;
     }
 
@@ -116,6 +146,22 @@ class TVShowsPage extends Component {
                             placeholder="Genre"
                         />
                     </div>
+
+                    <div className="filter-toggle-group">
+                        <button 
+                            className={`filter-toggle-btn ${this.state.sortOrder !== 'oldest' ? 'active' : ''}`}
+                            onClick={() => this.setState({ sortOrder: 'latest' })}
+                        >
+                            Latest
+                        </button>
+                        <button 
+                            className={`filter-toggle-btn ${this.state.sortOrder === 'oldest' ? 'active' : ''}`}
+                            onClick={() => this.setState({ sortOrder: 'oldest' })}
+                        >
+                            Oldest
+                        </button>
+                    </div>
+
                     {(filters.search || filters.genre !== 'all') && (
                         <button className="btn-clear" onClick={this.props.clearFilters}>Clear filters</button>
                     )}
@@ -128,6 +174,42 @@ class TVShowsPage extends Component {
                         <div className="empty-icon">📺</div>
                         <h3>No TV shows found</h3>
                         <p>Add some TV shows to get started!</p>
+                    </div>
+                ) : statusFilter === 'recommendations' ? (
+                    <div className="movie-grid">
+                        {filtered.map(rec => (
+                            <div key={rec._id} style={{ position: 'relative' }}>
+                                <MovieCard movie={{
+                                    _id: rec.imdbID,
+                                    title: rec.mediaTitle,
+                                    poster: rec.poster,
+                                    imdbID: rec.imdbID,
+                                    mediaType: rec.mediaType,
+                                    isExternal: true
+                                }} />
+                                <button
+                                    onClick={(e) => this.handleDismissRec(rec._id, e)}
+                                    title="Remove recommendation"
+                                    style={{
+                                        position: 'absolute', top: '-8px', left: '-8px',
+                                        width: '24px', height: '24px', borderRadius: '50%',
+                                        background: 'rgba(20,20,30,0.85)',
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                        backdropFilter: 'blur(10px)',
+                                        color: 'rgba(255,255,255,0.7)',
+                                        fontSize: '13px', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        zIndex: 10, boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,59,48,0.85)'; e.currentTarget.style.color='white'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background='rgba(20,20,30,0.85)'; e.currentTarget.style.color='rgba(255,255,255,0.7)'; }}
+                                >✕</button>
+                                <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                                    From @{rec.sender?.username || 'friend'}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ) : (
                     <div className="movie-grid">

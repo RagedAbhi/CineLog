@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { showToast } from '../store/actions';
+import { fetchRecommendations } from '../store/thunks';
+import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import '../styles/global.css';
 
 const FriendsPage = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests' | 'search'
     const [friends, setFriends] = useState([]);
     const [requests, setRequests] = useState([]);
@@ -14,6 +17,7 @@ const FriendsPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const dispatch = useDispatch();
+    const { user, recommendations, unreadMessages } = useSelector(state => state.auth);
 
     const token = localStorage.getItem('token');
     const apiHeader = { headers: { Authorization: `Bearer ${token}` } };
@@ -21,6 +25,7 @@ const FriendsPage = () => {
     useEffect(() => {
         fetchFriends();
         fetchRequests();
+        dispatch(fetchRecommendations());
 
         // Initial entry animation
         gsap.from(".social-container > *", {
@@ -126,21 +131,52 @@ const FriendsPage = () => {
                                 <button className="btn btn-primary" style={{ marginTop: '20px' }} onClick={() => setActiveTab('search')}>Find Friends</button>
                             </div>
                         ) : (
-                            friends.map(friend => (
-                                <Link to={`/profile/${friend._id}`} key={friend._id} className="stat-card clickable" style={{
-                                    padding: '32px',
-                                    textDecoration: 'none',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                }}>
-                                    <div className="avatar-wrapper" style={{ width: '80px', height: '80px', fontSize: '32px', marginBottom: '20px' }}>
-                                        {friend.name.charAt(0)}
+                            friends.map(friend => {
+                                const recs = recommendations || user?.recommendations || [];
+                                const unreadFromFriendRecs = recs.filter(r => {
+                                    const senderId = (r.sender?._id || r.sender)?.toString();
+                                    const receiverId = (r.receiver?._id || r.receiver)?.toString();
+                                    const currentUserId = (user?._id || user?.id)?.toString();
+                                    const friendId = friend._id?.toString();
+                                    return senderId === friendId && receiverId === currentUserId && !r.read;
+                                }).length;
+
+                                const unreadFromFriendMsgs = (unreadMessages || []).filter(m => {
+                                    const senderId = (m.sender?._id || m.sender)?.toString();
+                                    const friendId = friend._id?.toString();
+                                    return senderId === friendId;
+                                }).length;
+
+                                const totalUnreadFromFriend = unreadFromFriendRecs + unreadFromFriendMsgs;
+
+                                return (
+                                    <div key={friend._id} className="stat-card glass-panel" style={{
+                                        padding: '32px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        position: 'relative'
+                                    }}>
+                                        {totalUnreadFromFriend > 0 && (
+                                            <span className="dot-notification-friend">{totalUnreadFromFriend}</span>
+                                        )}
+                                        <Link to={`/profile/${friend._id}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'inherit' }}>
+                                            <div className="avatar-wrapper" style={{ width: '80px', height: '80px', fontSize: '32px', marginBottom: '20px', overflow: 'hidden' }}>
+                                                {friend.profilePicture ? (
+                                                    <img src={friend.profilePicture.startsWith('http') ? friend.profilePicture : `http://localhost:5000/${friend.profilePicture}`} alt={friend.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    friend.name.charAt(0)
+                                                )}
+                                            </div>
+                                            <h4 className="stat-value" style={{ fontSize: '24px', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>{friend.name}</h4>
+                                            <p className="stat-label" style={{ marginBottom: '20px' }}>@{friend.username}</p>
+                                        </Link>
+                                        <Link to={`/chat/${friend._id}`} className="btn btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                                            💬 Message
+                                        </Link>
                                     </div>
-                                    <h4 className="stat-value" style={{ fontSize: '24px', margin: '0 0 8px 0' }}>{friend.name}</h4>
-                                    <p className="stat-label">@{friend.username}</p>
-                                </Link>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 )}
@@ -194,12 +230,23 @@ const FriendsPage = () => {
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                             {searchResults.map(user => (
-                                <div key={user._id} className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <div>
-                                        <h4 style={{ margin: 0 }}>{user.name}</h4>
-                                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>@{user.username}</p>
+                                <div key={user._id} className="glass-panel" style={{ 
+                                    padding: '24px', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between',
+                                    cursor: 'pointer'
+                                }} onClick={() => navigate(`/profile/${user._id}`)}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                            {user.name?.charAt(0) || user.username?.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h4 style={{ margin: 0 }}>{user.name}</h4>
+                                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>@{user.username}</p>
+                                        </div>
                                     </div>
-                                    <button className="btn btn-secondary btn-sm" onClick={() => sendRequest(user._id)}>Add</button>
+                                    <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); sendRequest(user._id); }}>Add</button>
                                 </div>
                             ))}
                         </div>

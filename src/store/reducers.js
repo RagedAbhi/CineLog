@@ -6,7 +6,8 @@ import {
   DELETE_MOVIE_SUCCESS,
   SET_FILTER, SET_SEARCH, CLEAR_FILTERS,
   AUTH_REQUEST, AUTH_SUCCESS, AUTH_FAILURE, LOGOUT,
-  FETCH_RECS_REQUEST, FETCH_RECS_SUCCESS, FETCH_RECS_FAILURE
+  FETCH_RECS_REQUEST, FETCH_RECS_SUCCESS, FETCH_RECS_FAILURE,
+  FETCH_CHATS_SUCCESS, MARK_CHAT_READ
 } from './actions';
 
 // ============================================================
@@ -86,7 +87,8 @@ const initialAuthState = {
   isAuthenticated: !!localStorage.getItem('token'),
   loading: false,
   error: null,
-  recommendations: []
+  recommendations: [],
+  unreadMessages: []
 };
 
 const authReducer = (state = initialAuthState, action) => {
@@ -126,6 +128,18 @@ const authReducer = (state = initialAuthState, action) => {
     
     case FETCH_RECS_FAILURE:
       return { ...state, loading: false, error: action.payload };
+
+    case FETCH_CHATS_SUCCESS:
+      return { 
+        ...state, 
+        unreadMessages: action.payload.filter(m => !m.read && m.receiver === state.user?._id)
+      };
+
+    case MARK_CHAT_READ:
+      return {
+        ...state,
+        unreadMessages: state.unreadMessages.filter(m => m.sender !== action.payload)
+      };
 
     default:
       return state;

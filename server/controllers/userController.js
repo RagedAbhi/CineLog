@@ -35,7 +35,7 @@ exports.getMe = async (req, res) => {
 
 // Update user profile (name, bio)
 exports.updateProfile = async (req, res) => {
-    const { name, bio, username } = req.body;
+    const { name, bio, username, profilePicture } = req.body;
     
     try {
         const user = await User.findById(req.user.id);
@@ -44,6 +44,7 @@ exports.updateProfile = async (req, res) => {
         if (name) user.name = name;
         if (bio !== undefined) user.bio = bio;
         if (username) user.username = username;
+        if (profilePicture !== undefined) user.profilePicture = profilePicture;
 
         await user.save();
         res.status(200).json(user);
@@ -65,7 +66,7 @@ exports.searchUsers = async (req, res) => {
         const users = await User.find({
             username: { $regex: username, $options: 'i' },
             _id: { $ne: req.user.id }
-        }).select('username name bio');
+        }).select('username name bio profilePicture lastSeen');
 
         res.status(200).json(users);
     } catch (error) {
@@ -83,7 +84,7 @@ exports.getUserProfile = async (req, res) => {
         }
 
         const user = await User.findById(userId)
-            .select('username name bio topPicks')
+            .select('username name bio profilePicture topPicks lastSeen')
             .populate('topPicks');
 
         if (!user) {
@@ -165,5 +166,39 @@ exports.changePassword = async (req, res) => {
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error changing password', error: error.message });
+    }
+};
+
+// Upload and update profile picture
+exports.uploadAvatar = async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Store the full URL to the uploaded file
+        const fileUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+        user.profilePicture = fileUrl;
+        
+        await user.save();
+        res.status(200).json({ 
+            message: 'Profile picture updated', 
+            profilePicture: fileUrl,
+            user 
+        });
+    } catch (error) {
+        console.error('[uploadAvatar] Error:', error);
+        res.status(500).json({ message: 'Error uploading avatar', error: error.message });
+    }
+};
+
+// Heartbeat - update lastSeen timestamp for the current user
+exports.heartbeat = async (req, res) => {
+    try {
+        await User.findByIdAndUpdate(req.user.id, { lastSeen: new Date() });
+        res.status(200).json({ ok: true });
+    } catch (error) {
+        res.status(500).json({ message: 'Heartbeat error', error: error.message });
     }
 };

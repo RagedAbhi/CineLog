@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { Eye, Bookmark, Send, Check, Search, X, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { Eye, Bookmark, Send, Check, Search, X, Loader2, Star } from 'lucide-react';
 import { showToast } from '../store/actions';
 import CineSelect from './CineSelect';
 import { searchMoviesExternal, getMovieDetailsExternal as getMovieDetails, createMovie } from '../services/movieService';
+import { searchMultiTMDB, GENRE_MAP } from '../services/tmdbService';
 
 const GENRES = ['Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure', 'Biography', 'History'];
 
-const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType }) => {
+const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType, chatMode, onSelect }) => {
     const [mediaType, setMediaType] = useState(initialData?.mediaType || defaultType || 'movie');
     const [query, setQuery] = useState(initialData?.title || '');
     const [searching, setSearching] = useState(false);
@@ -22,7 +24,6 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType }) => {
         year: ''
     } : null);
     
-    const [manualMode, setManualMode] = useState(false);
     const [manualData, setManualData] = useState({
         title: '',
         genre: 'Drama',
@@ -30,9 +31,40 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType }) => {
         director: ''
     });
 
+    const [manualMode, setManualMode] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
     const [pendingActions, setPendingActions] = useState({});
     const [actionLoading, setActionLoading] = useState(false);
     const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const userMovies = useSelector(state => state.movies.items);
+
+    // Calculate user genre/cast/director/type preferences for personalization
+    const userPreferences = useMemo(() => {
+        const prefs = { genres: {}, actors: {}, directors: {}, types: { movie: 0, series: 0 } };
+        userMovies.forEach(m => {
+            (m.genre?.split(', ') || []).forEach(g => {
+                prefs.genres[g] = (prefs.genres[g] || 0) + 1;
+            });
+            (m.cast?.split(', ') || []).forEach(a => {
+                prefs.actors[a] = (prefs.actors[a] || 0) + 1;
+            });
+            if (m.director) {
+                prefs.directors[m.director] = (prefs.directors[m.director] || 0) + 1;
+            }
+            if (m.mediaType === 'series') prefs.types.series++;
+            else prefs.types.movie++;
+        });
+        return prefs;
+    }, [userMovies]);
+
+    const typeWeights = useMemo(() => {
+        const total = userMovies.length || 1;
+        return {
+            movie: (userPreferences.types.movie / total) * 50,
+            series: (userPreferences.types.series / total) * 50
+        };
+    }, [userPreferences, userMovies.length]);
 
     useEffect(() => {
         document.body.classList.add('modal-open');
@@ -62,10 +94,68 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType }) => {
         setFetchedMovie(null);
         setManualMode(false);
         try {
-            const results = await searchMoviesExternal(query.trim(), mediaType);
-            setSearchResults(results);
+            const data = await searchMultiTMDB(query.trim());
+            
+            // Personalize results using same logic as GlobalSearch
+            const personalized = data.map(item => {
+                let score = item.popularity || 0;
+                let reasons = [];
+
+                // 1. Media Type Preference
+                const typeBoost = typeWeights[item.mediaType] || 0;
+                if (typeBoost > 25) reasons.push(`Top ${item.mediaType === 'series' ? 'Series' : 'Movie'} Pick`);
+
+                // 2. Genre match
+                let genreBoost = 0;
+                let topGenre = '';
+                item.genreIds.forEach(gid => {
+                    const gName = GENRE_MAP[gid];
+                    const count = userPreferences.genres[gName] || 0;
+                    if (count > genreBoost) {
+                        genreBoost = count;
+                        topGenre = gName;
+                    }
+                });
+                if (topGenre && genreBoost > 2) reasons.push(`Matches your love for ${topGenre}`);
+
+                // 3. Overview match for favorite actors/directors
+                let personBoost = 0;
+                let matchedPerson = '';
+                const textToSearch = `${item.title} ${item.overview} ${item.subtitle || ''}`.toLowerCase();
+                Object.keys(userPreferences.actors).forEach(actor => {
+                    if (textToSearch.includes(actor.toLowerCase())) {
+                        const boost = userPreferences.actors[actor] * 15;
+                        if (boost > personBoost) {
+                            personBoost = boost;
+                            matchedPerson = actor;
+                        }
+                    }
+                });
+                Object.keys(userPreferences.directors).forEach(dir => {
+                    if (textToSearch.includes(dir.toLowerCase())) {
+                        const boost = userPreferences.directors[dir] * 20;
+                        if (boost > personBoost) {
+                            personBoost = boost;
+                            matchedPerson = dir;
+                        }
+                    }
+                });
+                if (matchedPerson) reasons.push(`Featured: ${matchedPerson}`);
+
+                const totalMatchScore = (genreBoost * 20) + personBoost + typeBoost;
+                return { 
+                    ...item, 
+                    imdbID: item.id,
+                    matchScore: totalMatchScore, 
+                    totalScore: score + totalMatchScore,
+                    recommendationReason: reasons[0] || ''
+                };
+            }).sort((a, b) => b.totalScore - a.totalScore);
+
+            setSearchResults(personalized);
+            setSelectedIndex(-1);
         } catch (err) {
-            setSearchError(err.message === 'NO_API_KEY' ? 'NO_API_KEY' : (err.message || 'Not found'));
+            setSearchError(err.message || 'Not found');
         } finally {
             setSearching(false);
         }
@@ -148,6 +238,28 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType }) => {
                                     className="form-input"
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (!searchResults.length) return;
+                                        if (e.key === 'ArrowDown') {
+                                            e.preventDefault();
+                                            setSelectedIndex(prev => (prev < searchResults.length - 1 ? prev + 1 : prev));
+                                        } else if (e.key === 'ArrowUp') {
+                                            e.preventDefault();
+                                            setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
+                                        } else if (e.key === 'Enter') {
+                                            if (selectedIndex >= 0) {
+                                                const res = searchResults[selectedIndex];
+                                                if (chatMode && onSelect) {
+                                                    onSelect(res);
+                                                } else {
+                                                    onClose();
+                                                    navigate(`/movies/${res.imdbID}?external=true&type=${res.mediaType}`);
+                                                }
+                                            } else {
+                                                handleSearch();
+                                            }
+                                        }
+                                    }}
                                     placeholder={`Type a ${mediaType === 'movie' ? 'movie' : 'show'} title…`}
                                     style={{ flex: 1 }}
                                     autoFocus
@@ -166,47 +278,69 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType }) => {
 
                     {searchResults.length > 0 && !fetchedMovie && (
                         <div className="search-results-list glass-panel" style={{ marginTop: '20px', maxHeight: '350px', overflowY: 'auto' }}>
-                            {searchResults.map(res => {
+                            {searchResults.map((res, idx) => {
                                 const actions = pendingActions[res.imdbID] || { status: null, recommend: false };
                                 const hasSelection = actions.status || actions.recommend;
                                 
                                 return (
-                                    <div key={res.imdbID} className="search-result-item" style={{ display: 'flex', gap: '12px', padding: '12px', borderBottom: '1px solid var(--border)' }}>
+                                    <div 
+                                        key={res.imdbID} 
+                                        className={`search-result-item ${idx === selectedIndex ? 'selected' : ''}`}
+                                        style={{ display: 'flex', gap: '12px', padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                                        onClick={() => {
+                                            if (chatMode && onSelect) {
+                                                onSelect(res);
+                                            } else {
+                                                onClose();
+                                                navigate(`/movies/${res.imdbID}?external=true&type=${res.mediaType}`);
+                                            }
+                                        }}
+                                    >
                                         <img src={res.poster || 'https://via.placeholder.com/150'} alt="poster" style={{ width: '45px', height: '65px', borderRadius: '6px', objectFit: 'cover' }} />
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 600, fontSize: '14px', color: '#fff' }}>{res.title}</div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{res.year} • {res.mediaType}</div>
-                                            
-                                            <div className="search-item-actions" style={{ opacity: 1, transform: 'none', pointerEvents: 'auto', marginTop: 0 }}>
-                                                <div className="action-icons-group">
-                                                    <button 
-                                                        className={`action-icon-btn ${actions.status === 'watched' ? 'active' : ''}`}
-                                                        onClick={(e) => toggleAction(e, res.imdbID, 'watched')}
-                                                        title="Mark as Watched"
-                                                    >
-                                                        <Eye size={14} />
-                                                    </button>
-                                                    <button 
-                                                        className={`action-icon-btn ${actions.status === 'watchlist' ? 'active' : ''}`}
-                                                        onClick={(e) => toggleAction(e, res.imdbID, 'watchlist')}
-                                                        title="Add to Watchlist"
-                                                    >
-                                                        <Bookmark size={14} />
-                                                    </button>
-                                                    <button 
-                                                        className={`action-icon-btn ${actions.recommend ? 'active' : ''}`}
-                                                        onClick={(e) => toggleAction(e, res.imdbID, 'recommend')}
-                                                        title="Recommend"
-                                                    >
-                                                        <Send size={14} />
-                                                    </button>
-                                                </div>
-                                                {hasSelection && (
-                                                    <button className="btn-execute-actions" onClick={(e) => handleExecuteActions(e, res)}>
-                                                        <Check size={14} />
-                                                    </button>
-                                                )}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                                <div style={{ fontWeight: 600, fontSize: '14px', color: '#fff' }}>{res.title}</div>
+                                                {idx === 0 && <span className="top-match-badge" style={{ fontSize: '9px', padding: '1px 5px' }}>Top Match</span>}
+                                                {res.recommendationReason && <span className="recommendation-reason-badge" style={{ fontSize: '9px', padding: '1px 5px' }}>{res.recommendationReason}</span>}
                                             </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                                {res.year} • {res.mediaType}
+                                                {res.subtitle && <span className="search-item-subtitle"> • {res.subtitle}</span>}
+                                                {res.rating !== 'N/A' && <span style={{ marginLeft: '8px', color: 'var(--accent)' }}><Star size={10} fill="var(--accent)" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '2px' }} /> {res.rating}</span>}
+                                            </div>
+                                            
+                                            {!chatMode && (
+                                                <div className="search-item-actions" style={{ opacity: 1, transform: 'none', pointerEvents: 'auto', marginTop: 0 }} onClick={e => e.stopPropagation()}>
+                                                    <div className="action-icons-group">
+                                                        <button 
+                                                            className={`action-icon-btn ${actions.status === 'watched' ? 'active' : ''}`}
+                                                            onClick={(e) => toggleAction(e, res.imdbID, 'watched')}
+                                                            title="Mark as Watched"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                        <button 
+                                                            className={`action-icon-btn ${actions.status === 'watchlist' ? 'active' : ''}`}
+                                                            onClick={(e) => toggleAction(e, res.imdbID, 'watchlist')}
+                                                            title="Add to Watchlist"
+                                                        >
+                                                            <Bookmark size={14} />
+                                                        </button>
+                                                        <button 
+                                                            className={`action-icon-btn ${actions.recommend ? 'active' : ''}`}
+                                                            onClick={(e) => toggleAction(e, res.imdbID, 'recommend')}
+                                                            title="Recommend"
+                                                        >
+                                                            <Send size={14} />
+                                                        </button>
+                                                    </div>
+                                                    {hasSelection && (
+                                                        <button className="btn-execute-actions" onClick={(e) => handleExecuteActions(e, res)}>
+                                                            <Check size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
