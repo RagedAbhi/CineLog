@@ -145,7 +145,12 @@ class MovieCard extends Component {
         className="movie-card bio-luminescent"
         ref={this.cardRef}
         onClick={() => {
-            const idToUse = movie._id || movie.imdbID;
+            // For recommendations & external items, prefer imdbID.
+            // rec._id is a Recommendation MongoDB ObjectId — NOT a valid TMDB/IMDB movie ID.
+            // Passing it to TMDB causes a completely different movie to be fetched.
+            const idToUse = (movie.isRecommendation || movie.isExternal)
+                ? (movie.imdbID || movie._id)
+                : (movie._id || movie.imdbID);
             if (idToUse) {
                 const url = (movie.isExternal || !movie._id || movie.isRecommendation)
                     ? `/movies/${idToUse}?external=true&type=${movie.mediaType || 'movie'}` 

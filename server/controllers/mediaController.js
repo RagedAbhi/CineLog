@@ -37,6 +37,17 @@ exports.createMedia = async (req, res) => {
             if (existing) {
                 return res.status(400).json({ message: 'This item is already in your library' });
             }
+        } else {
+            // Fallback for items without imdbID (rare but possible)
+            const existing = await Media.findOne({ 
+                userId: req.user.id, 
+                title: req.body.title, 
+                year: req.body.year,
+                mediaType: req.body.mediaType 
+            });
+            if (existing) {
+                return res.status(400).json({ message: 'This item is already in your library' });
+            }
         }
  
         const media = await Media.create(mediaData);

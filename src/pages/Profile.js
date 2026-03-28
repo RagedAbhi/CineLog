@@ -9,7 +9,7 @@ import MovieCard from '../components/MovieCard';
 import CineSelect from '../components/CineSelect';
 import '../styles/global.css';
 
-const GENRES = ['all', 'Action', 'Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Science Fiction', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Biography'];
+const GENRES = ['all', 'Action', 'Adventure', 'Animation', 'Biography', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Sci-Fi', 'Science Fiction', 'Thriller', 'War', 'Western'];
 
 const Profile = () => {
     const { id } = useParams();
@@ -22,13 +22,30 @@ const Profile = () => {
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [formData, setFormData] = useState({ name: '', bio: '', username: '', profilePicture: '' });
     const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '' });
+    
+    // Filters
     const [recGenreFilter, setRecGenreFilter] = useState('all');
     const [recMediaTypeFilter, setRecMediaTypeFilter] = useState('all');
     const [recSortOrder, setRecSortOrder] = useState('latest');
+    
     const [sentGenreFilter, setSentGenreFilter] = useState('all');
     const [sentMediaTypeFilter, setSentMediaTypeFilter] = useState('all');
     const [sentSortOrder, setSentSortOrder] = useState('latest');
+
+    const [topGenreFilter, setTopGenreFilter] = useState('all');
+    const [topMediaTypeFilter, setTopMediaTypeFilter] = useState('all');
+    
     const fileInputRef = useRef(null);
+
+    // Reset filters on profile change
+    useEffect(() => {
+        setRecGenreFilter('all');
+        setRecMediaTypeFilter('all');
+        setSentGenreFilter('all');
+        setSentMediaTypeFilter('all');
+        setTopGenreFilter('all');
+        setTopMediaTypeFilter('all');
+    }, [id]);
 
     // Decode JWT to get current user ID reliably (works on page refresh when Redux state is empty)
     const getTokenUserId = () => {
@@ -329,18 +346,68 @@ const Profile = () => {
                     <div className="picks-line"></div>
                 </div>
 
-
-                {profile.topPicks?.length > 0 ? (
-                    <div className="media-grid-minimal">
-                        {profile.topPicks.map((media, index) => (
-                            <MovieCard key={media._id} movie={media} index={index} />
+                <div className="profile-rec-controls" style={{ 
+                    display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', 
+                    flexWrap: 'wrap', padding: '0 4px' 
+                }}>
+                    <div style={{ width: '160px' }}>
+                        <CineSelect
+                            options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))}
+                            value={topGenreFilter}
+                            onChange={setTopGenreFilter}
+                            placeholder="Genre"
+                        />
+                    </div>
+                    <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
+                        {['all', 'movie', 'series'].map(type => (
+                            <button 
+                                key={type}
+                                className={`media-tab ${topMediaTypeFilter === type ? 'active' : ''}`}
+                                onClick={() => setTopMediaTypeFilter(type)}
+                                style={{ fontSize: '12px', padding: '0 12px' }}
+                            >
+                                {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+                            </button>
                         ))}
                     </div>
-                ) : (
-                    <div className="picks-empty-minimal">
-                        <p>Discover and add your favorites to this collection.</p>
-                    </div>
-                )}
+                </div>
+
+                {(() => {
+                    let filtered = profile.topPicks || [];
+                    
+                    if (topGenreFilter !== 'all') {
+                        const q = topGenreFilter.toLowerCase();
+                        filtered = filtered.filter(m => {
+                            if (!m.genre) return false;
+                            const normalized = m.genre.toLowerCase();
+                            // Special case for Sci-Fi
+                            if (q === 'sci-fi' || q === 'science fiction') {
+                                return normalized.includes('sci-fi') || normalized.includes('science fiction');
+                            }
+                            return normalized.includes(q);
+                        });
+                    }
+
+                    if (topMediaTypeFilter !== 'all') {
+                        filtered = filtered.filter(m => m.mediaType === topMediaTypeFilter);
+                    }
+
+                    if (filtered.length > 0) {
+                        return (
+                            <div className="media-grid-minimal">
+                                {filtered.map((media, index) => (
+                                    <MovieCard key={media._id} movie={media} index={index} />
+                                ))}
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <div className="picks-empty-minimal">
+                            <p>No matches found in Top Picks.</p>
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* Recommendations Received SECTION */}
@@ -376,21 +443,39 @@ const Profile = () => {
                     // 3. Group duplicates and count them
                     const grouped = {};
                     filtered.forEach(r => {
-                        const key = r.imdbID || r._id;
-                        if (!grouped[key]) {
-                            grouped[key] = { ...r, count: 1, allIds: [r._id], allSenders: [r.sender] };
+                        // Use imdbID or a canonical combination of title + type to group
+                        const canonicalKey = (r.imdbID || (r.mediaTitle + '|' + r.mediaType)).toLowerCase().replace(/\s/g, '');
+                        
+                        if (!grouped[canonicalKey]) {
+                            grouped[canonicalKey] = { 
+                                ...r, 
+                                count: 1, 
+                                allIds: [r._id], 
+                                allSenders: [r.sender] 
+                            };
                         } else {
-                            grouped[key].count += 1;
-                            grouped[key].allIds.push(r._id);
-                            grouped[key].allSenders.push(r.sender);
+                            grouped[canonicalKey].count += 1;
+                            grouped[canonicalKey].allIds.push(r._id);
+                            grouped[canonicalKey].allSenders.push(r.sender);
+                            // Merge unread status: if any are unread, mark group as unread
+                            if (!r.read) grouped[canonicalKey].read = false;
                         }
                     });
                     
                     filtered = Object.values(grouped);
 
-                    // 4. Apply Genre Filter
-                    if (recGenreFilter !== 'all') {
-                        filtered = filtered.filter(r => r.genre && r.genre.toLowerCase().includes(recGenreFilter.toLowerCase()));
+                    // 4. Apply Filters
+                    if (recGenreFilter && recGenreFilter !== 'all') {
+                        const q = recGenreFilter.toLowerCase();
+                        filtered = filtered.filter(r => {
+                            if (!r.genre) return false;
+                            const normalized = r.genre.toLowerCase();
+                            // Special case for Sci-Fi
+                            if (q === 'sci-fi' || q === 'science fiction') {
+                                return normalized.includes('sci-fi') || normalized.includes('science fiction');
+                            }
+                            return normalized.includes(q);
+                        });
                     }
 
                     // 4.5 Apply Media Type Filter
@@ -419,7 +504,7 @@ const Profile = () => {
                                         placeholder="Genre"
                                     />
                                 </div>
-                                <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '36px' }}>
+                                <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
                                     {['all', 'movie', 'series'].map(type => (
                                         <button 
                                             key={type}
@@ -431,7 +516,7 @@ const Profile = () => {
                                         </button>
                                     ))}
                                 </div>
-                                <div className="filter-toggle-group" style={{ margin: 0 }}>
+                                <div className="filter-toggle-group" style={{ margin: 0, height: '38px' }}>
                                     <button 
                                         className={`filter-toggle-btn ${recSortOrder === 'latest' ? 'active' : ''}`}
                                         onClick={() => setRecSortOrder('latest')}
@@ -455,6 +540,13 @@ const Profile = () => {
                                     {filtered.map((rec, index) => {
                                         const isUnseen = !rec.read && (rec.receiver?._id || rec.receiver)?.toString() === currentUserId;
                                         
+                                        // Try to find genre in my movies if missing in recommendation
+                                        let displayGenre = rec.genre;
+                                        if (!displayGenre || displayGenre === 'Unknown') {
+                                            const myMatch = myMovies?.find(m => m.imdbID === rec.imdbID);
+                                            if (myMatch && myMatch.genre) displayGenre = myMatch.genre;
+                                        }
+
                                         return (
                                         <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible', position: 'relative' }}>
                                             <MovieCard 
@@ -464,8 +556,9 @@ const Profile = () => {
                                                     poster: rec.poster,
                                                     imdbID: rec.imdbID,
                                                     mediaType: rec.mediaType,
-                                                    genre: rec.genre,
-                                                    isExternal: true
+                                                    genre: displayGenre,
+                                                    isExternal: true,
+                                                    isRecommendation: true
                                                 }} 
                                                 index={index} 
                                             />
@@ -569,7 +662,8 @@ const Profile = () => {
                                                 }
                                             </div>
                                         </div>
-                                    );})}
+                                    );
+                                })}
                                 </div>
                             ) : (
                                 <div className="picks-empty-minimal">
@@ -606,21 +700,36 @@ const Profile = () => {
                     // 3. Group duplicates and count them
                     const grouped = {};
                     filtered.forEach(r => {
-                        const key = r.imdbID || r._id;
-                        if (!grouped[key]) {
-                            grouped[key] = { ...r, count: 1, allIds: [r._id], allReceivers: [r.receiver] };
+                        const canonicalKey = (r.imdbID || (r.mediaTitle + '|' + r.mediaType)).toLowerCase().replace(/\s/g, '');
+                        
+                        if (!grouped[canonicalKey]) {
+                            grouped[canonicalKey] = { 
+                                ...r, 
+                                count: 1, 
+                                allIds: [r._id], 
+                                allReceivers: [r.receiver] 
+                            };
                         } else {
-                            grouped[key].count += 1;
-                            grouped[key].allIds.push(r._id);
-                            grouped[key].allReceivers.push(r.receiver);
+                            grouped[canonicalKey].count += 1;
+                            grouped[canonicalKey].allIds.push(r._id);
+                            grouped[canonicalKey].allReceivers.push(r.receiver);
                         }
                     });
                     
                     filtered = Object.values(grouped);
 
-                    // 4. Apply Genre Filter
-                    if (sentGenreFilter !== 'all') {
-                        filtered = filtered.filter(r => r.genre && r.genre.toLowerCase().includes(sentGenreFilter.toLowerCase()));
+                    // 4. Apply Filters
+                    if (sentGenreFilter && sentGenreFilter !== 'all') {
+                        const q = sentGenreFilter.toLowerCase();
+                        filtered = filtered.filter(r => {
+                            if (!r.genre) return false;
+                            const normalized = r.genre.toLowerCase();
+                            // Special case for Sci-Fi
+                            if (q === 'sci-fi' || q === 'science fiction') {
+                                return normalized.includes('sci-fi') || normalized.includes('science fiction');
+                            }
+                            return normalized.includes(q);
+                        });
                     }
 
                     // 4.5 Apply Media Type Filter
@@ -649,7 +758,7 @@ const Profile = () => {
                                         placeholder="Genre"
                                     />
                                 </div>
-                                <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '36px' }}>
+                                <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
                                     {['all', 'movie', 'series'].map(type => (
                                         <button 
                                             key={type}
@@ -661,7 +770,7 @@ const Profile = () => {
                                         </button>
                                     ))}
                                 </div>
-                                <div className="filter-toggle-group" style={{ margin: 0 }}>
+                                <div className="filter-toggle-group" style={{ margin: 0, height: '38px' }}>
                                     <button 
                                         className={`filter-toggle-btn ${sentSortOrder === 'latest' ? 'active' : ''}`}
                                         onClick={() => setSentSortOrder('latest')}
@@ -682,7 +791,15 @@ const Profile = () => {
 
                             {filtered.length > 0 ? (
                                 <div className="media-grid-minimal">
-                                    {filtered.map((rec, index) => (
+                                    {filtered.map((rec, index) => {
+                                        // Try to find genre in my movies if missing in recommendation
+                                        let displayGenre = rec.genre;
+                                        if (!displayGenre || displayGenre === 'Unknown') {
+                                            const myMatch = myMovies?.find(m => m.imdbID === rec.imdbID);
+                                            if (myMatch && myMatch.genre) displayGenre = myMatch.genre;
+                                        }
+                                        
+                                        return (
                                         <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible', position: 'relative' }}>
                                             <MovieCard 
                                                 movie={{
@@ -691,8 +808,9 @@ const Profile = () => {
                                                     poster: rec.poster,
                                                     imdbID: rec.imdbID,
                                                     mediaType: rec.mediaType,
-                                                    genre: rec.genre,
-                                                    isExternal: true
+                                                    genre: displayGenre,
+                                                    isExternal: true,
+                                                    isRecommendation: true
                                                 }} 
                                                 index={index} 
                                             />
@@ -775,7 +893,8 @@ const Profile = () => {
                                                 }
                                             </div>
                                         </div>
-                                    ))}
+                                    );
+                                })}
                                 </div>
                             ) : (
                                 <div className="picks-empty-minimal">

@@ -6,14 +6,15 @@ import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import Toast from '../components/Toast';
 
-const GENRES = ['all', 'Action', 'Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Science Fiction', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy'];
+const GENRES = ['all', 'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction', 'TV Movie', 'Thriller', 'War', 'Western'];
 
 class Watchlist extends Component {
   constructor(props) {
     super(props);
     this.state = {
       showAddModal: false,
-      toast: null
+      toast: null,
+      sortOrder: 'latest'
     };
   }
 
@@ -43,19 +44,37 @@ class Watchlist extends Component {
       const q = filters.search.toLowerCase();
       list = list.filter(m =>
         m.title.toLowerCase().includes(q) ||
-        (m.director && m.director.toLowerCase().includes(q))
+        (m.director && m.director.toLowerCase().includes(q)) ||
+        (m.genre && m.genre.toLowerCase().includes(q))
       );
     }
 
-    if (filters.genre !== 'all') {
-      list = list.filter(m => m.genre && m.genre.toLowerCase().includes(filters.genre.toLowerCase()));
+    if (filters.genre && filters.genre !== 'all') {
+      const q = filters.genre.toLowerCase();
+      list = list.filter(m => m.genre && m.genre.toLowerCase().includes(q));
     }
 
     if (filters.mediaType !== 'all') {
       list = list.filter(m => m.mediaType === filters.mediaType);
     }
 
-    return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const { sortOrder = 'latest' } = this.state;
+    list = list.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+    });
+
+    // --- UI Deduplication ---
+    const seen = new Set();
+    list = list.filter(m => {
+        const key = (m.imdbID || m._id || m.title).toString().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
+    return list;
   }
 
   render() {
@@ -92,6 +111,22 @@ class Watchlist extends Component {
               <option key={g} value={g}>{g === 'all' ? 'All Genres' : g}</option>
             ))}
           </select>
+
+          <div className="filter-toggle-group">
+            <button 
+              className={`filter-toggle-btn ${this.state.sortOrder !== 'oldest' ? 'active' : ''}`}
+              onClick={() => this.setState({ sortOrder: 'latest' })}
+            >
+              Latest
+            </button>
+            <button 
+              className={`filter-toggle-btn ${this.state.sortOrder === 'oldest' ? 'active' : ''}`}
+              onClick={() => this.setState({ sortOrder: 'oldest' })}
+            >
+              Oldest
+            </button>
+          </div>
+
           {(filters.search || filters.genre !== 'all' || filters.mediaType !== 'all') && (
             <button className="btn-clear" onClick={this.props.clearFilters}>Clear filters</button>
           )}

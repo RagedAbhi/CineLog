@@ -29,7 +29,7 @@ class Dashboard extends Component {
       showRecommendModal: false,
       selectedMedia: null,
       isEditingOrder: false,
-      sectionOrder: ['recent_movies', 'recent_shows', 'watchlist', 'expertise_stats', 'recommendations']
+      sectionOrder: ['recent_movies', 'recent_shows', 'watchlist', 'expertise_stats']
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
@@ -356,16 +356,19 @@ class Dashboard extends Component {
     const recentlyWatchedMovies = movies
       .filter(m => m.status === 'watched' && m.watchedOn && (m.mediaType === 'movie' || !m.mediaType))
       .sort((a, b) => new Date(b.watchedOn) - new Date(a.watchedOn))
+      .filter((m, i, arr) => arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (x.title === m.title && x.year === m.year)) === i)
       .slice(0, 10);
 
     const recentlyWatchedShows = movies
       .filter(m => m.status === 'watched' && m.watchedOn && m.mediaType === 'series')
       .sort((a, b) => new Date(b.watchedOn) - new Date(a.watchedOn))
+      .filter((m, i, arr) => arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (x.title === m.title && x.year === m.year)) === i)
       .slice(0, 10);
 
     const watchlistItems = movies
       .filter(m => m.status === 'watchlist')
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .filter((m, i, arr) => arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (x.title === m.title && x.year === m.year)) === i)
       .slice(0, 15);
 
     return (
@@ -471,48 +474,7 @@ class Dashboard extends Component {
                 return this.renderRow('My Watchlist', watchlistItems, '/watchlist', 'watchlist', index);
               case 'expertise_stats':
                 return this.renderExpertiseStats(index);
-              case 'recommendations':
-                return (
-                  <div className={`media-row-container ${this.state.isEditingOrder ? 'editing' : 'reveal'}`} key="recommendations">
-                    {this.state.isEditingOrder && (
-                      <div className="section-edit-controls">
-                        <button className="btn-edit-move" onClick={() => this.moveSection(index, -1)} disabled={index === 0}>↑</button>
-                        <button className="btn-edit-move" onClick={() => this.moveSection(index, 1)} disabled={index === this.state.sectionOrder.length - 1}>↓</button>
-                        <div className="section-label-edit">Friend Suggestions</div>
-                      </div>
-                    )}
-                    <div className="row-header">
-                      <h3>Friend Suggestions</h3>
-                      {!this.state.isEditingOrder && <button className="btn-clear" onClick={() => navigate('/friends')}>Social</button>}
-                    </div>
-                    <div className="media-row">
-                      {recommendations.length > 0 ? (
-                        recommendations.map(rec => {
-                          const existingInLibrary = movies.find(m => 
-                            (rec.imdbID && m.imdbID === rec.imdbID) || 
-                            (m.title.toLowerCase() === rec.mediaTitle.toLowerCase())
-                          );
-                          return (
-                            <MovieCard
-                              key={rec._id.toString()}
-                              movie={{
-                                _id: existingInLibrary ? existingInLibrary._id.toString() : rec._id.toString(),
-                                title: rec.mediaTitle,
-                                poster: rec.poster,
-                                genre: `From ${rec.sender.name}`,
-                                mediaType: rec.mediaType,
-                                imdbID: rec.imdbID,
-                                isRecommendation: !existingInLibrary
-                              }}
-                            />
-                          );
-                        })
-                      ) : (
-                        <div className="glass-panel-empty">Connect with friends to see recommendations here!</div>
-                      )}
-                    </div>
-                  </div>
-                );
+
               default:
                 return null;
             }
@@ -535,7 +497,7 @@ class Dashboard extends Component {
           <div className="edit-mode-footer-bar glass-panel bio-luminescent">
             <span>Rearrange your home sections using the arrows.</span>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn btn-secondary" onClick={() => this.setState({ isEditingOrder: false, sectionOrder: JSON.parse(localStorage.getItem('dashboard_section_order') || '["social_pulse", "recent_movies", "recent_shows", "watchlist", "recommendations"]') })}>
+              <button className="btn btn-secondary" onClick={() => this.setState({ isEditingOrder: false, sectionOrder: JSON.parse(localStorage.getItem('dashboard_section_order') || '["recent_movies", "recent_shows", "watchlist", "expertise_stats"]') })}>
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={this.saveSectionOrder}>

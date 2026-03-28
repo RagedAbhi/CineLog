@@ -78,7 +78,11 @@ const Analytics = () => {
     // Genre count
     const genreCount = {};
     watchedMovies.forEach(m => {
-      genreCount[m.genre] = (genreCount[m.genre] || 0) + 1;
+      if (m.genre) {
+        m.genre.split(', ').forEach(g => {
+          genreCount[g] = (genreCount[g] || 0) + 1;
+        });
+      }
     });
     const sortedGenres = Object.entries(genreCount).sort((a, b) => b[1] - a[1]);
     const topGenre = sortedGenres[0]?.[0] || '—';

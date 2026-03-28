@@ -154,8 +154,16 @@ const GlobalSearch = () => {
                         }
 
                         const totalMatchScore = (genreBoost * 20) + personBoost + typeBoost;
+                        
+                        // Map IDs to human-readable genre string
+                        const genreString = (item.genreIds || [])
+                            .map(gid => GENRE_MAP[gid])
+                            .filter(Boolean)
+                            .join(', ');
+
                         return { 
                             ...item, 
+                            genre: genreString,
                             matchScore: totalMatchScore, 
                             totalScore: score + totalMatchScore,
                             matchPercentage: Math.min(matchPercentage, 99),

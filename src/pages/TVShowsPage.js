@@ -8,7 +8,7 @@ import AddMovieModal from '../components/AddMovieModal';
 import CineSelect from '../components/CineSelect';
 import Toast from '../components/Toast';
 
-const GENRES = ['all', 'Action', 'Adventure', 'Action & Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Science Fiction', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Biography'];
+const GENRES = ['all', 'Action & Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Kids', 'Mystery', 'News', 'Reality', 'Sci-Fi & Fantasy', 'Soap', 'Talk', 'War & Politics', 'Western'];
 
 class TVShowsPage extends Component {
     constructor(props) {
@@ -85,11 +85,34 @@ class TVShowsPage extends Component {
 
         if (filters.search) {
             const q = filters.search.toLowerCase();
-            list = list.filter(m => m.title.toLowerCase().includes(q) || (m.director && m.director.toLowerCase().includes(q)));
+            list = list.filter(m => 
+                m.title.toLowerCase().includes(q) || 
+                (m.director && m.director.toLowerCase().includes(q)) ||
+                (m.genre && m.genre.toLowerCase().includes(q))
+            );
         }
-        if (filters.genre !== 'all') {
-            list = list.filter(m => m.genre && m.genre.toLowerCase().includes(filters.genre.toLowerCase()));
+        if (filters.genre && filters.genre !== 'all') {
+            const q = filters.genre.toLowerCase();
+            list = list.filter(m => m.genre && m.genre.toLowerCase().includes(q));
         }
+
+        // --- UI Deduplication ---
+        const seen = new Set();
+        list = list.filter(m => {
+            const key = (m.imdbID || m._id || m.title).toString().toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        // --- Sorting ---
+        const { sortOrder = 'latest' } = this.state;
+        list = [...list].sort((a, b) => {
+            const dateA = new Date(a.createdAt || a.addedOn || 0);
+            const dateB = new Date(b.createdAt || b.addedOn || 0);
+            return sortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+        });
+
         return list;
     }
 

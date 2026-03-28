@@ -41,18 +41,20 @@ const SocialPulse = () => {
                     <div 
                         key={rec._id} 
                         className="pulse-item"
-                        onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true&type=${rec.mediaType || 'movie'}`)}
+                        // Use imdbID specifically for recommendations. 
+                        // rec._id is a Recommendation record ID, NOT a movie ID.
+                        onClick={() => navigate(`/movies/${rec.imdbID}?external=true&type=${rec.mediaType || 'movie'}`)}
                     >
                         <div className="pulse-avatar">
-                            {rec.sender.avatar ? (
-                                <img src={rec.sender.avatar} alt={rec.sender.name} />
+                            {rec.sender?.avatar ? (
+                                <img src={rec.sender.avatar} alt={rec.sender?.name || ''} />
                             ) : (
                                 <User size={14} />
                             )}
                         </div>
                         <div className="pulse-info">
                             <p className="pulse-text">
-                                <strong>{rec.sender.name}</strong> recommended 
+                                <strong>{rec.sender?.name || 'Unknown User'}</strong> recommended 
                                 <span> {rec.mediaTitle}</span>
                             </p>
                             <span className="pulse-time">{formatTime(rec.createdAt)}</span>

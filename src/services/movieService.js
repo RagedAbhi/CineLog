@@ -100,8 +100,22 @@ export const getMovieDetailsExternal = async (id, mediaType = '') => {
         }
 
         // 2. Get full details including credits (for cast)
-        const detailUrl = `https://api.themoviedb.org/3/${tmdbType}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
-        const detailRes = await axios.get(detailUrl);
+        let detailRes;
+        try {
+            const detailUrl = `https://api.themoviedb.org/3/${tmdbType}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
+            detailRes = await axios.get(detailUrl);
+        } catch (err) {
+            // If the initial type was wrong (common with numeric IDs in recs), retry with the other type
+            if (err.response?.status === 404) {
+                const retryType = tmdbType === 'tv' ? 'movie' : 'tv';
+                const retryUrl = `https://api.themoviedb.org/3/${retryType}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
+                detailRes = await axios.get(retryUrl);
+                tmdbType = retryType; // Correct the type for mapping
+            } else {
+                throw err;
+            }
+        }
+
         const item = detailRes.data;
 
         data = {

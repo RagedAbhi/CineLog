@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { markChatRead } from '../store/actions';
 import axios from 'axios';
 import { Send, Plus, X, Film, Tv, User, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import AddMovieModal from '../components/AddMovieModal';
 import './Messenger.css';
 
@@ -100,87 +101,132 @@ const Chat = () => {
         setShowMediaPicker(false);
     };
 
-    const getStatus = (lastSeen) => {
-        if (!lastSeen) return 'Away';
+    const getStatusInfo = (lastSeen) => {
+        if (!lastSeen) return { label: 'Away', isOnline: false };
         const lastSeenDate = new Date(lastSeen);
         const now = new Date();
         const diffInMinutes = Math.floor((now - lastSeenDate) / 60000);
 
-        if (diffInMinutes < 2) return 'Online';
-        if (diffInMinutes < 60) return `Last seen ${diffInMinutes}m ago`;
-        if (diffInMinutes < 1440) return `Last seen ${Math.floor(diffInMinutes / 60)}h ago`;
-        return `Last seen ${Math.floor(diffInMinutes / 1440)}d ago`;
+        if (diffInMinutes < 2) return { label: 'Online', isOnline: true };
+        if (diffInMinutes < 60) return { label: `${diffInMinutes}m ago`, isOnline: false };
+        if (diffInMinutes < 1440) return { label: `${Math.floor(diffInMinutes / 60)}h ago`, isOnline: false };
+        return { label: `${Math.floor(diffInMinutes / 1440)}d ago`, isOnline: false };
     };
 
-    if (!friend && loading) return <div className="chat-loading">Loading chat...</div>;
+    const status = getStatusInfo(friend?.lastSeen);
 
     return (
-        <div className="chat-page-container">
-            <div className="chat-header glass-panel">
-                <button className="chat-back-btn" onClick={() => navigate('/friends')}>
-                    <ArrowLeft size={20} />
-                </button>
-                <div className="chat-user-info">
-                    {friend?.avatar ? <img src={friend.avatar.startsWith('http') ? friend.avatar : `http://localhost:5000/${friend.avatar}`} alt="" /> : <div className="user-icon-placeholder"><User size={20} /></div>}
-                    <div className="chat-user-details">
-                        <span className="chat-friend-name">{friend?.name || friend?.username}</span>
-                        <span className={`chat-status ${getStatus(friend?.lastSeen) === 'Online' ? 'online' : 'offline'}`}>
-                            {getStatus(friend?.lastSeen)}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="chat-messages-area">
-                {messages.length === 0 && !loading && (
-                    <div className="empty-chat-hint">Say hi to start the conversation!</div>
-                )}
-                {messages.map((msg) => {
-                    const isMine = msg.sender === user?._id;
-                    return (
-                        <div key={msg._id} className={`message-row ${isMine ? 'mine' : 'theirs'}`}>
-                            <div className="message-bubble glass-panel">
-                                {msg.mediaAddon && (
-                                    <div className="message-media-addon" onClick={() => navigate(`/movies/${msg.mediaAddon.imdbID}?external=true&type=${msg.mediaAddon.mediaType}`)}>
-                                        <img src={msg.mediaAddon.poster} alt="" />
-                                        <div className="addon-info">
-                                            <span className="addon-title">{msg.mediaAddon.title}</span>
-                                            <span className="addon-type">{msg.mediaAddon.mediaType === 'series' ? <Tv size={10} /> : <Film size={10} />} {msg.mediaAddon.mediaType}</span>
-                                        </div>
-                                    </div>
-                                )}
-                                {msg.text && <p className="message-text">{msg.text}</p>}
-                                <span className="message-time">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        <motion.div 
+            className="chat-page-container"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        >
+            <div className="chat-main-window">
+                <div className="chat-header">
+                    <button className="chat-back-btn" onClick={() => navigate('/friends')}>
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div className="chat-user-info">
+                        <div className={`chat-avatar-ring ${!status.isOnline ? 'offline' : ''}`}>
+                            {friend?.avatar ? 
+                                <img src={friend.avatar.startsWith('http') ? friend.avatar : `http://localhost:5000/${friend.avatar}`} alt="" /> 
+                                : <div className="user-icon-placeholder"><User size={22} /></div>
+                            }
+                        </div>
+                        <div className="chat-user-details">
+                            <span className="chat-friend-name">{friend?.name || friend?.username}</span>
+                            <div className={`chat-status-pill ${status.isOnline ? 'online' : 'offline'}`}>
+                                <span className="indicator" />
+                                {status.label}
                             </div>
                         </div>
-                    );
-                })}
-                <div ref={messagesEndRef} />
-            </div>
-
-            <footer className="chat-input-area glass-panel">
-                {attachedMedia && (
-                    <div className="attached-media-preview glass-panel">
-                        <img src={attachedMedia.poster} alt="" />
-                        <span>{attachedMedia.title}</span>
-                        <button onClick={() => setAttachedMedia(null)}><X size={14} /></button>
                     </div>
-                )}
-                <form className="chat-form" onSubmit={handleSendMessage}>
-                    <button type="button" className="btn-attach" onClick={() => setShowMediaPicker(true)}>
-                        <Plus size={20} />
-                    </button>
-                    <input 
-                        type="text" 
-                        placeholder="Message..." 
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                    />
-                    <button type="submit" className="btn-send" disabled={!inputText.trim() && !attachedMedia}>
-                        <Send size={20} />
-                    </button>
-                </form>
-            </footer>
+                </div>
+
+                <div className="chat-messages-area">
+                    <AnimatePresence>
+                        {messages.length === 0 && !loading && (
+                            <motion.div 
+                                className="empty-chat-hint"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                            >
+                                ✨ Start a cinematic conversation with {friend?.name || 'your friend'}!
+                            </motion.div>
+                        )}
+                        {messages.map((msg, idx) => {
+                            const isMine = msg.sender === user?._id;
+                            const isLastInSeries = idx === messages.length - 1 || messages[idx+1]?.sender !== msg.sender;
+                            
+                            return (
+                                <motion.div 
+                                    key={msg._id} 
+                                    className={`message-row ${isMine ? 'mine' : 'theirs'}`}
+                                    initial={{ opacity: 0, x: isMine ? 20 : -20, scale: 0.95 }}
+                                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                                    transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                                >
+                                    <div className="message-bubble">
+                                        {msg.mediaAddon && (
+                                            <div className="message-media-addon" onClick={() => navigate(`/movies/${msg.mediaAddon.imdbID}?external=true&type=${msg.mediaAddon.mediaType}`)}>
+                                                <img src={msg.mediaAddon.poster} alt="" />
+                                                <div className="addon-info">
+                                                    <span className="addon-title">{msg.mediaAddon.title}</span>
+                                                    <span className="addon-type">
+                                                        {msg.mediaAddon.mediaType === 'series' ? <Tv size={11} /> : <Film size={11} />} 
+                                                        {msg.mediaAddon.mediaType}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {msg.text && <p className="message-text">{msg.text}</p>}
+                                        <span className="message-time">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
+                    <div ref={messagesEndRef} />
+                </div>
+
+                <footer className="chat-input-area">
+                    <AnimatePresence>
+                        {attachedMedia && (
+                            <motion.div 
+                                className="attached-media-preview"
+                                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                            >
+                                <img src={attachedMedia.poster} alt="" />
+                                <span className="preview-name">{attachedMedia.title}</span>
+                                <button className="btn-detach" onClick={() => setAttachedMedia(null)}>
+                                    <X size={12} />
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    
+                    <form className="chat-form" onSubmit={handleSendMessage}>
+                        <div className="input-shell">
+                            <button type="button" className="btn-attach" onClick={() => setShowMediaPicker(true)}>
+                                <Plus size={20} />
+                            </button>
+                            <input 
+                                className="chat-input"
+                                type="text" 
+                                placeholder="Write something..." 
+                                value={inputText}
+                                onChange={(e) => setInputText(e.target.value)}
+                            />
+                            <button type="submit" className="btn-send" disabled={!inputText.trim() && !attachedMedia}>
+                                <Send size={18} />
+                            </button>
+                        </div>
+                    </form>
+                </footer>
+            </div>
 
             {showMediaPicker && (
                 <AddMovieModal 
@@ -189,7 +235,7 @@ const Chat = () => {
                     chatMode={true}
                 />
             )}
-        </div>
+        </motion.div>
     );
 };
 

@@ -83,15 +83,22 @@ exports.getFriends = async (req, res) => {
             ]
         }).populate('requester recipient', 'username name bio profilePicture');
 
+        console.log(`[getFriends] user=${req.user.id} found ${friendships.length} accepted friendships`);
+
+        // Filter out friendships where the other user was deleted (null populate)
+        const validFriendships = friendships.filter(f => f.requester && f.recipient);
+
         // Extract the friend's data from the friendship object
-        const friends = friendships.map(f => {
+        const friends = validFriendships.map(f => {
             return f.requester._id.toString() === req.user.id
                 ? f.recipient
                 : f.requester;
         });
 
+        console.log(`[getFriends] returning ${friends.length} friends:`, friends.map(f => f?.username));
         res.status(200).json(friends);
     } catch (error) {
+        console.error('[getFriends] error:', error);
         res.status(500).json({ message: 'Error fetching friends', error: error.message });
     }
 };

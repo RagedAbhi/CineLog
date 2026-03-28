@@ -6,7 +6,7 @@ import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import Toast from '../components/Toast';
 
-const GENRES = ['all', 'Action', 'Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Science Fiction', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy'];
+const GENRES = ['all', 'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction', 'TV Movie', 'Thriller', 'War', 'Western'];
 
 class Watched extends Component {
   constructor(props) {
@@ -44,12 +44,14 @@ class Watched extends Component {
       const q = filters.search.toLowerCase();
       list = list.filter(m =>
         m.title.toLowerCase().includes(q) ||
-        (m.director && m.director.toLowerCase().includes(q))
+        (m.director && m.director.toLowerCase().includes(q)) ||
+        (m.genre && m.genre.toLowerCase().includes(q))
       );
     }
 
-    if (filters.genre !== 'all') {
-      list = list.filter(m => m.genre && m.genre.toLowerCase().includes(filters.genre.toLowerCase()));
+    if (filters.genre && filters.genre !== 'all') {
+      const q = filters.genre.toLowerCase();
+      list = list.filter(m => m.genre && m.genre.toLowerCase().includes(q));
     }
 
     if (filters.rating !== 'all') {
@@ -68,7 +70,18 @@ class Watched extends Component {
       list = list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     } else if (sortBy === 'title') {
       list = list.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'oldest') {
+      list = list.sort((a, b) => new Date(a.watchedOn || 0) - new Date(b.watchedOn || 0));
     }
+
+    // --- UI Deduplication ---
+    const seen = new Set();
+    list = list.filter(m => {
+        const key = (m.imdbID || m._id || m.title).toString().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 
     return list;
   }
@@ -123,6 +136,7 @@ class Watched extends Component {
             onChange={(e) => this.setState({ sortBy: e.target.value })}
           >
             <option value="watchedOn">Sort: Recently Watched</option>
+            <option value="oldest">Sort: Date Logged (Oldest)</option>
             <option value="rating">Sort: Highest Rated</option>
             <option value="title">Sort: Title A-Z</option>
           </select>

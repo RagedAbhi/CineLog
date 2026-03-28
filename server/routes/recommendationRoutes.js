@@ -10,6 +10,7 @@ router.get('/', recommendationController.getMyRecommendations);
 router.post('/', recommendationController.sendRecommendation);
 router.get('/:id', recommendationController.getRecommendationById);
 router.patch('/:id/read', recommendationController.markAsRead);
+router.patch('/:id/metadata', recommendationController.updateMetadata);
 router.patch('/mark-all-read/:senderId', recommendationController.markAllFromSenderAsRead);
 router.delete('/:id', recommendationController.deleteRecommendation);
 

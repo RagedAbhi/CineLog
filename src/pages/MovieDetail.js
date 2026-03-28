@@ -70,10 +70,11 @@ class MovieDetail extends Component {
         }, () => {
             this.fetchStreamingInfo();
             this.initAnimations();
+            this.syncMetadataIfNeeded(details);
         });
     } catch (err) {
-        console.error('External fetch failed:', err);
-        this.setState({ localLoading: false });
+        console.error('External fetch failed, falling back to recommendation record:', err);
+        this.fetchRecommendationFallback();
     }
   }
 
@@ -138,6 +139,25 @@ class MovieDetail extends Component {
       });
     } catch (err) {
       this.setState({ localLoading: false });
+    }
+  }
+
+  syncMetadataIfNeeded = async (freshDetails) => {
+    const movie = this.getMovie();
+    // If we're looking at a recommendation and the stored rec has no genre (or "Unknown"), fix it.
+    if (movie && movie.isExternalRec && movie._id && (!movie.genre || movie.genre === 'Unknown' || movie.genre === '')) {
+      if (freshDetails && freshDetails.genre && freshDetails.genre !== 'Unknown') {
+        console.log(`[MovieDetail] Healing recommendation ${movie._id} with genre: ${freshDetails.genre}`);
+        try {
+          const token = localStorage.getItem('token');
+          await axios.patch(`http://localhost:5000/api/recommendations/${movie._id}/metadata`, 
+            { genre: freshDetails.genre },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (err) {
+          console.error('[MovieDetail] Failed to sync recommendation metadata:', err);
+        }
+      }
     }
   }
 

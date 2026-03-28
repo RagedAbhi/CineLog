@@ -20,8 +20,7 @@ const FriendsPage = () => {
     const dispatch = useDispatch();
     const { user, recommendations, unreadMessages } = useSelector(state => state.auth);
 
-    const token = localStorage.getItem('token');
-    const apiHeader = { headers: { Authorization: `Bearer ${token}` } };
+    const getApiHeader = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 
     useEffect(() => {
         fetchFriends();
@@ -48,16 +47,16 @@ const FriendsPage = () => {
 
     const fetchFriends = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/friends', apiHeader);
+            const res = await axios.get('http://localhost:5000/api/friends', getApiHeader());
             setFriends(res.data);
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error('fetchFriends error:', err); }
     };
 
     const fetchRequests = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/friends/requests', apiHeader);
+            const res = await axios.get('http://localhost:5000/api/friends/requests', getApiHeader());
             setRequests(res.data);
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error('fetchRequests error:', err); }
     };
 
     const handleSearch = async (e) => {
@@ -65,7 +64,7 @@ const FriendsPage = () => {
         if (!searchQuery.trim()) return;
         setLoading(true);
         try {
-            const res = await axios.get(`http://localhost:5000/api/users/search?username=${searchQuery}`, apiHeader);
+            const res = await axios.get(`http://localhost:5000/api/users/search?username=${searchQuery}`, getApiHeader());
             setSearchResults(res.data);
         } catch (err) { console.error(err); }
         setLoading(false);
@@ -73,7 +72,7 @@ const FriendsPage = () => {
 
     const sendRequest = async (recipientId) => {
         try {
-            await axios.post('http://localhost:5000/api/friends/request', { recipientId }, apiHeader);
+            await axios.post('http://localhost:5000/api/friends/request', { recipientId }, getApiHeader());
             dispatch(showToast('Request sent!', 'success'));
         } catch (err) { 
             dispatch(showToast(err.response?.data?.message || 'Error sending request', 'error')); 
@@ -82,7 +81,7 @@ const FriendsPage = () => {
 
     const acceptRequest = async (requestId) => {
         try {
-            await axios.post('http://localhost:5000/api/friends/accept', { requestId }, apiHeader);
+            await axios.post('http://localhost:5000/api/friends/accept', { requestId }, getApiHeader());
             fetchFriends();
             fetchRequests();
         } catch (err) { console.error(err); }
@@ -194,7 +193,7 @@ const FriendsPage = () => {
                                                 {friend.profilePicture ? (
                                                     <img src={friend.profilePicture.startsWith('http') ? friend.profilePicture : `http://localhost:5000/${friend.profilePicture}`} alt={friend.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 ) : (
-                                                    friend.name.charAt(0)
+                                                    (friend.name || friend.username || '?').charAt(0)
                                                 )}
                                             </div>
                                             <h4 className="stat-value" style={{ fontSize: '24px', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>{friend.name}</h4>
@@ -279,7 +278,7 @@ const FriendsPage = () => {
                                                     From @{rec.sender.username}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
                                                 </p>
                                             </div>
-                                            <button className="btn btn-primary btn-sm" onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true&type=${rec.mediaType}`)}>View</button>
+                                            <button className="btn btn-primary btn-sm" onClick={() => navigate(`/movies/${rec.imdbID}?external=true&type=${rec.mediaType}`)}>View</button>
                                         </div>
                                     ));
                                 })()}
