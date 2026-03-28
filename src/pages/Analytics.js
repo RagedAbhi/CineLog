@@ -286,11 +286,11 @@ const Analytics = () => {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl text-white">{selectedGenre} Collection</h2>
                 <span className="text-white/60 text-sm">
-                  {watchedMovies.filter(m => m.genre === selectedGenre).length} items
+                  {watchedMovies.filter(m => m.genre && m.genre.toLowerCase().includes(selectedGenre.toLowerCase())).length} items
                 </span>
               </div>
               <div className="results-grid-redesign">
-                {watchedMovies.filter(m => m.genre === selectedGenre).map((movie, index) => (
+                {watchedMovies.filter(m => m.genre && m.genre.toLowerCase().includes(selectedGenre.toLowerCase())).map((movie, index) => (
                   <motion.div
                     key={movie._id}
                     initial={{ opacity: 0, x: -20 }}

@@ -9,7 +9,7 @@ import MovieCard from '../components/MovieCard';
 import CineSelect from '../components/CineSelect';
 import '../styles/global.css';
 
-const GENRES = ['all', 'Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure', 'Biography'];
+const GENRES = ['all', 'Action', 'Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Science Fiction', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Biography'];
 
 const Profile = () => {
     const { id } = useParams();
@@ -23,8 +23,10 @@ const Profile = () => {
     const [formData, setFormData] = useState({ name: '', bio: '', username: '', profilePicture: '' });
     const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '' });
     const [recGenreFilter, setRecGenreFilter] = useState('all');
+    const [recMediaTypeFilter, setRecMediaTypeFilter] = useState('all');
     const [recSortOrder, setRecSortOrder] = useState('latest');
     const [sentGenreFilter, setSentGenreFilter] = useState('all');
+    const [sentMediaTypeFilter, setSentMediaTypeFilter] = useState('all');
     const [sentSortOrder, setSentSortOrder] = useState('latest');
     const fileInputRef = useRef(null);
 
@@ -388,6 +390,11 @@ const Profile = () => {
                         filtered = filtered.filter(r => r.genre && r.genre.toLowerCase().includes(recGenreFilter.toLowerCase()));
                     }
 
+                    // 4.5 Apply Media Type Filter
+                    if (recMediaTypeFilter !== 'all') {
+                        filtered = filtered.filter(r => r.mediaType === recMediaTypeFilter);
+                    }
+
                     // 5. Apply Sort
                     filtered = [...filtered].sort((a, b) => {
                         const dateA = new Date(a.createdAt);
@@ -408,6 +415,18 @@ const Profile = () => {
                                         onChange={setRecGenreFilter}
                                         placeholder="Genre"
                                     />
+                                </div>
+                                <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '36px' }}>
+                                    {['all', 'movie', 'series'].map(type => (
+                                        <button 
+                                            key={type}
+                                            className={`media-tab ${recMediaTypeFilter === type ? 'active' : ''}`}
+                                            onClick={() => setRecMediaTypeFilter(type)}
+                                            style={{ fontSize: '12px', padding: '0 12px' }}
+                                        >
+                                            {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+                                        </button>
+                                    ))}
                                 </div>
                                 <div className="filter-toggle-group" style={{ margin: 0 }}>
                                     <button 
@@ -555,6 +574,11 @@ const Profile = () => {
                         filtered = filtered.filter(r => r.genre && r.genre.toLowerCase().includes(sentGenreFilter.toLowerCase()));
                     }
 
+                    // 4.5 Apply Media Type Filter
+                    if (sentMediaTypeFilter !== 'all') {
+                        filtered = filtered.filter(r => r.mediaType === sentMediaTypeFilter);
+                    }
+
                     // 5. Apply Sort
                     filtered = [...filtered].sort((a, b) => {
                         const dateA = new Date(a.createdAt);
@@ -575,6 +599,18 @@ const Profile = () => {
                                         onChange={setSentGenreFilter}
                                         placeholder="Genre"
                                     />
+                                </div>
+                                <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '36px' }}>
+                                    {['all', 'movie', 'series'].map(type => (
+                                        <button 
+                                            key={type}
+                                            className={`media-tab ${sentMediaTypeFilter === type ? 'active' : ''}`}
+                                            onClick={() => setSentMediaTypeFilter(type)}
+                                            style={{ fontSize: '12px', padding: '0 12px' }}
+                                        >
+                                            {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+                                        </button>
+                                    ))}
                                 </div>
                                 <div className="filter-toggle-group" style={{ margin: 0 }}>
                                     <button 

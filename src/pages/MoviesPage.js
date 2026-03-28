@@ -7,7 +7,7 @@ import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import CineSelect from '../components/CineSelect';
 
-const GENRES = ['all', 'Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure'];
+const GENRES = ['all', 'Action', 'Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Science Fiction', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery'];
 
 class MoviesPage extends Component {
     constructor(props) {

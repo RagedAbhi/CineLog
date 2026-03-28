@@ -6,7 +6,7 @@ import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import Toast from '../components/Toast';
 
-const GENRES = ['all', 'Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy'];
+const GENRES = ['all', 'Action', 'Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Science Fiction', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy'];
 
 class Watched extends Component {
   constructor(props) {
@@ -49,7 +49,7 @@ class Watched extends Component {
     }
 
     if (filters.genre !== 'all') {
-      list = list.filter(m => m.genre === filters.genre);
+      list = list.filter(m => m.genre && m.genre.toLowerCase().includes(filters.genre.toLowerCase()));
     }
 
     if (filters.rating !== 'all') {

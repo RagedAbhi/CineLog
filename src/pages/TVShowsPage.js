@@ -8,7 +8,7 @@ import AddMovieModal from '../components/AddMovieModal';
 import CineSelect from '../components/CineSelect';
 import Toast from '../components/Toast';
 
-const GENRES = ['all', 'Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure', 'Biography'];
+const GENRES = ['all', 'Action', 'Adventure', 'Action & Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Science Fiction', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Biography'];
 
 class TVShowsPage extends Component {
     constructor(props) {
