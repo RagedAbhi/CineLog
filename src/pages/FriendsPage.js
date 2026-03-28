@@ -276,7 +276,7 @@ const FriendsPage = () => {
                                                     </span>
                                                 </div>
                                                 <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                    From @{rec.sender.username}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
+                                                    From @{rec.sender?.username || 'unknown'}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
                                                 </p>
                                             </div>
                                             <button className="btn btn-primary btn-sm" onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true&type=${rec.mediaType}`)}>View</button>
@@ -350,7 +350,7 @@ const FriendsPage = () => {
                                                     </span>
                                                 </div>
                                                 <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                    To @{rec.receiver.username}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
+                                                    To @{rec.receiver?.username || 'unknown'}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
                                                 </p>
                                             </div>
                                             <button 
@@ -403,11 +403,11 @@ const FriendsPage = () => {
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                         <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                            {req.requester.name.charAt(0)}
+                                            {req.requester?.name?.charAt(0) || '?'}
                                         </div>
                                         <div>
-                                            <h4 style={{ margin: 0 }}>{req.requester.name}</h4>
-                                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>@{req.requester.username} wants to connect</p>
+                                            <h4 style={{ margin: 0 }}>{req.requester?.name || 'Unknown User'}</h4>
+                                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>@{req.requester?.username || 'unknown'} wants to connect</p>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', gap: '12px' }}>
