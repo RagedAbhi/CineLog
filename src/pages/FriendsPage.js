@@ -215,12 +215,49 @@ const FriendsPage = () => {
                         <div>
                            <h3 style={{ marginBottom: '16px', fontSize: '18px', color: 'var(--accent)' }}>Inbox</h3>
                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {recommendations.filter(r => (r.receiver?._id || r.receiver) === user?._id).length === 0 ? (
-                                    <p style={{ color: 'var(--text-muted)' }}>No recommendations received.</p>
-                                ) : (
-                                    recommendations.filter(r => (r.receiver?._id || r.receiver) === user?._id).map(rec => (
-                                        <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
+                                {(() => {
+                                    const inboxRecs = recommendations.filter(r => (r.receiver?._id || r.receiver) === user?._id);
+                                    if (inboxRecs.length === 0) return <p style={{ color: 'var(--text-muted)' }}>No recommendations received.</p>;
+
+                                    // Group by imdbID
+                                    const grouped = {};
+                                    inboxRecs.forEach(r => {
+                                        const key = r.imdbID || r._id;
+                                        if (!grouped[key]) {
+                                            grouped[key] = { ...r, count: 1, allIds: [r._id], allSenders: [r.sender] };
+                                        } else {
+                                            grouped[key].count += 1;
+                                            grouped[key].allIds.push(r._id);
+                                            grouped[key].allSenders.push(r.sender);
+                                        }
+                                    });
+
+                                    return Object.values(grouped).map(rec => (
+                                        <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+                                            <div style={{ position: 'relative' }}>
+                                                <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
+                                                {rec.count > 1 && (
+                                                    <div 
+                                                        title={`Recommended by: ${rec.allSenders.map(s => s.name || s.username).join(', ')}`}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '-8px',
+                                                            left: '-8px',
+                                                            background: 'white',
+                                                            color: '#1a1a2e',
+                                                            fontSize: '10px',
+                                                            fontWeight: 'bold',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '10px',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                                            cursor: 'help',
+                                                            zIndex: 2
+                                                        }}
+                                                    >
+                                                        x{rec.count}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                                                     <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
@@ -238,24 +275,63 @@ const FriendsPage = () => {
                                                         {rec.mediaType === 'series' ? 'Series' : 'Movie'}
                                                     </span>
                                                 </div>
-                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>From {rec.sender.name} • {rec.message || 'No message'}</p>
+                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                    From @{rec.sender.username}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
+                                                </p>
                                             </div>
                                             <button className="btn btn-primary btn-sm" onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true&type=${rec.mediaType}`)}>View</button>
                                         </div>
-                                    ))
-                                )}
+                                    ));
+                                })()}
                            </div>
                         </div>
 
                         <div>
                            <h3 style={{ marginBottom: '16px', fontSize: '18px', color: 'var(--accent)' }}>Sent by You</h3>
                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {recommendations.filter(r => (r.sender?._id || r.sender) === user?._id).length === 0 ? (
-                                    <p style={{ color: 'var(--text-muted)' }}>You haven't sent any recommendations yet.</p>
-                                ) : (
-                                    recommendations.filter(r => (r.sender?._id || r.sender) === user?._id).map(rec => (
-                                        <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
+                                {(() => {
+                                    const sentRecs = recommendations.filter(r => (r.sender?._id || r.sender) === user?._id);
+                                    if (sentRecs.length === 0) return <p style={{ color: 'var(--text-muted)' }}>You haven't sent any recommendations yet.</p>;
+
+                                    // Group by imdbID
+                                    const grouped = {};
+                                    sentRecs.forEach(r => {
+                                        const key = r.imdbID || r._id;
+                                        if (!grouped[key]) {
+                                            grouped[key] = { ...r, count: 1, allIds: [r._id], allReceivers: [r.receiver] };
+                                        } else {
+                                            grouped[key].count += 1;
+                                            grouped[key].allIds.push(r._id);
+                                            grouped[key].allReceivers.push(r.receiver);
+                                        }
+                                    });
+
+                                    return Object.values(grouped).map(rec => (
+                                        <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+                                            <div style={{ position: 'relative' }}>
+                                                <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
+                                                {rec.count > 1 && (
+                                                    <div 
+                                                        title={`Sent to: ${rec.allReceivers.map(re => re.name || re.username).join(', ')}`}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '-8px',
+                                                            left: '-8px',
+                                                            background: 'white',
+                                                            color: '#1a1a2e',
+                                                            fontSize: '10px',
+                                                            fontWeight: 'bold',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '10px',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                                            cursor: 'help',
+                                                            zIndex: 2
+                                                        }}
+                                                    >
+                                                        x{rec.count}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                                                     <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
@@ -273,22 +349,33 @@ const FriendsPage = () => {
                                                         {rec.mediaType === 'series' ? 'Series' : 'Movie'}
                                                     </span>
                                                 </div>
-                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>To {rec.receiver.name} • {rec.message || 'No message'}</p>
+                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                    To @{rec.receiver.username}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
+                                                </p>
                                             </div>
                                             <button 
                                                 className="btn btn-secondary btn-sm" 
                                                 style={{ color: 'var(--red)', borderColor: 'rgba(255, 59, 48, 0.2)' }}
                                                 onClick={() => {
+                                                    const receiverNames = rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ');
                                                     dispatch(showConfirmModal({
                                                         title: 'Unrecommend',
-                                                        message: `Withdraw recommendation for "${rec.mediaTitle}"?`,
+                                                        message: `Withdraw your recommendation for "${rec.mediaTitle}" sent to ${rec.count} friend${rec.count > 1 ? 's' : ''}${rec.count > 1 ? ` (${receiverNames})` : ''}?`,
                                                         confirmText: 'Unrecommend',
                                                         cancelText: 'Cancel',
                                                         isDangerous: true,
                                                         onConfirm: async () => {
-                                                            await axios.delete(`http://localhost:5000/api/recommendations/${rec._id}`, apiHeader);
-                                                            dispatch(fetchRecommendations());
-                                                            dispatch(showToast('Recommendation withdrawn'));
+                                                            try {
+                                                                if (rec.allIds && rec.allIds.length > 0) {
+                                                                    await Promise.all(rec.allIds.map(id => axios.delete(`http://localhost:5000/api/recommendations/${id}`, apiHeader)));
+                                                                } else {
+                                                                    await axios.delete(`http://localhost:5000/api/recommendations/${rec._id}`, apiHeader);
+                                                                }
+                                                                dispatch(fetchRecommendations());
+                                                                dispatch(showToast('Recommendation(s) withdrawn'));
+                                                            } catch (err) {
+                                                                dispatch(showToast('Error withdrawing recommendation', 'error'));
+                                                            }
                                                         }
                                                     }));
                                                 }}
@@ -296,8 +383,8 @@ const FriendsPage = () => {
                                                 Withdraw
                                             </button>
                                         </div>
-                                    ))
-                                )}
+                                    ));
+                                })()}
                            </div>
                         </div>
                     </div>
