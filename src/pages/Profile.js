@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchCurrentUser, fetchRecommendations, fetchMovies } from '../store/thunks';
-import { showToast } from '../store/actions';
+import { showToast, showConfirmModal } from '../store/actions';
 import gsap from 'gsap';
 import MovieCard from '../components/MovieCard';
 import CineSelect from '../components/CineSelect';
@@ -366,9 +366,9 @@ const Profile = () => {
                         
                         if (!isValidContext) return false;
 
-                        // 2. Filter out if already in watchlist/watched
-                        const alreadyAdded = myMovies?.some(m => m.imdbID === r.imdbID && (m.status === 'watchlist' || m.status === 'watched'));
-                        if (alreadyAdded) return false;
+                        // 2. Filter out if already in watchlist/watched (DISABLED as per user request)
+                        // const alreadyAdded = myMovies?.some(m => m.imdbID === r.imdbID && (m.status === 'watchlist' || m.status === 'watched'));
+                        // if (alreadyAdded) return false;
 
                         return true;
                     }) || [];
@@ -489,7 +489,17 @@ const Profile = () => {
                                             )}
                                             {isOwnProfile && (
                                                 <button
-                                                    onClick={(e) => dismissRecommendation(rec._id, e)}
+                                                    onClick={(e) => {
+                                                        if (e) e.stopPropagation();
+                                                        dispatch(showConfirmModal({
+                                                            title: 'Remove Recommendation',
+                                                            message: `Are you sure you want to remove the recommendation for "${rec.mediaTitle}"?`,
+                                                            confirmText: 'Remove',
+                                                            cancelText: 'Cancel',
+                                                            isDangerous: true,
+                                                            onConfirm: () => dismissRecommendation(rec._id)
+                                                        }));
+                                                    }}
                                                     title="Dismiss recommendation"
                                                     style={{
                                                         position: 'absolute',
@@ -649,7 +659,17 @@ const Profile = () => {
                                             />
                                             {isOwnProfile && (
                                                 <button
-                                                    onClick={(e) => dismissRecommendation(rec._id, e)}
+                                                    onClick={(e) => {
+                                                        if (e) e.stopPropagation();
+                                                        dispatch(showConfirmModal({
+                                                            title: 'Retract Recommendation',
+                                                            message: `Withdraw your recommendation for "${rec.mediaTitle}"?`,
+                                                            confirmText: 'Withdraw',
+                                                            cancelText: 'Cancel',
+                                                            isDangerous: true,
+                                                            onConfirm: () => dismissRecommendation(rec._id)
+                                                        }));
+                                                    }}
                                                     title="Retract recommendation"
                                                     style={{
                                                         position: 'absolute',

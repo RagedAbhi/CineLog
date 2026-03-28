@@ -17,5 +17,7 @@ const mediaSchema = new mongoose.Schema({
     addedOn: { type: String, default: () => new Date().toISOString().split('T')[0] },
     isTopPick: { type: Boolean, default: false }
 }, { timestamps: true });
+ 
+mediaSchema.index({ userId: 1, imdbID: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Media', mediaSchema);

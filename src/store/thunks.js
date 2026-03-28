@@ -38,7 +38,10 @@ export const addMovie = (movieData) => async (dispatch) => {
     dispatch(addMovieSuccess(newMovie));
     return newMovie;
   } catch (error) {
-    dispatch(addMovieFailure(error.message));
+    const errorMessage = error.response?.data?.message || error.message;
+    dispatch(addMovieFailure(errorMessage));
+    dispatch(showToast(errorMessage, 'error'));
+    throw error; // Re-throw so components can handle it if needed
   }
 };
 
