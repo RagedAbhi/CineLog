@@ -470,20 +470,25 @@ const Profile = () => {
                                                 index={index} 
                                             />
                                             {rec.count > 1 && (
-                                                <div className="rec-count-badge" style={{
-                                                    position: 'absolute',
-                                                    top: '10px',
-                                                    left: '10px',
-                                                    background: 'rgba(255, 255, 255, 0.95)',
-                                                    color: '#1a1a2e',
-                                                    fontSize: '12px',
-                                                    fontWeight: 'bold',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '12px',
-                                                    zIndex: 15,
-                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                                                    border: '1px solid rgba(0,0,0,0.1)'
-                                                }}>
+                                                <div 
+                                                    className="rec-count-badge" 
+                                                    title={`Recommended by: ${rec.allSenders?.map(s => s?.name || s?.username || 'Friend').join(', ')}`}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '10px',
+                                                        left: '10px',
+                                                        background: 'rgba(255, 255, 255, 0.95)',
+                                                        color: '#1a1a2e',
+                                                        fontSize: '12px',
+                                                        fontWeight: 'bold',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '12px',
+                                                        zIndex: 15,
+                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                                        border: '1px solid rgba(0,0,0,0.1)',
+                                                        cursor: 'help'
+                                                    }}
+                                                >
                                                     x{rec.count}
                                                 </div>
                                             )}
@@ -528,7 +533,7 @@ const Profile = () => {
                                                             }
                                                         }));
                                                     }}
-                                                    title={`Recommended by: ${rec.allSenders?.map(s => s?.name || s?.username || 'Friend').join(', ')}`}
+                                                    title=""
                                                     style={{
                                                         position: 'absolute',
                                                         top: '-10px',
@@ -692,20 +697,25 @@ const Profile = () => {
                                                 index={index} 
                                             />
                                             {rec.count > 1 && (
-                                                <div className="rec-count-badge" style={{
-                                                    position: 'absolute',
-                                                    top: '10px',
-                                                    left: '10px',
-                                                    background: 'rgba(255, 255, 255, 0.95)',
-                                                    color: '#1a1a2e',
-                                                    fontSize: '12px',
-                                                    fontWeight: 'bold',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '12px',
-                                                    zIndex: 15,
-                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                                                    border: '1px solid rgba(0,0,0,0.1)'
-                                                }}>
+                                                <div 
+                                                    className="rec-count-badge" 
+                                                    title={`Sent to: ${rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ')}`}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '10px',
+                                                        left: '10px',
+                                                        background: 'rgba(255, 255, 255, 0.95)',
+                                                        color: '#1a1a2e',
+                                                        fontSize: '12px',
+                                                        fontWeight: 'bold',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '12px',
+                                                        zIndex: 15,
+                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                                        border: '1px solid rgba(0,0,0,0.1)',
+                                                        cursor: 'help'
+                                                    }}
+                                                >
                                                     x{rec.count}
                                                 </div>
                                             )}
@@ -729,7 +739,7 @@ const Profile = () => {
                                                             }
                                                         }));
                                                     }}
-                                                    title={`Sent to: ${rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ')}`}
+                                                    title=""
                                                     style={{
                                                         position: 'absolute',
                                                         top: '-10px',
