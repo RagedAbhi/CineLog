@@ -55,7 +55,8 @@ const RecommendModal = ({ movie, onClose, onRecommend }) => {
             onRecommend();
         } catch (err) {
             console.error('Error sending recommendation:', err);
-            dispatch(showToast('Failed to send recommendation', 'error'));
+            const errorMessage = err.response?.data?.message || 'Failed to send recommendation';
+            dispatch(showToast(errorMessage, 'error'));
         }
     };
 

@@ -47,15 +47,24 @@ exports.sendRecommendation = async (req, res) => {
         const verifiedType = await verifyMediaType(imdbID, mediaType);
  
         // Prevent duplicates from same sender to same receiver
+        const existingQuery = {
+            sender: req.user.id,
+            receiver: receiverId
+        };
+
         if (imdbID) {
-            const existing = await Recommendation.findOne({
-                sender: req.user.id,
-                receiver: receiverId,
-                imdbID: imdbID
+            existingQuery.imdbID = imdbID;
+        } else {
+            // Fallback to title check if no imdbID is provided (less ideal but better than nothing)
+            existingQuery.mediaTitle = { $regex: new RegExp(`^${mediaTitle}$`, 'i') };
+        }
+
+        const existing = await Recommendation.findOne(existingQuery);
+        
+        if (existing) {
+            return res.status(400).json({ 
+                message: `You have already recommended "${mediaTitle}" to this friend` 
             });
-            if (existing) {
-                return res.status(400).json({ message: 'You have already recommended this to your friend' });
-            }
         }
 
         const recommendation = await Recommendation.create({
