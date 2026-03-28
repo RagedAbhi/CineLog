@@ -373,17 +373,19 @@ const Profile = () => {
                         return true;
                     }) || [];
 
-                    // 3. Remove duplicates (no show repeats twice)
-                    const uniqueFiltered = [];
-                    const seenIds = new Set();
+                    // 3. Group duplicates and count them
+                    const grouped = {};
                     filtered.forEach(r => {
-                        if (!seenIds.has(r.imdbID)) {
-                            uniqueFiltered.push(r);
-                            seenIds.add(r.imdbID);
+                        const key = r.imdbID || r._id;
+                        if (!grouped[key]) {
+                            grouped[key] = { ...r, count: 1, allIds: [r._id] };
+                        } else {
+                            grouped[key].count += 1;
+                            grouped[key].allIds.push(r._id);
                         }
                     });
                     
-                    filtered = uniqueFiltered;
+                    filtered = Object.values(grouped);
 
                     // 4. Apply Genre Filter
                     if (recGenreFilter !== 'all') {
@@ -466,6 +468,24 @@ const Profile = () => {
                                                 }} 
                                                 index={index} 
                                             />
+                                            {rec.count > 1 && (
+                                                <div className="rec-count-badge" style={{
+                                                    position: 'absolute',
+                                                    top: '10px',
+                                                    left: '10px',
+                                                    background: 'rgba(255, 255, 255, 0.95)',
+                                                    color: '#1a1a2e',
+                                                    fontSize: '12px',
+                                                    fontWeight: 'bold',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '12px',
+                                                    zIndex: 15,
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                                    border: '1px solid rgba(0,0,0,0.1)'
+                                                }}>
+                                                    x{rec.count}
+                                                </div>
+                                            )}
                                             {isUnseen && (
                                                 <div className="rec-unseen-badge" style={{
                                                     position: 'absolute',
@@ -530,7 +550,10 @@ const Profile = () => {
                                                 </button>
                                             )}
                                             <div className="rec-attribution" style={{ marginTop: '10px' }}>
-                                                {isOwnProfile ? `From @${rec.sender?.username || 'friend'}` : 'To you'}
+                                                {isOwnProfile 
+                                                    ? `From @${rec.sender?.username || 'friend'}${rec.count > 1 ? ` and ${rec.count - 1} others` : ''}` 
+                                                    : `To @${profile.username || 'user'}${rec.count > 1 ? ` (shared by ${rec.count} friends)` : ''}`
+                                                }
                                             </div>
                                         </div>
                                     );})}
@@ -567,17 +590,19 @@ const Profile = () => {
                         return recSenderId === currentUserId && recReceiverId === profileId;
                     }) || [];
 
-                    // Remove duplicates
-                    const uniqueFiltered = [];
-                    const seenIds = new Set();
+                    // 3. Group duplicates and count them
+                    const grouped = {};
                     filtered.forEach(r => {
-                        if (!seenIds.has(r.imdbID)) {
-                            uniqueFiltered.push(r);
-                            seenIds.add(r.imdbID);
+                        const key = r.imdbID || r._id;
+                        if (!grouped[key]) {
+                            grouped[key] = { ...r, count: 1, allIds: [r._id] };
+                        } else {
+                            grouped[key].count += 1;
+                            grouped[key].allIds.push(r._id);
                         }
                     });
                     
-                    filtered = uniqueFiltered;
+                    filtered = Object.values(grouped);
 
                     // 4. Apply Genre Filter
                     if (sentGenreFilter !== 'all') {
@@ -657,6 +682,24 @@ const Profile = () => {
                                                 }} 
                                                 index={index} 
                                             />
+                                            {rec.count > 1 && (
+                                                <div className="rec-count-badge" style={{
+                                                    position: 'absolute',
+                                                    top: '10px',
+                                                    left: '10px',
+                                                    background: 'rgba(255, 255, 255, 0.95)',
+                                                    color: '#1a1a2e',
+                                                    fontSize: '12px',
+                                                    fontWeight: 'bold',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '12px',
+                                                    zIndex: 15,
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                                    border: '1px solid rgba(0,0,0,0.1)'
+                                                }}>
+                                                    x{rec.count}
+                                                </div>
+                                            )}
                                             {isOwnProfile && (
                                                 <button
                                                     onClick={(e) => {
@@ -700,7 +743,10 @@ const Profile = () => {
                                                 </button>
                                             )}
                                             <div className="rec-attribution" style={{ marginTop: '10px' }}>
-                                                {isOwnProfile ? `To @${rec.receiver?.username || 'friend'}` : 'From you'}
+                                                {isOwnProfile 
+                                                    ? `To @${rec.receiver?.username || 'friend'}${rec.count > 1 ? ` and ${rec.count - 1} others` : ''}` 
+                                                    : `From you${rec.count > 1 ? ` (to ${rec.count} friends)` : ''}`
+                                                }
                                             </div>
                                         </div>
                                     ))}

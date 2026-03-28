@@ -11,5 +11,7 @@ const recommendationSchema = new mongoose.Schema({
     message: { type: String },
     read: { type: Boolean, default: false }
 }, { timestamps: true });
+ 
+recommendationSchema.index({ sender: 1, receiver: 1, imdbID: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Recommendation', recommendationSchema);

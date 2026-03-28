@@ -45,6 +45,18 @@ exports.sendRecommendation = async (req, res) => {
 
         // Always verify mediaType from OMDB to prevent misclassification
         const verifiedType = await verifyMediaType(imdbID, mediaType);
+ 
+        // Prevent duplicates from same sender to same receiver
+        if (imdbID) {
+            const existing = await Recommendation.findOne({
+                sender: req.user.id,
+                receiver: receiverId,
+                imdbID: imdbID
+            });
+            if (existing) {
+                return res.status(400).json({ message: 'You have already recommended this to your friend' });
+            }
+        }
 
         const recommendation = await Recommendation.create({
             sender: req.user.id,
