@@ -211,7 +211,7 @@ const FriendsPage = () => {
                 )}
 
                 {activeTab === 'recommendations' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '32px', alignItems: 'start' }}>
                         <div>
                            <h3 style={{ marginBottom: '16px', fontSize: '18px', color: 'var(--accent)' }}>Inbox</h3>
                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
