@@ -6,7 +6,8 @@ import {
   updateMovieRequest, updateMovieSuccess, updateMovieFailure,
   deleteMovieRequest, deleteMovieSuccess, deleteMovieFailure,
   authRequest, authSuccess, authFailure, logout as logoutAction,
-  fetchRecsRequest, fetchRecsSuccess, fetchRecsFailure
+  fetchRecsRequest, fetchRecsSuccess, fetchRecsFailure,
+  fetchChatsSuccess, showToast
 } from './actions';
 import axios from 'axios';
 
@@ -151,14 +152,26 @@ export const fetchRecommendations = () => async (dispatch) => {
     }
 };
 
-export const fetchRecentChats = () => async (dispatch) => {
+export const fetchRecentChats = () => async (dispatch, getState) => {
     try {
         const token = localStorage.getItem('token');
         if (!token) return;
+        
+        const previousUnreadCount = getState().auth.unreadMessages?.length || 0;
+        
         const res = await axios.get('http://localhost:5000/api/messages/recent', {
             headers: { Authorization: `Bearer ${token}` }
         });
+        
         dispatch(fetchChatsSuccess(res.data));
+        
+        // After dispatching, get the new state to see if unread messages increased
+        const newUnreadCount = getState().auth.unreadMessages?.length || 0;
+        
+        if (newUnreadCount > previousUnreadCount) {
+             dispatch(showToast('You have a new message! 💬', 'info'));
+        }
+        
     } catch (error) {
         console.error("Failed to fetch recent chats:", error);
     }

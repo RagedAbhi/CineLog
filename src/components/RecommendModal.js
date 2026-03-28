@@ -36,12 +36,7 @@ const RecommendModal = ({ movie, onClose, onRecommend }) => {
         e.preventDefault();
         if (!selectedFriend) return;
 
-        console.log('[RecommendModal] Sending recommendation:', {
-            receiverId: selectedFriend,
-            mediaTitle: movie.title,
-            mediaType: movie.mediaType || 'movie',
-            imdbID: movie.imdbID
-        });
+        const idToUse = movie.imdbID || movie.id;
 
         try {
             const token = localStorage.getItem('token');
@@ -50,7 +45,7 @@ const RecommendModal = ({ movie, onClose, onRecommend }) => {
                 mediaTitle: movie.title,
                 mediaType: movie.mediaType || 'movie',
                 genre: movie.genre || '',
-                imdbID: movie.imdbID,
+                imdbID: idToUse,
                 poster: movie.poster,
                 message: message
             }, {

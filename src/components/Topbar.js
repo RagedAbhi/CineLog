@@ -83,97 +83,103 @@ const Topbar = () => {
             transition={{ duration: 0.35, ease: 'easeInOut' }}
         >
             <div className="topbar-inner">
-                {/* Left: Logo */}
-                <NavLink to="/" className="topbar-logo-premium">
-                    CINELOG<span className="logo-dot">.</span>
-                </NavLink>
+                {/* Left: Logo & Search */}
+                <div className="topbar-left">
+                    <NavLink to="/" className="topbar-logo-premium">
+                        CINELOG<span className="logo-dot">.</span>
+                    </NavLink>
 
-                {/* Center-Left: Search */}
-                <div className="topbar-search-container">
-                    <GlobalSearch />
+                    {!isMobile && (
+                        <div className="topbar-search-container">
+                            <GlobalSearch />
+                        </div>
+                    )}
                 </div>
 
-                {/* Center: Nav */}
-                <nav className="topnav-premium">
-                    {navItems.map((item) => {
-                        const recs = recommendations || user?.recommendations || [];
-                        const unreadRecs = recs.filter(r => {
-                            const receiverId = (r.receiver?._id || r.receiver)?.toString();
-                            const currentUserId = (user?._id || user?.id)?.toString();
-                            return receiverId === currentUserId && !r.read;
-                        }).length;
-                        
-                        const unreadMsgCount = unreadMessages?.length || 0;
-                        const totalUnreadSocial = unreadRecs + unreadMsgCount;
+                {/* Right: Nav & Profile */}
+                <div className="topbar-right">
+                    {!isMobile && (
+                        <nav className="topnav-premium">
+                            {navItems.map((item) => {
+                                const recs = recommendations || user?.recommendations || [];
+                                const unreadRecs = recs.filter(r => {
+                                    const receiverId = (r.receiver?._id || r.receiver)?.toString();
+                                    const currentUserId = (user?._id || user?.id)?.toString();
+                                    return receiverId === currentUserId && !r.read;
+                                }).length;
+                                
+                                const unreadMsgCount = unreadMessages?.length || 0;
+                                const totalUnreadSocial = unreadRecs + unreadMsgCount;
 
-                        return (
-                            <NavLink 
-                                key={item.path} 
-                                to={item.path} 
-                                end={item.end}
-                                className={({ isActive }) => `nav-item-premium ${isActive ? 'active' : ''}`}
-                            >
-                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                    <item.icon className="nav-icon" size={18} />
-                                    {item.label === 'Social' && totalUnreadSocial > 0 && (
-                                        <span className="dot-notification-nav">{totalUnreadSocial}</span>
-                                    )}
-                                </div>
-                                <span>{item.label}</span>
-                            </NavLink>
-                        );
-                    })}
-                </nav>
+                                return (
+                                    <NavLink 
+                                        key={item.path} 
+                                        to={item.path} 
+                                        end={item.end}
+                                        className={({ isActive }) => `nav-item-premium ${isActive ? 'active' : ''}`}
+                                    >
+                                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                            <item.icon className="nav-icon" size={18} />
+                                            {item.label === 'Social' && totalUnreadSocial > 0 && (
+                                                <span className="dot-notification-nav">{totalUnreadSocial}</span>
+                                            )}
+                                        </div>
+                                        <span>{item.label}</span>
+                                    </NavLink>
+                                );
+                            })}
+                        </nav>
+                    )}
 
-                {/* Right: Actions */}
-                <div className="topbar-actions-premium" ref={dropdownRef}>
-                    <div 
-                        className={`profile-trigger ${dropdownOpen ? 'active' : ''}`}
-                        onClick={() => setDropdownOpen(!dropdownOpen)}
-                    >
-                        <div className="avatar-wrapper" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {user?.profilePicture ? (
-                                <img src={user.profilePicture} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                                <span className="avatar-icon">👤</span>
-                            )}
+                    <div className="topbar-actions-premium" ref={dropdownRef}>
+                        <div 
+                            className={`profile-trigger ${dropdownOpen ? 'active' : ''}`}
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                        >
+                            <div className="avatar-wrapper" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {user?.profilePicture ? (
+                                    <img src={user.profilePicture} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <span className="avatar-icon">👤</span>
+                                )}
+                            </div>
+                            <span className="user-name-compact">{user?.username || 'Profile'}</span>
                         </div>
-                        <span className="user-name-compact">{user?.username || 'Profile'}</span>
-                    </div>
 
-                    <AnimatePresence>
-                        {dropdownOpen && (
-                            <motion.div 
-                                className="profile-dropdown-menu"
-                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                transition={{ duration: 0.2, ease: "easeOut" }}
-                            >
-                                <div className="dropdown-header">
-                                    <p className="user-email-small">{user?.email}</p>
-                                </div>
-                                <div className="dropdown-divider" />
-                                
-                                <NavLink to="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                                    <User size={16} />
-                                    <span>My Profile</span>
-                                </NavLink>
-                                
-                                <NavLink to="/watchlist" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                                    <List size={16} />
-                                    <span>Watchlist</span>
-                                </NavLink>
-                                
-                                <div className="dropdown-divider" />
-                                
-                                <button className="dropdown-item logout" onClick={onLogout}>
-                                    <LogOut size={16} />
-                                    <span>Log out</span>
-                                </button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                        <AnimatePresence>
+                            {dropdownOpen && (
+                                <motion.div 
+                                    className="profile-dropdown-menu"
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                >
+                                    <div className="dropdown-header">
+                                        <p className="user-email-small">{user?.email}</p>
+                                    </div>
+                                    <div className="dropdown-divider" />
+                                    
+                                    <NavLink to="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                                        <User size={16} />
+                                        <span>My Profile</span>
+                                    </NavLink>
+                                    
+                                    <NavLink to="/watchlist" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                                        <List size={16} />
+                                        <span>Watchlist</span>
+                                    </NavLink>
+                                    
+                                    <div className="dropdown-divider" />
+                                    
+                                    <button className="dropdown-item logout" onClick={onLogout}>
+                                        <LogOut size={16} />
+                                        <span>Log out</span>
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             </div>
         </motion.header>

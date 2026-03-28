@@ -261,7 +261,7 @@ const GlobalSearch = () => {
                         return (
                             <div 
                                 key={item.imdbID || item.id} 
-                                className={`search-item ${isTopMatch ? 'top-match' : ''} ${index === selectedIndex ? 'selected' : ''}`}
+                                className={`search-item ${index === selectedIndex ? 'selected' : ''}`}
                                 onClick={() => handleSelect(item)}
                             >
                                 <div className="search-item-poster-container">
@@ -269,18 +269,11 @@ const GlobalSearch = () => {
                                         src={item.poster && item.poster !== 'N/A' ? item.poster : 'https://via.placeholder.com/40x60'} 
                                         alt={item.title} 
                                     />
-                                    {isTopMatch && <div className="top-match-badge">Top Match</div>}
                                 </div>
                                 <div className="search-item-info">
                                     <div className="search-item-header">
                                         <div className="search-item-title-row">
                                             <div className="search-item-title">{item.title}</div>
-                                            {item.matchPercentage > 70 && (
-                                                <span className="match-percentage-badge">
-                                                    {item.matchPercentage}% Match
-                                                </span>
-                                            )}
-                                            {item.recommendationReason && <span className="recommendation-reason-badge">{item.recommendationReason}</span>}
                                         </div>
                                         {item.rating !== 'N/A' && (
                                             <div className="search-item-rating">

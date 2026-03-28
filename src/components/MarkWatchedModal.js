@@ -1,10 +1,12 @@
-import { Component } from 'react';
+import React, { Component } from 'react';
+import { Star } from 'lucide-react';
 
 class MarkWatchedModal extends Component {
   constructor(props) {
     super(props);
     this.state = {
       rating: 7,
+      hoverRating: 0,
       review: '',
       watchedOn: new Date().toISOString().split('T')[0]
     };
@@ -56,20 +58,29 @@ class MarkWatchedModal extends Component {
             <form onSubmit={this.handleSubmit}>
               <div className="form-group">
                 <label className="form-label">Rating</label>
-                <div className="rating-selector">
+                <div className="star-rating-container">
                   {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
-                    <button
+                    <div
                       key={num}
-                      type="button"
-                      className={`rating-btn ${rating === num ? 'selected' : ''}`}
+                      className={`star-item ${num <= (this.state.hoverRating || rating) ? 'filled' : ''} ${num <= this.state.hoverRating ? 'hovered' : ''}`}
+                      onMouseEnter={() => this.setState({ hoverRating: num })}
+                      onMouseLeave={() => this.setState({ hoverRating: 0 })}
                       onClick={() => this.handleRating(num)}
                     >
-                      {num}
-                    </button>
+                      <Star 
+                        size={28} 
+                        fill={num <= (this.state.hoverRating || rating) ? "#FFC107" : "transparent"} 
+                        strokeWidth={1.5}
+                      />
+                    </div>
                   ))}
                 </div>
-                <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Selected: {rating}/10
+                <div style={{ marginTop: '12px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#FFC107', fontSize: '18px' }}>★</span>
+                  <span>{rating}/10</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '400' }}>
+                    ({rating <= 3 ? 'Weak' : (rating <= 6 ? 'Decent' : (rating <= 8 ? 'Great' : 'Masterpiece'))})
+                  </span>
                 </div>
               </div>
 

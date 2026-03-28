@@ -33,9 +33,20 @@ app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/messages', messageRoutes);
 
 // Database Connection
-mongoose.connect(process.env.MONGODB_URI)
+const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cinelog';
+console.log('Connecting to MongoDB at:', mongoURI.replace(/:([^:@]+)@/, ':****@'));
+
+mongoose.connect(mongoURI)
     .then(() => console.log('MongoDB connected successfully'))
-    .catch(err => console.error('MongoDB connection error:', err));
+    .catch(err => {
+        console.error('MongoDB connection error:', err);
+        if (mongoURI !== 'mongodb://127.0.0.1:27017/cinelog') {
+            console.log('Retrying with local MongoDB fallback...');
+            mongoose.connect('mongodb://127.0.0.1:27017/cinelog')
+                .then(() => console.log('Connected to local MongoDB fallback'))
+                .catch(localErr => console.error('Local fallback failed:', localErr));
+        }
+    });
 
 // Basic Route
 app.get('/', (req, res) => {

@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { Star, Clock, Calendar, Film, Trash2, Edit3, Share2, ArrowLeft, MoreVertical, PlayCircle, ExternalLink, MessageCircle, Heart, CheckCircle, Info } from 'lucide-react';
 import { connect } from 'react-redux';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie } from '../store/thunks';
@@ -26,8 +27,8 @@ class MovieDetail extends Component {
     this.state = {
       editing: false,
       showMarkWatched: false,
-      showRecommend: false,
-      toast: null,
+      showConfirmModal: false,
+      hoverRating: 0,
       editForm: {},
       externalMovie: null,
       localLoading: false
@@ -35,9 +36,7 @@ class MovieDetail extends Component {
   }
 
   async componentDidMount() {
-    console.log('DEBUG: MovieDetail Mount. ID:', this.props.movieId);
     if (this.props.movies.length === 0) {
-      console.log('DEBUG: Movies empty, fetching library...');
       await this.props.fetchMovies();
     }
     
@@ -124,7 +123,6 @@ class MovieDetail extends Component {
         headers: { Authorization: `Bearer ${token}` }
       });
       const rec = res.data;
-      console.log('DEBUG: Found as recommendation:', rec.mediaTitle);
       const movieData = {
         _id: rec._id,
         title: rec.mediaTitle,
@@ -139,7 +137,6 @@ class MovieDetail extends Component {
         this.initAnimations();
       });
     } catch (err) {
-      console.error('DEBUG: Recommendation lookup failed:', err.response?.status);
       this.setState({ localLoading: false });
     }
   }
@@ -268,12 +265,14 @@ class MovieDetail extends Component {
       editing: true,
       editForm: {
         title: movie.title,
-        genre: movie.genre,
-        director: movie.director || '',
         year: movie.year,
-        rating: movie.rating || '',
+        genre: movie.genre || '',
+        director: movie.director || '',
+        poster: movie.poster || '',
+        status: movie.status,
+        rating: movie.rating || 0,
         review: movie.review || '',
-        poster: movie.poster || ''
+        isTopPick: movie.isTopPick || false
       }
     });
   }
@@ -289,7 +288,8 @@ class MovieDetail extends Component {
     await this.props.updateMovie(movie._id, {
       ...editForm,
       year: parseInt(editForm.year),
-      rating: editForm.rating ? parseInt(editForm.rating) : movie.rating
+      rating: editForm.rating || movie.rating,
+      isTopPick: editForm.isTopPick
     });
     this.setState({ editing: false });
     this.props.showToast('Changes saved!');
@@ -302,8 +302,8 @@ class MovieDetail extends Component {
       const movieToSave = {
         title: movie.title,
         year: movie.year,
-        genre: movie.genre,
-        director: movie.director,
+        genre: movie.genre || 'Unknown',
+        director: movie.director || 'Unknown',
         poster: movie.poster,
         imdbID: movie.imdbID,
         mediaType: movie.mediaType || 'movie',
@@ -311,8 +311,6 @@ class MovieDetail extends Component {
         ...watchData
       };
       await this.props.addMovie(movieToSave);
-      // After adding, we should probably stay on the page but it might change ID
-      // The thunk handles refreshing the library.
     } else {
       await this.props.markAsWatched(movie._id, watchData);
     }
@@ -320,11 +318,39 @@ class MovieDetail extends Component {
     this.props.showToast('Marked as watched! 🎬');
   }
 
+  handleAddToWatchlist = () => {
+    const movie = this.getMovie();
+    this.props.showConfirmModal({
+        title: 'Add to Watchlist',
+        message: `Add "${movie.title}" to your watchlist?`,
+        confirmText: 'Yes',
+        cancelText: 'No',
+        isDangerous: false,
+        onConfirm: async () => {
+            const movieToSave = {
+                title: movie.title,
+                year: movie.year,
+                genre: movie.genre || 'Unknown',
+                director: movie.director || 'Unknown',
+                poster: movie.poster,
+                imdbID: movie.imdbID,
+                mediaType: movie.mediaType || 'movie',
+                status: 'watchlist'
+            };
+            await this.props.addMovie(movieToSave);
+            this.props.showToast('Added to watchlist!', 'success');
+        }
+    });
+  }
+
   handleDelete = async () => {
     const movie = this.getMovie();
     this.props.showConfirmModal({
       title: 'Remove from Library',
       message: `Are you sure you want to remove "${movie.title}" from your library?`,
+      confirmText: 'Confirm',
+      cancelText: 'Cancel',
+      isDangerous: true,
       onConfirm: async () => {
         await this.props.deleteMovie(movie._id);
         this.props.showToast('Removed from library', 'info');
@@ -408,7 +434,7 @@ class MovieDetail extends Component {
                     </button>
                   )}
                   {movie.isExternalRec && (
-                    <button className="btn btn-secondary glass-panel" onClick={() => this.setState({ showAddModal: true })}>
+                    <button className="btn btn-secondary glass-panel" onClick={this.handleAddToWatchlist}>
                       + Add to Watchlist
                     </button>
                   )}
@@ -531,63 +557,83 @@ class MovieDetail extends Component {
                 </div>
               </div>
             </div>
-
           ) : (
             /* Edit Form */
-            <div>
-              <div className="page-header">
-                <h2>Edit Movie</h2>
+            <div className="edit-form-premium" style={{ width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+              <div className="page-header-premium" style={{ marginBottom: '40px', textAlign: 'center' }}>
+                <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>
+                  Journal Archive
+                </div>
+                <h2 style={{ fontSize: '36px', margin: 0, fontWeight: '800' }}>{movie.title}</h2>
+                <div style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Update your personal rating and thoughts</div>
               </div>
-              <div style={{ maxWidth: 600 }}>
-                <div className="form-group">
-                  <label className="form-label">Title</label>
-                  <input className="form-input" name="title" value={editForm.title} onChange={this.handleEditChange} />
+              
+              <div className="glass-panel-premium" style={{ padding: '48px', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                {/* Recommendation / Top Pick Toggle */}
+                <div className="form-group-premium" style={{ marginBottom: '40px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer', padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)', transition: 'all 0.3s ease', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={editForm.isTopPick}
+                        onChange={(e) => this.setState({ editForm: { ...editForm, isTopPick: e.target.checked } })}
+                        style={{ width: '24px', height: '24px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#fff' }}>Add to your Masterpieces ⭐</div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>Marks this as one of your highest recommendations on your profile.</div>
+                    </div>
+                  </label>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Genre</label>
-                    <input className="form-input" name="genre" value={editForm.genre} onChange={this.handleEditChange} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Year</label>
-                    <input className="form-input" type="number" name="year" value={editForm.year} onChange={this.handleEditChange} />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Director</label>
-                    <input className="form-input" name="director" value={editForm.director} onChange={this.handleEditChange} />
-                  </div>
-                  <div className="edit-field-minimal">
-                      <label>STATUS</label>
-                      <select 
-                        value={editForm.status}
-                        onChange={(e) => this.setState({ editForm: { ...editForm, status: e.target.value } })}
+
+                {/* Star Rating Section */}
+                <div className="form-group-premium" style={{ marginBottom: '40px' }}>
+                  <label className="form-label-premium" style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', display: 'block' }}>Update Your Rating</label>
+                  <div className="star-rating-container" style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                      <div
+                        key={num}
+                        className={`star-item ${num <= (this.state.hoverRating || editForm.rating) ? 'filled' : ''} ${num <= this.state.hoverRating ? 'hovered' : ''}`}
+                        onMouseEnter={() => this.setState({ hoverRating: num })}
+                        onMouseLeave={() => this.setState({ hoverRating: 0 })}
+                        onClick={() => this.setState({ editForm: { ...editForm, rating: num } })}
+                        style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
                       >
-                        <option value="watchlist">WATCHLIST</option>
-                        <option value="watched">WATCHED</option>
-                      </select>
-                    </div>
+                        <Star 
+                          size={36} 
+                          fill={num <= (this.state.hoverRating || editForm.rating) ? "#FFC107" : "transparent"} 
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '28px', fontWeight: '900', color: '#FFC107' }}>{editForm.rating}</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '15px', fontWeight: '500' }}>/ 10 Rating</span>
+                    <span style={{ fontSize: '13px', background: 'rgba(255,193,7,0.1)', color: '#FFC107', padding: '4px 12px', borderRadius: '100px', marginLeft: '8px' }}>
+                      {editForm.rating <= 3 ? 'Weak' : (editForm.rating <= 6 ? 'Decent' : (editForm.rating <= 8 ? 'Great' : 'Masterpiece'))}
+                    </span>
+                  </div>
                 </div>
-                {movie.status === 'watched' && (
-                  <>
-                    <div className="form-group">
-                      <label className="form-label">Rating (1-10)</label>
-                      <input className="form-input" type="number" name="rating" min="1" max="10" value={editForm.rating} onChange={this.handleEditChange} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Review</label>
-                      <textarea className="form-input" name="review" value={editForm.review} onChange={this.handleEditChange} />
-                    </div>
-                  </>
-                )}
-                <div className="form-group">
-                  <label className="form-label">Poster URL</label>
-                  <input className="form-input" name="poster" value={editForm.poster} onChange={this.handleEditChange} />
+
+                {/* Review Section */}
+                <div className="form-group-premium" style={{ marginBottom: '48px' }}>
+                  <label className="form-label-premium" style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px', display: 'block' }}>Personal Thoughts & Review</label>
+                  <textarea 
+                    className="form-input-premium" 
+                    name="review" 
+                    value={editForm.review} 
+                    onChange={this.handleEditChange} 
+                    placeholder="Shared your updated thoughts on this movie..."
+                    style={{ minHeight: '200px', width: '100%', padding: '24px', borderRadius: '20px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '16px', lineHeight: '1.6', outline: 'none', transition: 'border-color 0.3s ease' }}
+                  />
                 </div>
-                <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
-                  <button className="btn btn-primary" onClick={this.handleEditSave}>Save Changes</button>
-                  <button className="btn btn-secondary" onClick={() => this.setState({ editing: false })}>Cancel</button>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '20px' }}>
+                  <button className="btn btn-primary" style={{ padding: '16px 48px', borderRadius: '100px', fontSize: '16px', fontWeight: '700', background: 'var(--accent)', color: '#000' }} onClick={this.handleEditSave}>Save Changes</button>
+                  <button className="btn btn-secondary" style={{ padding: '16px 48px', borderRadius: '100px', fontSize: '16px', fontWeight: '600' }} onClick={() => this.setState({ editing: false })}>Cancel</button>
                 </div>
               </div>
             </div>

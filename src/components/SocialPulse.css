@@ -90,3 +90,25 @@
     padding: 40px;
     color: rgba(255, 255, 255, 0.2);
 }
+
+.pulse-see-more-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--accent);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    align-self: flex-start;
+    margin-top: 8px;
+}
+
+.pulse-see-more-btn:hover {
+    background: rgba(100, 255, 218, 0.1);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(100, 255, 218, 0.1);
+}
+

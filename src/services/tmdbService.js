@@ -294,6 +294,7 @@ export const getTrendingTMDB = async () => {
             params: { api_key: TMDB_API_KEY }
         });
         return response.data.results.slice(0, 5).map(item => ({
+            id: item.id,
             title: item.title || item.name,
             year: (item.release_date || item.first_air_date || '').split('-')[0],
             poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',

@@ -100,7 +100,8 @@ export const getMovieDetailsExternal = async (id, mediaType = '') => {
         }
 
         // 2. Get full details including credits (for cast)
-        const detailRes = await axios.get(`https://api.themoviedb.org/3/${tmdbType}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`);
+        const detailUrl = `https://api.themoviedb.org/3/${tmdbType}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
+        const detailRes = await axios.get(detailUrl);
         const item = detailRes.data;
 
         data = {

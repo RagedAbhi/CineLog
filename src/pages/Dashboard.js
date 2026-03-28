@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import RecommendModal from '../components/RecommendModal';
-import SocialPulse from '../components/SocialPulse';
 import Toast from '../components/Toast';
 import axios from 'axios';
 import gsap from 'gsap';
@@ -30,7 +29,7 @@ class Dashboard extends Component {
       showRecommendModal: false,
       selectedMedia: null,
       isEditingOrder: false,
-      sectionOrder: ['social_pulse', 'recent_movies', 'recent_shows', 'watchlist', 'expertise_stats', 'recommendations']
+      sectionOrder: ['recent_movies', 'recent_shows', 'watchlist', 'expertise_stats', 'recommendations']
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
@@ -50,9 +49,6 @@ class Dashboard extends Component {
     if (saved) {
       try {
         let order = JSON.parse(saved);
-        if (!order.includes('social_pulse')) {
-            order = ['social_pulse', ...order];
-        }
         this.setState({ sectionOrder: order });
       } catch (e) {
         console.error("Failed to load section order", e);
@@ -466,12 +462,7 @@ class Dashboard extends Component {
         <div style={{ padding: '0 4%', marginTop: '-40px', position: 'relative', zIndex: 10 }}>
           {this.state.sectionOrder.map((sectionId, index) => {
             switch (sectionId) {
-              case 'social_pulse':
-                return (
-                  <div className="reveal" key="social_pulse" style={{ marginBottom: '40px' }}>
-                    <SocialPulse />
-                  </div>
-                );
+
               case 'recent_movies':
                 return this.renderRow('Recently Watched Movies', recentlyWatchedMovies, '/watched', 'recent_movies', index);
               case 'recent_shows':

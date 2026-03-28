@@ -130,6 +130,9 @@ const App = () => {
         title={confirm.title}
         message={confirm.message}
         onConfirm={confirm.onConfirm}
+        confirmText={confirm.confirmText}
+        cancelText={confirm.cancelText}
+        isDangerous={confirm.isDangerous}
         onClose={() => dispatch(hideConfirmModal())}
       />
       

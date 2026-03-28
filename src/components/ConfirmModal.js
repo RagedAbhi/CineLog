@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../styles/global.css';
 
-const ConfirmModal = ({ visible, title, message, onConfirm, onClose }) => {
+const ConfirmModal = ({ visible, title, message, onConfirm, onClose, confirmText = 'Confirm', cancelText = 'Cancel', isDangerous = true }) => {
   return (
     <AnimatePresence>
       {visible && (
@@ -25,7 +25,7 @@ const ConfirmModal = ({ visible, title, message, onConfirm, onClose }) => {
             </div>
             <div className="form-actions" style={{ justifyContent: 'center', gap: '12px' }}>
               <button className="btn btn-secondary" onClick={onClose} style={{ minWidth: '100px' }}>
-                Cancel
+                {cancelText}
               </button>
               <button 
                 className="btn btn-primary" 
@@ -33,9 +33,14 @@ const ConfirmModal = ({ visible, title, message, onConfirm, onClose }) => {
                   if (onConfirm) onConfirm();
                   onClose();
                 }}
-                style={{ minWidth: '100px', background: 'rgba(255, 59, 48, 0.2)', border: '1px solid rgba(255, 59, 48, 0.3)', color: '#ff453a' }}
+                style={{ 
+                    minWidth: '100px', 
+                    background: isDangerous ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 255, 255, 0.1)', 
+                    border: isDangerous ? '1px solid rgba(255, 59, 48, 0.3)' : '1px solid rgba(255, 255, 255, 0.3)', 
+                    color: isDangerous ? '#ff453a' : '#ffffff'
+                }}
               >
-                Confirm
+                {confirmText}
               </button>
             </div>
           </motion.div>

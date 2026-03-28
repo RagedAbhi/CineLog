@@ -5,12 +5,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { showToast } from '../store/actions';
 import { fetchRecommendations } from '../store/thunks';
 import { useNavigate } from 'react-router-dom';
+import SocialPulse from '../components/SocialPulse';
 import gsap from 'gsap';
 import '../styles/global.css';
 
 const FriendsPage = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests' | 'search'
+    const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests' | 'recommendations' | 'search'
     const [friends, setFriends] = useState([]);
     const [requests, setRequests] = useState([]);
     const [searchResults, setSearchResults] = useState([]);
@@ -89,28 +90,56 @@ const FriendsPage = () => {
 
     return (
         <div className="container-fluid social-container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            <div className="page-header" style={{ textAlign: 'center', marginBottom: '80px' }}>
+            <div className="page-header" style={{ textAlign: 'center', marginBottom: '40px' }}>
                 <h2>Social</h2>
                 <p>Connect with fellow cinephiles</p>
             </div>
 
-            <div className="glass-panel-premium" style={{
+            <div style={{ marginBottom: '40px' }}>
+                <SocialPulse />
+            </div>
+
+            <div style={{
                 display: 'flex',
                 gap: '8px',
-                padding: '6px',
-                borderRadius: '100px',
+                padding: '0',
                 marginBottom: '40px',
                 maxWidth: '500px',
-                margin: '0 auto 40px'
+                margin: '0 auto 40px',
+                background: 'transparent',
+                boxShadow: 'none',
+                border: 'none'
             }}>
-                {['friends', 'requests', 'search'].map(tab => (
+                {['friends', 'requests', 'recommendations', 'search'].map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`nav-item-premium ${activeTab === tab ? 'active' : ''}`}
-                        style={{ flex: 1, justifyContent: 'center' }}
+                        style={{ 
+                            flex: 1, 
+                            justifyContent: 'center', 
+                            color: activeTab === tab ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                            background: activeTab === tab ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                            boxShadow: 'none',
+                            border: 'none',
+                            padding: '10px 20px',
+                            borderRadius: '100px',
+                            fontWeight: '600',
+                            fontSize: '15px',
+                            transition: 'all 0.3s ease'
+                        }}
                     >
                         {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        {tab === 'friends' && (unreadMessages?.length || 0) > 0 && (
+                            <span className="badge-premium" style={{ marginLeft: '8px', marginBottom: 0 }}>
+                                {unreadMessages.length}
+                            </span>
+                        )}
+                        {tab === 'recommendations' && recommendations.filter(r => !r.read && (r.receiver?._id || r.receiver) === user?._id).length > 0 && (
+                            <span className="badge-premium" style={{ marginLeft: '8px', marginBottom: 0 }}>
+                                {recommendations.filter(r => !r.read && (r.receiver?._id || r.receiver) === user?._id).length}
+                            </span>
+                        )}
                         {tab === 'requests' && requests.length > 0 && (
                             <span className="badge-premium" style={{ marginLeft: '8px', marginBottom: 0 }}>
                                 {requests.length}
@@ -181,6 +210,68 @@ const FriendsPage = () => {
                     </div>
                 )}
 
+                {activeTab === 'recommendations' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div>
+                           <h3 style={{ marginBottom: '16px', fontSize: '18px', color: 'var(--accent)' }}>Inbox</h3>
+                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {recommendations.filter(r => (r.receiver?._id || r.receiver) === user?._id).length === 0 ? (
+                                    <p style={{ color: 'var(--text-muted)' }}>No recommendations received.</p>
+                                ) : (
+                                    recommendations.filter(r => (r.receiver?._id || r.receiver) === user?._id).map(rec => (
+                                        <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
+                                            <div style={{ flex: 1 }}>
+                                                <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
+                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>From {rec.sender.name} • {rec.message || 'No message'}</p>
+                                            </div>
+                                            <button className="btn btn-primary btn-sm" onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true&type=${rec.mediaType}`)}>View</button>
+                                        </div>
+                                    ))
+                                )}
+                           </div>
+                        </div>
+
+                        <div>
+                           <h3 style={{ marginBottom: '16px', fontSize: '18px', color: 'var(--accent)' }}>Sent by You</h3>
+                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {recommendations.filter(r => (r.sender?._id || r.sender) === user?._id).length === 0 ? (
+                                    <p style={{ color: 'var(--text-muted)' }}>You haven't sent any recommendations yet.</p>
+                                ) : (
+                                    recommendations.filter(r => (r.sender?._id || r.sender) === user?._id).map(rec => (
+                                        <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
+                                            <div style={{ flex: 1 }}>
+                                                <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
+                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>To {rec.receiver.name} • {rec.message || 'No message'}</p>
+                                            </div>
+                                            <button 
+                                                className="btn btn-secondary btn-sm" 
+                                                style={{ color: 'var(--red)', borderColor: 'rgba(255, 59, 48, 0.2)' }}
+                                                onClick={() => {
+                                                    dispatch(showConfirmModal({
+                                                        title: 'Unrecommend',
+                                                        message: `Withdraw recommendation for "${rec.mediaTitle}"?`,
+                                                        confirmText: 'Unrecommend',
+                                                        cancelText: 'Cancel',
+                                                        isDangerous: true,
+                                                        onConfirm: async () => {
+                                                            await axios.delete(`http://localhost:5000/api/recommendations/${rec._id}`, apiHeader);
+                                                            dispatch(fetchRecommendations());
+                                                            dispatch(showToast('Recommendation withdrawn'));
+                                                        }
+                                                    }));
+                                                }}
+                                            >
+                                                Withdraw
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                           </div>
+                        </div>
+                    </div>
+                )}
                 {activeTab === 'requests' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {requests.length === 0 ? (

@@ -6,7 +6,7 @@ import gsap from 'gsap';
 import { useDispatch, useSelector } from 'react-redux';
 import { Plus, Check, Send, Trash2, Clock } from 'lucide-react';
 import { addMovie, deleteMovie, markAsWatched } from '../store/thunks';
-import { showRecommendModal, showToast } from '../store/actions';
+import { showRecommendModal, showToast, showConfirmModal } from '../store/actions';
 
 // Wrapper to provide navigate and redux to class component
 function MovieCardWrapper(props) {
@@ -61,8 +61,17 @@ class MovieCard extends Component {
 
     if (existing) {
       if (existing.status === 'watchlist') {
-        dispatch(deleteMovie(existing._id));
-        dispatch(showToast('Removed from watchlist', 'info'));
+        dispatch(showConfirmModal({
+            title: 'Remove from Watchlist',
+            message: `Remove "${movie.title}" from your watchlist?`,
+            confirmText: 'Yes',
+            cancelText: 'No',
+            isDangerous: true,
+            onConfirm: () => {
+                dispatch(deleteMovie(existing._id));
+                dispatch(showToast('Removed from watchlist', 'info'));
+            }
+        }));
       } else {
         dispatch(showToast('Already in your collection', 'info'));
       }
@@ -87,8 +96,17 @@ class MovieCard extends Component {
 
     if (existing) {
       if (existing.status === 'watched') {
-        dispatch(deleteMovie(existing._id));
-        dispatch(showToast('Removed from watched list', 'info'));
+        dispatch(showConfirmModal({
+            title: 'Remove from Watched',
+            message: `Remove "${movie.title}" from your watched list?`,
+            confirmText: 'Yes',
+            cancelText: 'No',
+            isDangerous: true,
+            onConfirm: () => {
+                dispatch(deleteMovie(existing._id));
+                dispatch(showToast('Removed from watched list', 'info'));
+            }
+        }));
       } else {
         dispatch(markAsWatched(existing._id, existing));
         dispatch(showToast('Marked as watched! 🍿', 'success'));
@@ -129,8 +147,8 @@ class MovieCard extends Component {
         onClick={() => {
             const idToUse = movie._id || movie.imdbID;
             if (idToUse) {
-                const url = (movie.isExternal || !movie._id)
-                    ? `/movies/${idToUse}?external=true` 
+                const url = (movie.isExternal || !movie._id || movie.isRecommendation)
+                    ? `/movies/${idToUse}?external=true&type=${movie.mediaType || 'movie'}` 
                     : `/movies/${idToUse}`;
                 navigate(url);
             }

@@ -7,6 +7,8 @@ import './SocialPulse.css';
 const SocialPulse = () => {
     const recommendations = useSelector(state => state.auth.recommendations) || [];
     const navigate = useNavigate();
+    const [showAll, setShowAll] = React.useState(false);
+    const limit = 3;
 
     const formatTime = (date) => {
         const diff = Date.now() - new Date(date).getTime();
@@ -26,6 +28,8 @@ const SocialPulse = () => {
         );
     }
 
+    const displayedRecs = showAll ? recommendations : recommendations.slice(0, limit);
+
     return (
         <div className="social-pulse-container glass-panel">
             <div className="pulse-header">
@@ -33,11 +37,11 @@ const SocialPulse = () => {
                 <span>Recent Activity</span>
             </div>
             <div className="pulse-list">
-                {recommendations.slice(0, 5).map((rec) => (
+                {displayedRecs.map((rec) => (
                     <div 
                         key={rec._id} 
                         className="pulse-item"
-                        onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true`)}
+                        onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true&type=${rec.mediaType || 'movie'}`)}
                     >
                         <div className="pulse-avatar">
                             {rec.sender.avatar ? (
@@ -56,6 +60,14 @@ const SocialPulse = () => {
                     </div>
                 ))}
             </div>
+            {recommendations.length > limit && (
+                <button 
+                    className="pulse-see-more-btn"
+                    onClick={() => setShowAll(!showAll)}
+                >
+                    {showAll ? 'Show less' : `See more (${recommendations.length - limit} more)`}
+                </button>
+            )}
         </div>
     );
 };

@@ -233,11 +233,23 @@ img {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex: 1;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
   gap: 20px;
 }
 
 .topbar-actions-premium {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -260,7 +272,6 @@ img {
 .topbar-search-container {
     flex: 1;
     max-width: 400px;
-    margin-right: -20px;
 }
 
 .topnav-premium {
@@ -297,12 +308,6 @@ img {
   color: #fff;
   box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.topbar-actions-premium {
-  display: flex;
-  align-items: center;
-  gap: 16px;
 }
 
 .profile-trigger {
@@ -1535,6 +1540,33 @@ textarea.form-input {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.star-rating-container {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.star-item {
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: var(--text-muted);
+}
+
+.star-item.filled {
+    color: #FFC107;
+    filter: drop-shadow(0 0 8px rgba(255, 193, 7, 0.3));
+}
+
+.star-item.hovered {
+    color: #FFD54F;
+    transform: scale(1.1);
+}
+
+.star-item:hover {
+    transform: scale(1.2);
+}
+
 
 /* ============================================================
    WATCHED RECENTLY LIST
@@ -3749,4 +3781,32 @@ html.lenis {
     font-size: 13px;
     color: var(--accent);
     font-weight: 600;
+}
+
+/* ============================================================
+   PREMIUM NAV ITEMS (Social Page Tabs)
+   ============================================================ */
+.nav-item-premium {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-item-premium:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item-premium.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
 }

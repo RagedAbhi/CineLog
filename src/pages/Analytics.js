@@ -165,7 +165,7 @@ const Analytics = () => {
           onClick={() => setActiveTab('genre')}
         />
         <StatCard
-          title="Top Picks"
+          title="Your Masterpieces"
           value={stats.masterpieces}
           subtitle="Best movies & series"
           icon={Trophy}
@@ -338,7 +338,7 @@ const Analytics = () => {
                     <Film className="w-6 h-6 text-cyan-400" />
                   </div>
                   <div>
-                    <h2 className="section-title-redesign">Top Movies</h2>
+                    <h2 className="section-title-redesign">Masterpiece Movies</h2>
                     <p className="section-subtitle-redesign">Your highest rated films</p>
                   </div>
                 </div>
@@ -384,7 +384,7 @@ const Analytics = () => {
                     <Tv className="w-6 h-6 text-cyan-400" />
                   </div>
                   <div>
-                    <h2 className="section-title-redesign">Top Series</h2>
+                    <h2 className="section-title-redesign">Masterpiece Series</h2>
                     <p className="section-subtitle-redesign">Your highest rated shows</p>
                   </div>
                 </div>
