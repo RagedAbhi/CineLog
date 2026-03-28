@@ -378,10 +378,11 @@ const Profile = () => {
                     filtered.forEach(r => {
                         const key = r.imdbID || r._id;
                         if (!grouped[key]) {
-                            grouped[key] = { ...r, count: 1, allIds: [r._id] };
+                            grouped[key] = { ...r, count: 1, allIds: [r._id], allSenders: [r.sender] };
                         } else {
                             grouped[key].count += 1;
                             grouped[key].allIds.push(r._id);
+                            grouped[key].allSenders.push(r.sender);
                         }
                     });
                     
@@ -511,16 +512,23 @@ const Profile = () => {
                                                 <button
                                                     onClick={(e) => {
                                                         if (e) e.stopPropagation();
+                                                        const senderNames = rec.allSenders?.map(s => s?.name || s?.username || 'Friend').join(', ');
                                                         dispatch(showConfirmModal({
                                                             title: 'Remove Recommendation',
-                                                            message: `Are you sure you want to remove the recommendation for "${rec.mediaTitle}"?`,
+                                                            message: `This was recommended by ${rec.count} friend${rec.count > 1 ? 's' : ''}${rec.count > 1 ? ` (${senderNames})` : ''}. Are you sure you want to remove the recommendation for "${rec.mediaTitle}"?`,
                                                             confirmText: 'Remove',
                                                             cancelText: 'Cancel',
                                                             isDangerous: true,
-                                                            onConfirm: () => dismissRecommendation(rec._id)
+                                                            onConfirm: () => {
+                                                                if (rec.allIds && rec.allIds.length > 0) {
+                                                                    rec.allIds.forEach(id => dismissRecommendation(id));
+                                                                } else {
+                                                                    dismissRecommendation(rec._id);
+                                                                }
+                                                            }
                                                         }));
                                                     }}
-                                                    title="Dismiss recommendation"
+                                                    title={`Recommended by: ${rec.allSenders?.map(s => s?.name || s?.username || 'Friend').join(', ')}`}
                                                     style={{
                                                         position: 'absolute',
                                                         top: '-10px',
@@ -595,10 +603,11 @@ const Profile = () => {
                     filtered.forEach(r => {
                         const key = r.imdbID || r._id;
                         if (!grouped[key]) {
-                            grouped[key] = { ...r, count: 1, allIds: [r._id] };
+                            grouped[key] = { ...r, count: 1, allIds: [r._id], allReceivers: [r.receiver] };
                         } else {
                             grouped[key].count += 1;
                             grouped[key].allIds.push(r._id);
+                            grouped[key].allReceivers.push(r.receiver);
                         }
                     });
                     
@@ -704,16 +713,23 @@ const Profile = () => {
                                                 <button
                                                     onClick={(e) => {
                                                         if (e) e.stopPropagation();
+                                                        const receiverNames = rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ');
                                                         dispatch(showConfirmModal({
                                                             title: 'Retract Recommendation',
-                                                            message: `Withdraw your recommendation for "${rec.mediaTitle}"?`,
+                                                            message: `Withdraw your recommendation for "${rec.mediaTitle}" sent to ${rec.count} friend${rec.count > 1 ? 's' : ''}${rec.count > 1 ? ` (${receiverNames})` : ''}?`,
                                                             confirmText: 'Withdraw',
                                                             cancelText: 'Cancel',
                                                             isDangerous: true,
-                                                            onConfirm: () => dismissRecommendation(rec._id)
+                                                            onConfirm: () => {
+                                                                if (rec.allIds && rec.allIds.length > 0) {
+                                                                    rec.allIds.forEach(id => dismissRecommendation(id));
+                                                                } else {
+                                                                    dismissRecommendation(rec._id);
+                                                                }
+                                                            }
                                                         }));
                                                     }}
-                                                    title="Retract recommendation"
+                                                    title={`Sent to: ${rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ')}`}
                                                     style={{
                                                         position: 'absolute',
                                                         top: '-10px',
