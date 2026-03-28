@@ -32,13 +32,22 @@ export const fetchStreamingAvailability = async (title, type, year, imdbID = nul
 
         // 2. Fallback to search if no imdbID or find failed
         if (!tmdbId) {
-            const searchResponse = await axios.get(`${BASE_URL}/search/${tmdbType}`, {
-                params: {
-                    api_key: TMDB_API_KEY,
-                    query: title,
-                    year: year // for movies
-                    // first_air_date_year: year // for TV shows (optional refinement)
+            const cleanYear = year ? String(year).match(/\d{4}/)?.[0] : null;
+            const searchParams = {
+                api_key: TMDB_API_KEY,
+                query: title
+            };
+            
+            if (cleanYear) {
+                if (tmdbType === 'movie') {
+                    searchParams.year = cleanYear;
+                } else {
+                    searchParams.first_air_date_year = cleanYear;
                 }
+            }
+
+            const searchResponse = await axios.get(`${BASE_URL}/search/${tmdbType}`, {
+                params: searchParams
             });
             const searchResult = searchResponse.data.results[0];
             if (searchResult) tmdbId = searchResult.id;

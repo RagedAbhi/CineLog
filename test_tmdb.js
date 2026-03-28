@@ -1,27 +1,37 @@
 const axios = require('axios');
+
 const TMDB_API_KEY = '94835791ed031d251f3bee9230a18e18';
 const BASE_URL = 'https://api.themoviedb.org/3';
 
-async function test() {
+async function test(title) {
+    console.log(`Testing: ${title}`);
     try {
-        const searchResponse = await axios.get(`${BASE_URL}/search/movie`, {
-            params: {
-                api_key: TMDB_API_KEY,
-                query: 'Inception',
-                year: 2010
-            }
+        const searchRes = await axios.get(`${BASE_URL}/search/movie`, {
+            params: { api_key: TMDB_API_KEY, query: title }
         });
-        const tmdbId = searchResponse.data.results[0].id;
-        console.log("TMDB ID:", tmdbId);
-
-        const providersResponse = await axios.get(`${BASE_URL}/movie/${tmdbId}/watch/providers`, {
+        const id = searchRes.data.results[0]?.id;
+        if (!id) {
+            console.log('No movie found');
+            return;
+        }
+        console.log(`Found ID: ${id}`);
+        
+        const providersRes = await axios.get(`${BASE_URL}/movie/${id}/watch/providers`, {
             params: { api_key: TMDB_API_KEY }
         });
-
-        const indiaProviders = providersResponse.data.results?.IN;
-        console.log("India Providers:", JSON.stringify(indiaProviders, null, 2));
-    } catch (e) {
-        console.error(e.response ? e.response.data : e.message);
+        
+        const providers = providersRes.data.results;
+        console.log('Regions found:', Object.keys(providers).join(', '));
+        
+        if (providers.IN) {
+            console.log('India (IN) Providers:');
+            console.log(JSON.stringify(providers.IN, null, 2));
+        } else {
+            console.log('No providers found for India (IN)');
+        }
+    } catch (err) {
+        console.error('Error:', err.message);
     }
 }
-test();
+
+test('Inception');

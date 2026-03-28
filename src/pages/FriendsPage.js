@@ -222,7 +222,22 @@ const FriendsPage = () => {
                                         <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                                             <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
                                             <div style={{ flex: 1 }}>
-                                                <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                                    <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
+                                                    <span style={{ 
+                                                        fontSize: '10px', 
+                                                        padding: '1px 6px', 
+                                                        borderRadius: '4px', 
+                                                        background: rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.1)' : 'rgba(255, 74, 147, 0.1)', 
+                                                        color: rec.mediaType === 'series' ? '#4a9eff' : '#ff4a93', 
+                                                        border: `1px solid ${rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.2)' : 'rgba(255, 74, 147, 0.2)'}`,
+                                                        fontWeight: '600',
+                                                        letterSpacing: '0.05em',
+                                                        textTransform: 'uppercase'
+                                                    }}>
+                                                        {rec.mediaType === 'series' ? 'Series' : 'Movie'}
+                                                    </span>
+                                                </div>
                                                 <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>From {rec.sender.name} • {rec.message || 'No message'}</p>
                                             </div>
                                             <button className="btn btn-primary btn-sm" onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true&type=${rec.mediaType}`)}>View</button>
@@ -242,7 +257,22 @@ const FriendsPage = () => {
                                         <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                                             <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
                                             <div style={{ flex: 1 }}>
-                                                <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                                    <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
+                                                    <span style={{ 
+                                                        fontSize: '10px', 
+                                                        padding: '1px 6px', 
+                                                        borderRadius: '4px', 
+                                                        background: rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.1)' : 'rgba(255, 74, 147, 0.1)', 
+                                                        color: rec.mediaType === 'series' ? '#4a9eff' : '#ff4a93', 
+                                                        border: `1px solid ${rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.2)' : 'rgba(255, 74, 147, 0.2)'}`,
+                                                        fontWeight: '600',
+                                                        letterSpacing: '0.05em',
+                                                        textTransform: 'uppercase'
+                                                    }}>
+                                                        {rec.mediaType === 'series' ? 'Series' : 'Movie'}
+                                                    </span>
+                                                </div>
                                                 <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>To {rec.receiver.name} • {rec.message || 'No message'}</p>
                                             </div>
                                             <button 

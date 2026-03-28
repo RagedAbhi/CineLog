@@ -165,7 +165,7 @@ class MovieDetail extends Component {
   fetchStreamingInfo = async () => {
     const movie = this.getMovie();
     if (movie && movie.title) {
-      const res = await fetchStreamingAvailability(movie.title, movie.mediaType || 'movie', movie.year);
+      const res = await fetchStreamingAvailability(movie.title, movie.mediaType || 'movie', movie.year, movie.imdbID);
       if (res && res.error) {
         this.setState({ ottError: res.error });
       } else if (res) {
