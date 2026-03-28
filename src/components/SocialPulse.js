@@ -44,7 +44,7 @@ const SocialPulse = () => {
                         onClick={() => navigate(`/movies/${rec.imdbID || rec._id}?external=true&type=${rec.mediaType || 'movie'}`)}
                     >
                         <div className="pulse-avatar">
-                            {rec.sender.avatar ? (
+                            {rec.sender?.avatar ? (
                                 <img src={rec.sender.avatar} alt={rec.sender.name} />
                             ) : (
                                 <User size={14} />
@@ -52,7 +52,7 @@ const SocialPulse = () => {
                         </div>
                         <div className="pulse-info">
                             <p className="pulse-text">
-                                <strong>{rec.sender.name}</strong> recommended 
+                                <strong>{rec.sender?.name || 'Unknown User'}</strong> recommended 
                                 <span> {rec.mediaTitle}</span>
                             </p>
                             <span className="pulse-time">{formatTime(rec.createdAt)}</span>

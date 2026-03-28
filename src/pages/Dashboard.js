@@ -499,7 +499,7 @@ class Dashboard extends Component {
                                 _id: existingInLibrary ? existingInLibrary._id.toString() : rec._id.toString(),
                                 title: rec.mediaTitle,
                                 poster: rec.poster,
-                                genre: `From ${rec.sender.name}`,
+                                genre: `From ${rec.sender?.name || 'Unknown User'}`,
                                 mediaType: rec.mediaType,
                                 imdbID: rec.imdbID,
                                 isRecommendation: !existingInLibrary
