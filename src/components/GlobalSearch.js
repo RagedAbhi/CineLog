@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getMovieDetailsExternal, createMovie } from '../services/movieService';
 import { searchMultiTMDB, getTrendingTMDB, GENRE_MAP, getBatchProvidersTMDB } from '../services/tmdbService';
 import { showToast, showRecommendModal } from '../store/actions';
+import { addMovie } from '../store/thunks';
 
 const GlobalSearch = () => {
     const [query, setQuery] = useState('');
@@ -208,18 +209,19 @@ const GlobalSearch = () => {
         try {
             const idToUse = movie.imdbID || movie.id;
             const details = await getMovieDetailsExternal(idToUse, movie.mediaType);
-            await createMovie({
+            await dispatch(addMovie({
                 ...details,
                 imdbID: idToUse,
                 status: actionType,
                 watchedOn: actionType === 'watched' ? new Date().toISOString().split('T')[0] : null
-            });
+            }));
+            // Only show success if addMovie didn't throw
             dispatch(showToast(`${movie.title} added to your ${actionType}!`, 'success'));
             setIsOpen(false);
             setQuery('');
         } catch (err) {
+            // Error toast already dispatched by the addMovie thunk
             console.error('Quick Action Error:', err);
-            dispatch(showToast('Operation failed', 'error'));
         } finally {
             setActionLoading(false);
         }

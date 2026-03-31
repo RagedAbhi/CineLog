@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Bookmark, Send, Check, Search, X, Loader2, Star } from 'lucide-react';
 import { showToast } from '../store/actions';
+import { addMovie, fetchMovies } from '../store/thunks';
 import CineSelect from './CineSelect';
-import { searchMoviesExternal, getMovieDetailsExternal as getMovieDetails, createMovie } from '../services/movieService';
+import { getMovieDetailsExternal as getMovieDetails } from '../services/movieService';
 import { searchMultiTMDB, GENRE_MAP } from '../services/tmdbService';
 
 const GENRES = ['Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure', 'Biography', 'History'];
@@ -182,16 +183,15 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType, chatMode, 
         try {
             if (actions.status && actions.status !== 'null') {
                 const details = await getMovieDetails(movie.imdbID, movie.mediaType);
-                await createMovie({
+                await dispatch(addMovie({
                     ...details,
                     imdbID: movie.imdbID,
                     status: actions.status,
                     watchedOn: actions.status === 'watched' ? new Date().toISOString().split('T')[0] : null
-                });
+                }));
             }
             if (actions.recommend) {
-                onClose(); // Close this modal and let navigate happen if needed, or open RecommendModal
-                // For simplicity in this modal, we'll redirect to detail page where Recommend is available
+                onClose(); 
                 window.location.href = `/movies/${movie.imdbID}?external=true&recommend=true`;
                 return;
             }
@@ -200,8 +200,8 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType, chatMode, 
                 onClose();
             }
         } catch (err) {
+            // Error toast already dispatched by the addMovie thunk — do nothing
             console.error('Action Error:', err);
-            dispatch(showToast('Operation failed', 'error'));
         } finally {
             setActionLoading(false);
         }

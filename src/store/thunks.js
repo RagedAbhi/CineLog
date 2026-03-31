@@ -155,6 +155,20 @@ export const fetchRecommendations = () => async (dispatch) => {
     }
 };
 
+export const clearRecentActivity = () => async (dispatch) => {
+    try {
+        const token = localStorage.getItem('token');
+        await axios.delete('http://localhost:5000/api/recommendations/bulk/clear-all', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        dispatch(fetchRecsSuccess([]));
+        dispatch(showToast('Recent activity cleared'));
+    } catch (error) {
+        console.error("Failed to clear recent activity:", error);
+        dispatch(showToast('Failed to clear activity', 'error'));
+    }
+};
+
 export const fetchRecentChats = () => async (dispatch, getState) => {
     try {
         const token = localStorage.getItem('token');

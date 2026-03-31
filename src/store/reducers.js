@@ -30,8 +30,19 @@ const moviesReducer = (state = initialMoviesState, action) => {
     case FETCH_MOVIES_FAILURE:
       return { ...state, loading: false, error: action.payload };
 
-    case ADD_MOVIE_SUCCESS:
-      return { ...state, items: [...state.items, action.payload] };
+    case ADD_MOVIE_SUCCESS: {
+      // If item already exists (due to status update), replace it; otherwise prepend.
+      const exists = state.items.some(movie => movie._id === action.payload._id);
+      if (exists) {
+        return {
+          ...state,
+          items: state.items.map(movie =>
+            movie._id === action.payload._id ? action.payload : movie
+          )
+        };
+      }
+      return { ...state, items: [action.payload, ...state.items] };
+    }
 
     case UPDATE_MOVIE_SUCCESS:
       return {

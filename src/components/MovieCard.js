@@ -54,13 +54,12 @@ class MovieCard extends Component {
     window.open(link, '_blank');
   };
 
-  handleWatchlistToggle = (e) => {
+  handleWatchlistToggle = async (e) => {
     e.stopPropagation();
     const { movie, dispatch, userMovies } = this.props;
     const existing = userMovies.find(m => (m.imdbID === movie.imdbID && movie.imdbID) || m._id === movie._id);
 
-    if (existing) {
-      if (existing.status === 'watchlist') {
+    if (existing && existing.status === 'watchlist') {
         dispatch(showConfirmModal({
             title: 'Remove from Watchlist',
             message: `Remove "${movie.title}" from your watchlist?`,
@@ -72,30 +71,32 @@ class MovieCard extends Component {
                 dispatch(showToast('Removed from watchlist', 'info'));
             }
         }));
-      } else {
-        dispatch(showToast('Already in your collection', 'info'));
-      }
     } else {
-      dispatch(addMovie({
-        title: movie.title,
-        year: movie.year,
-        poster: movie.poster,
-        imdbID: movie.imdbID,
-        mediaType: movie.mediaType || 'movie',
-        genre: movie.genre || 'Unknown',
-        status: 'watchlist'
-      }));
-      dispatch(showToast('Added to watchlist', 'success'));
+      try {
+        await dispatch(addMovie({
+          title: movie.title,
+          year: movie.year,
+          poster: movie.poster,
+          imdbID: movie.imdbID,
+          mediaType: movie.mediaType || 'movie',
+          genre: movie.genre || 'Unknown',
+          status: 'watchlist'
+        }));
+        // Only show success if addMovie didn't throw
+        if (!existing) dispatch(showToast('Added to watchlist', 'success'));
+        else dispatch(showToast('Moved to watchlist', 'success'));
+      } catch (err) {
+        // Error toast already dispatched by the thunk — do nothing here
+      }
     }
   };
 
-  handleMarkWatched = (e) => {
+  handleMarkWatched = async (e) => {
     e.stopPropagation();
     const { movie, dispatch, userMovies } = this.props;
     const existing = userMovies.find(m => (m.imdbID === movie.imdbID && movie.imdbID) || m._id === movie._id);
 
-    if (existing) {
-      if (existing.status === 'watched') {
+    if (existing && existing.status === 'watched') {
         dispatch(showConfirmModal({
             title: 'Remove from Watched',
             message: `Remove "${movie.title}" from your watched list?`,
@@ -107,22 +108,24 @@ class MovieCard extends Component {
                 dispatch(showToast('Removed from watched list', 'info'));
             }
         }));
-      } else {
-        dispatch(markAsWatched(existing._id, existing));
-        dispatch(showToast('Marked as watched! 🍿', 'success'));
-      }
     } else {
-      dispatch(addMovie({
-        title: movie.title,
-        year: movie.year,
-        poster: movie.poster,
-        imdbID: movie.imdbID,
-        mediaType: movie.mediaType || 'movie',
-        genre: movie.genre || 'Unknown',
-        status: 'watched',
-        watchedOn: new Date().toISOString().split('T')[0]
-      }));
-      dispatch(showToast('Added to Watched list! 🍿', 'success'));
+      try {
+        await dispatch(addMovie({
+          title: movie.title,
+          year: movie.year,
+          poster: movie.poster,
+          imdbID: movie.imdbID,
+          mediaType: movie.mediaType || 'movie',
+          genre: movie.genre || 'Unknown',
+          status: 'watched',
+          watchedOn: new Date().toISOString().split('T')[0]
+        }));
+        // Only show success if addMovie didn't throw
+        if (!existing) dispatch(showToast('Added to Watched list! 🍿', 'success'));
+        else dispatch(showToast('Marked as watched! 🍿', 'success'));
+      } catch (err) {
+        // Error toast already dispatched by the thunk — do nothing here
+      }
     }
   };
 

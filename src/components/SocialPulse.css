@@ -19,6 +19,11 @@
     padding-bottom: 12px;
 }
 
+.btn-clear-pulse:hover {
+    color: var(--red) !important;
+    transform: scale(1.15);
+}
+
 .pulse-list {
     display: flex;
     flex-direction: column;

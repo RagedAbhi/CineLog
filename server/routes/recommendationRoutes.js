@@ -12,6 +12,7 @@ router.get('/:id', recommendationController.getRecommendationById);
 router.patch('/:id/read', recommendationController.markAsRead);
 router.patch('/:id/metadata', recommendationController.updateMetadata);
 router.patch('/mark-all-read/:senderId', recommendationController.markAllFromSenderAsRead);
+router.delete('/bulk/clear-all', recommendationController.clearMyRecommendations);
 router.delete('/:id', recommendationController.deleteRecommendation);
 
 module.exports = router;

@@ -215,7 +215,7 @@ const Profile = () => {
         <div className="container-fluid">
             <div className="profile-minimal-header profile-anim">
                 <div className="profile-top-bar">
-                    <div className="profile-badge">PRO</div>
+
                     {isOwnProfile && !isEditing && (
                         <button
                             onClick={() => setIsEditing(true)}

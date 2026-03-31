@@ -234,3 +234,16 @@ exports.updateMetadata = async (req, res) => {
         res.status(500).json({ message: 'Error updating metadata', error: error.message });
     }
 };
+// Clear all recommendations for the current user
+exports.clearMyRecommendations = async (req, res) => {
+    try {
+        const result = await Recommendation.deleteMany({ receiver: req.user.id });
+        res.status(200).json({ 
+            message: 'Recent activity cleared successfully', 
+            deletedCount: result.deletedCount 
+        });
+    } catch (error) {
+        console.error('[clearMyRecommendations] Error:', error);
+        res.status(500).json({ message: 'Error clearing activity', error: error.message });
+    }
+};

@@ -317,25 +317,30 @@ class MovieDetail extends Component {
 
   handleMarkWatched = async (watchData) => {
     const movie = this.getMovie();
-    if (movie.isExternalRec) {
-      // It's not in our library yet, so we use addMovie thunk
-      const movieToSave = {
-        title: movie.title,
-        year: movie.year,
-        genre: movie.genre || 'Unknown',
-        director: movie.director || 'Unknown',
-        poster: movie.poster,
-        imdbID: movie.imdbID,
-        mediaType: movie.mediaType || 'movie',
-        status: 'watched',
-        ...watchData
-      };
-      await this.props.addMovie(movieToSave);
-    } else {
-      await this.props.markAsWatched(movie._id, watchData);
+    try {
+      if (movie.isExternalRec) {
+        // Not in library yet — add via addMovie thunk
+        const movieToSave = {
+          title: movie.title,
+          year: movie.year,
+          genre: movie.genre || 'Unknown',
+          director: movie.director || 'Unknown',
+          poster: movie.poster,
+          imdbID: movie.imdbID,
+          mediaType: movie.mediaType || 'movie',
+          status: 'watched',
+          ...watchData
+        };
+        await this.props.addMovie(movieToSave);
+      } else {
+        await this.props.markAsWatched(movie._id, watchData);
+      }
+      this.setState({ showMarkWatched: false });
+      this.props.showToast('Marked as watched! 🎬');
+    } catch (err) {
+      // Error toast already shown by the thunk
+      this.setState({ showMarkWatched: false });
     }
-    this.setState({ showMarkWatched: false });
-    this.props.showToast('Marked as watched! 🎬');
   }
 
   handleAddToWatchlist = () => {
@@ -357,8 +362,12 @@ class MovieDetail extends Component {
                 mediaType: movie.mediaType || 'movie',
                 status: 'watchlist'
             };
-            await this.props.addMovie(movieToSave);
-            this.props.showToast('Added to watchlist!', 'success');
+            try {
+                await this.props.addMovie(movieToSave);
+                this.props.showToast('Added to watchlist!', 'success');
+            } catch (err) {
+                // Error toast already shown by the thunk
+            }
         }
     });
   }

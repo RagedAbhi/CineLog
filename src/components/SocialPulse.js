@@ -1,14 +1,22 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Clock, User } from 'lucide-react';
+import { MessageSquare, Clock, User, Trash2 } from 'lucide-react';
+import { clearRecentActivity } from '../store/thunks';
 import './SocialPulse.css';
 
 const SocialPulse = () => {
     const recommendations = useSelector(state => state.auth.recommendations) || [];
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const [showAll, setShowAll] = React.useState(false);
     const limit = 3;
+
+    const handleClearAll = () => {
+        if (window.confirm('Clear all recent activity?')) {
+            dispatch(clearRecentActivity());
+        }
+    };
 
     const formatTime = (date) => {
         const diff = Date.now() - new Date(date).getTime();
@@ -32,9 +40,29 @@ const SocialPulse = () => {
 
     return (
         <div className="social-pulse-container glass-panel">
-            <div className="pulse-header">
-                <Clock size={16} />
-                <span>Recent Activity</span>
+            <div className="pulse-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={16} />
+                    <span>Recent Activity</span>
+                </div>
+                <button 
+                    className="btn-clear-pulse" 
+                    onClick={handleClearAll}
+                    title="Clear all activity"
+                    style={{ 
+                        background: 'transparent', 
+                        border: 'none', 
+                        color: 'rgba(255, 255, 255, 0.3)', 
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    <Trash2 size={14} />
+                </button>
             </div>
             <div className="pulse-list">
                 {displayedRecs.map((rec) => (
