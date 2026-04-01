@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { HelmetProvider } from 'react-helmet-async';
+import useSocket from './hooks/useSocket';
 import Lenis from 'lenis';
 import blobBg from './assets/blob.jpeg';
 
@@ -19,6 +21,7 @@ import AuthPage from './pages/AuthPage';
 import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
 import Messenger from './pages/Messenger.js';
+import PersonPage from './pages/PersonPage';
 import { useDispatch } from 'react-redux';
 import { hideRecommendModal, showToast, hideConfirmModal } from './store/actions';
 import { fetchCurrentUser, fetchRecommendations, fetchRecentChats } from './store/thunks';
@@ -44,6 +47,8 @@ const App = () => {
   const dispatch = useDispatch();
   const { isAuthenticated } = useSelector(state => state.auth);
   const { recommend, confirm } = useSelector(state => state.ui);
+
+  useSocket(); // --- Real-Time Social Sync ---
 
   const isHomePage = location.pathname === '/';
   const isDetailPage = location.pathname.startsWith('/movies/');
@@ -87,7 +92,7 @@ const App = () => {
         try {
           const token = localStorage.getItem('token');
           if (token) {
-            await fetch('http://localhost:5000/api/users/heartbeat', {
+            await fetch(`${config.API_URL}/api/users/heartbeat`, {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -173,6 +178,7 @@ const App = () => {
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/watched" element={<Watched />} />
               <Route path="/watchlist" element={<Watchlist />} />
+              <Route path="/person/:id" element={<PersonPage />} />
             </Routes>
           </AnimatePresence>
         </main>
@@ -182,9 +188,11 @@ const App = () => {
 };
 
 const AppWrapper = () => (
-  <BrowserRouter>
-    <App />
-  </BrowserRouter>
+  <HelmetProvider>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </HelmetProvider>
 );
 
 export default AppWrapper;

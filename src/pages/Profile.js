@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchCurrentUser, fetchRecommendations, fetchMovies } from '../store/thunks';
+import config from '../config';
 import { showToast, showConfirmModal } from '../store/actions';
 import gsap from 'gsap';
 import MovieCard from '../components/MovieCard';
 import CineSelect from '../components/CineSelect';
+import { motion } from 'framer-motion';
 import '../styles/global.css';
 
 const GENRES = ['all', 'Action', 'Adventure', 'Animation', 'Biography', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Sci-Fi', 'Science Fiction', 'Thriller', 'War', 'Western'];
@@ -34,6 +37,7 @@ const Profile = () => {
 
     const [topGenreFilter, setTopGenreFilter] = useState('all');
     const [topMediaTypeFilter, setTopMediaTypeFilter] = useState('all');
+    const [activeTab, setActiveTab] = useState('expertise'); // ['expertise', 'top_picks', 'received', 'sent']
     
     const fileInputRef = useRef(null);
 
@@ -69,12 +73,248 @@ const Profile = () => {
                 { opacity: 1, y: 0, duration: 0.6, stagger: 0.08, ease: "circ.out" }
             );
         }
-    }, [loading, profile, isEditing]);
+        if (!loading && profile && !isEditing) {
+            markReadIfNeeded();
+        }
+    }, [loading, profile, isEditing, id, currentUser]);
+
+    const renderReceivedRecs = () => {
+        const profileId = profile._id?.toString();
+        const currentUserId = (currentUser?._id || currentUser?.id || getTokenUserId())?.toString();
+
+        let filtered = profile.recommendations?.filter(r => {
+            const recReceiverId = (r.receiver?._id || r.receiver)?.toString();
+            const recSenderId = (r.sender?._id || r.sender)?.toString();
+            const isOwnProfile = !id || id.toString() === currentUserId;
+
+            let isValidContext = false;
+            if (isOwnProfile) isValidContext = (recReceiverId === profileId);
+            else isValidContext = (recSenderId === profileId && recReceiverId === currentUserId);
+            
+            return isValidContext;
+        }) || [];
+
+        const grouped = {};
+        filtered.forEach(r => {
+            const canonicalKey = (r.mediaTitle?.toLowerCase().trim() + '|' + r.mediaType).toLowerCase().replace(/\s/g, '');
+            if (!grouped[canonicalKey]) {
+                grouped[canonicalKey] = { ...r, count: 1, allIds: [r._id], allSenders: [r.sender] };
+            } else {
+                grouped[canonicalKey].count += 1;
+                grouped[canonicalKey].allIds.push(r._id);
+                const currentSenderId = (r.sender?._id || r.sender)?.toString();
+                if (!grouped[canonicalKey].allSenders.some(s => (s?._id || s)?.toString() === currentSenderId)) {
+                    grouped[canonicalKey].allSenders.push(r.sender);
+                }
+                if (!r.read) grouped[canonicalKey].read = false;
+            }
+        });
+        
+        filtered = Object.values(grouped);
+        if (recGenreFilter !== 'all') {
+            const q = recGenreFilter.toLowerCase();
+            filtered = filtered.filter(r => r.genre?.toLowerCase().includes(q));
+        }
+        if (recMediaTypeFilter !== 'all') filtered = filtered.filter(r => r.mediaType === recMediaTypeFilter);
+        
+        filtered = [...filtered].sort((a, b) => {
+            const dateA = new Date(a.createdAt);
+            const dateB = new Date(b.createdAt);
+            return recSortOrder === 'latest' ? dateB - dateA : dateA - dateB;
+        });
+
+        return (
+            <>
+                <div className="profile-rec-controls" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
+                    <div style={{ width: '160px' }}>
+                        <CineSelect options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))} value={recGenreFilter} onChange={setRecGenreFilter} placeholder="Genre" />
+                    </div>
+                    <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
+                        {['all', 'movie', 'series'].map(type => (
+                            <button key={type} className={`media-tab ${recMediaTypeFilter === type ? 'active' : ''}`} onClick={() => setRecMediaTypeFilter(type)} style={{ fontSize: '12px', padding: '0 12px' }}>
+                                {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="filter-toggle-group" style={{ margin: 0, height: '38px' }}>
+                        {['latest', 'oldest'].map(order => (
+                            <button key={order} className={`filter-toggle-btn ${recSortOrder === order ? 'active' : ''}`} onClick={() => setRecSortOrder(order)}>
+                                {order.charAt(0).toUpperCase() + order.slice(1)}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {filtered.length > 0 ? (
+                    <div className="media-grid-minimal">
+                        {filtered.map((rec, index) => (
+                            <div key={rec._id} className="rec-card-wrapper" style={{ position: 'relative' }}>
+                                <MovieCard 
+                                    movie={{
+                                        _id: rec.imdbID,
+                                        title: rec.mediaTitle,
+                                        poster: rec.poster,
+                                        imdbID: rec.imdbID,
+                                        mediaType: rec.mediaType,
+                                        genre: rec.genre,
+                                        isExternal: true,
+                                        isRecommendation: true
+                                    }} 
+                                    index={index} 
+                                />
+                                {rec.count > 1 && <div className="rec-count-badge">Multi-Friend Pick</div>}
+                                <div className="rec-attribution" style={{ marginTop: '10px' }}>
+                                    by @{rec.sender?.username || 'friend'}{rec.allSenders?.length > 1 ? ` and ${rec.allSenders.length - 1} others` : ''}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="picks-empty-minimal">No recommendations received yet.</p>
+                )}
+            </>
+        );
+    };
+
+    const renderSentRecs = () => {
+        const profileId = profile._id?.toString();
+        const currentUserId = (currentUser?._id || currentUser?.id || getTokenUserId())?.toString();
+        const isOwnProfile = !id || id.toString() === currentUserId;
+
+        let filtered = profile.recommendations?.filter(r => {
+            const recSenderId = (r.sender?._id || r.sender)?.toString();
+            return isOwnProfile ? recSenderId === profileId : (recSenderId === currentUserId && (r.receiver?._id || r.receiver)?.toString() === profileId);
+        }) || [];
+
+        const grouped = {};
+        filtered.forEach(r => {
+            const canonicalKey = (r.mediaTitle?.toLowerCase().trim() + '|' + r.mediaType).toLowerCase().replace(/\s/g, '');
+            if (!grouped[canonicalKey]) {
+                grouped[canonicalKey] = { ...r, count: 1, allIds: [r._id], allReceivers: [r.receiver] };
+            } else {
+                grouped[canonicalKey].count += 1;
+                grouped[canonicalKey].allIds.push(r._id);
+            }
+        });
+        
+        filtered = Object.values(grouped);
+        if (sentGenreFilter !== 'all') filtered = filtered.filter(r => r.genre?.toLowerCase().includes(sentGenreFilter.toLowerCase()));
+        if (sentMediaTypeFilter !== 'all') filtered = filtered.filter(r => r.mediaType === sentMediaTypeFilter);
+        
+        filtered = [...filtered].sort((a, b) => (sentSortOrder === 'latest' ? new Date(b.createdAt) - new Date(a.createdAt) : new Date(a.createdAt) - new Date(b.createdAt)));
+
+        return (
+            <>
+                <div className="profile-rec-controls" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
+                    <div style={{ width: '160px' }}>
+                        <CineSelect options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))} value={sentGenreFilter} onChange={setSentGenreFilter} placeholder="Genre" />
+                    </div>
+                    <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
+                        {['all', 'movie', 'series'].map(type => (
+                            <button key={type} className={`media-tab ${sentMediaTypeFilter === type ? 'active' : ''}`} onClick={() => setSentMediaTypeFilter(type)} style={{ fontSize: '12px', padding: '0 12px' }}>
+                                {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {filtered.length > 0 ? (
+                    <div className="media-grid-minimal">
+                        {filtered.map((rec, index) => (
+                            <div key={rec._id} className="rec-card-wrapper" style={{ position: 'relative' }}>
+                                <MovieCard 
+                                    movie={{
+                                        _id: rec.imdbID,
+                                        title: rec.mediaTitle,
+                                        poster: rec.poster,
+                                        imdbID: rec.imdbID,
+                                        mediaType: rec.mediaType,
+                                        genre: rec.genre,
+                                        isExternal: true,
+                                        isRecommendation: true
+                                    }} 
+                                    index={index} 
+                                />
+                                <div className="rec-attribution" style={{ marginTop: '10px' }}>
+                                    to @{rec.receiver?.username || 'friend'}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="picks-empty-minimal">No recommendations sent yet.</p>
+                )}
+            </>
+        );
+    };
+
+    const renderExpertise = () => {
+        if (!profile || !profile.expertise) return null;
+
+        const { expertise } = profile;
+        const hasWatched = expertise.totalWatched > 0;
+        
+        const getRank = (count) => {
+            if (count >= 30) return { name: 'Cinephile Master', color: '#ffd700' };
+            if (count >= 15) return { name: 'Expert', color: 'var(--accent)' };
+            if (count >= 5) return { name: 'Enthusiast', color: '#00e676' };
+            return { name: 'Novice', color: '#90a4ae' };
+        };
+
+        const rank = getRank(expertise.totalWatched);
+
+        return (
+            <div className="profile-expertise-section profile-anim" style={{ marginBottom: '60px' }}>
+                <div className="picks-header" style={{ marginBottom: '24px' }}>
+                    <h2 className="picks-title">Cinema Expertise</h2>
+                    <div className="picks-line"></div>
+                </div>
+                
+                {hasWatched ? (
+                    <div className="expertise-grid">
+                        <div className="expertise-card glass-panel main-rank">
+                            <div className="rank-badge" style={{ borderColor: rank.color, color: rank.color }}>{rank.name}</div>
+                            <div className="rank-sub">{expertise.totalWatched} Titles Logged</div>
+                        </div>
+                        
+                        <div className="expertise-card glass-panel">
+                            <h4>Signature Style</h4>
+                            <div className="stats-list">
+                                {expertise.topGenres.map(({ name, count }) => (
+                                    <div key={name} className="stat-item">
+                                        <span className="stat-name">{name}</span>
+                                        <div className="stat-bar-bg">
+                                            <div className="stat-bar-fill" style={{ width: `${Math.min((count/15)*100, 100)}%` }}></div>
+                                        </div>
+                                        <span className="stat-count">{count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {expertise.topActor && (
+                            <div className="expertise-card glass-panel">
+                                <h4>Actor Focus</h4>
+                                <div className="director-highlight">
+                                    <div className="director-name">{expertise.topActor.name}</div>
+                                    <div className="director-count">{expertise.topActor.count} Works Seen</div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="picks-empty-minimal" style={{ textAlign: 'center', padding: '40px' }}>
+                        <p style={{ color: 'var(--text-muted)' }}>Start watching movies to build your cinema expertise! 🎬</p>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const fetchProfile = async () => {
         setLoading(true);
         try {
-            const url = id ? `http://localhost:5000/api/users/${id}` : 'http://localhost:5000/api/users/me';
+            const url = id ? `${config.API_URL}/api/users/${id}` : `${config.API_URL}/api/users/me`;
             const token = localStorage.getItem('token');
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -93,18 +333,11 @@ const Profile = () => {
         }
     };
 
-    useEffect(() => {
-        if (!loading && profile && !isEditing) {
-            markReadIfNeeded();
-        }
-    }, [loading, profile, isEditing, id, currentUser]);
-
     const markReadIfNeeded = async () => {
         const token = localStorage.getItem('token');
         const currentUserId = (currentUser?._id || currentUser?.id)?.toString();
         const profileId = id?.toString();
         
-        console.log(`[markReadIfNeeded] currentUserId: ${currentUserId}, profileId: ${profileId}`);
 
         // Check if there are actually any unread recommendations from this friend to avoid infinite loops
         const hasUnread = recommendations?.some(r => {
@@ -114,12 +347,10 @@ const Profile = () => {
         });
 
         if (profileId && profileId !== currentUserId && hasUnread) {
-            console.log(`[markReadIfNeeded] Marking all from sender ${profileId} as read`);
             try {
-                const res = await axios.patch(`http://localhost:5000/api/recommendations/mark-all-read/${profileId}`, {}, {
+                const res = await axios.patch(`${config.API_URL}/api/recommendations/mark-all-read/${profileId}`, {}, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                console.log(`[markReadIfNeeded] Backend response:`, res.data);
                 dispatch(fetchCurrentUser());
                 dispatch(fetchRecommendations()); // Ensure notifications clear
             } catch (err) { console.error('Error marking read:', err); }
@@ -128,13 +359,11 @@ const Profile = () => {
 
     const dismissRecommendation = async (recId, e) => {
         if (e) e.stopPropagation();
-        console.log(`[Profile] Dismissing recommendation: ${recId}`);
         const token = localStorage.getItem('token');
         try {
-            await axios.delete(`http://localhost:5000/api/recommendations/${recId}`, {
+            await axios.delete(`${config.API_URL}/api/recommendations/${recId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            console.log(`[Profile] Dismiss success for: ${recId}`);
             dispatch(showToast('Recommendation dismissed', 'success'));
             dispatch(fetchRecommendations());
             dispatch(fetchCurrentUser());
@@ -148,7 +377,7 @@ const Profile = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            await axios.patch('http://localhost:5000/api/users/profile', formData, {
+            await axios.patch(`${config.API_URL}/api/users/profile`, formData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsEditing(false);
@@ -166,7 +395,7 @@ const Profile = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            await axios.patch('http://localhost:5000/api/users/profile/password', passwordData, {
+            await axios.patch(`${config.API_URL}/api/users/profile/password`, passwordData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsChangingPassword(false);
@@ -188,7 +417,7 @@ const Profile = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.post('http://localhost:5000/api/users/upload-avatar', formData, {
+            const response = await axios.post(`${config.API_URL}/api/users/upload-avatar`, formData, {
                 headers: { 
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data'
@@ -208,11 +437,20 @@ const Profile = () => {
     if (loading) return <div className="loading">Loading profile...</div>;
     if (!profile) return <div className="error">Profile not found.</div>;
 
-    const currentUserId = currentUser?.id || currentUser?._id?.toString() || getTokenUserId();
-    const isOwnProfile = !id || id === currentUserId;
+    const currentUserId = (currentUser?._id || currentUser?.id || getTokenUserId())?.toString();
+    const isOwnProfile = !id || id.toString() === currentUserId;
 
     return (
         <div className="container-fluid">
+            <Helmet>
+                <title>{profile ? `${profile.name} (@${profile.username}) | CineLog` : 'Profile | CineLog'}</title>
+                <meta name="description" content={profile?.bio || `View ${profile?.name}'s cinema expertise and top movie picks on CineLog.`} />
+                <meta property="og:title" content={`${profile?.name} on CineLog`} />
+                <meta property="og:description" content={profile?.bio || 'Check out my movie journal and recommendations!'} />
+                <meta property="og:image" content={profile?.profilePicture} />
+                <meta property="og:type" content="profile" />
+                <meta property="profile:username" content={profile?.username} />
+            </Helmet>
             <div className="profile-minimal-header profile-anim">
                 <div className="profile-top-bar">
 
@@ -340,570 +578,170 @@ const Profile = () => {
                 </div>
             </div>
 
-            <div className="top-picks-container profile-anim">
-                <div className="picks-header">
-                    <h2 className="picks-title">Top Picks</h2>
-                    <div className="picks-line"></div>
-                </div>
+            {/* Premium Tab Navigation */}
+            <div className="profile-tabs-nav profile-anim" style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: '4px', 
+                marginBottom: '40px',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                padding: '0 20px 16px'
+            }}>
+                {[
+                    { id: 'expertise', label: 'Cinema Expertise', icon: '🎬' },
+                    { id: 'top_picks', label: 'Top Picks', icon: '⭐' },
+                    { id: 'received', label: 'Received', icon: '📥' },
+                    { id: 'sent', label: 'Sent', icon: '📤' }
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        className={`profile-nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+                        onClick={() => setActiveTab(tab.id)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: activeTab === tab.id ? 'var(--accent)' : 'var(--text-muted)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            letterSpacing: '1.2px',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            transition: 'all 0.3s ease',
+                            padding: '12px 24px',
+                            position: 'relative'
+                        }}
+                    >
+                        <span style={{ fontSize: '16px' }}>{tab.icon}</span> {tab.label}
+                        {activeTab === tab.id && (
+                            <motion.div 
+                                layoutId="profileTabUnderline"
+                                style={{ 
+                                    position: 'absolute', 
+                                    bottom: '-17px', 
+                                    left: 0, 
+                                    right: 0, 
+                                    height: '2px', 
+                                    background: 'var(--accent)',
+                                    boxShadow: '0 0 15px var(--accent)'
+                                }} 
+                            />
+                        )}
+                    </button>
+                ))}
+            </div>
 
-                <div className="profile-rec-controls" style={{ 
-                    display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', 
-                    flexWrap: 'wrap', padding: '0 4px' 
-                }}>
-                    <div style={{ width: '160px' }}>
-                        <CineSelect
-                            options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))}
-                            value={topGenreFilter}
-                            onChange={setTopGenreFilter}
-                            placeholder="Genre"
-                        />
-                    </div>
-                    <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
-                        {['all', 'movie', 'series'].map(type => (
-                            <button 
-                                key={type}
-                                className={`media-tab ${topMediaTypeFilter === type ? 'active' : ''}`}
-                                onClick={() => setTopMediaTypeFilter(type)}
-                                style={{ fontSize: '12px', padding: '0 12px' }}
-                            >
-                                {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+            {/* TAB CONTENT */}
+            <div className="profile-tab-content">
+                {activeTab === 'expertise' && renderExpertise()}
 
-                {(() => {
-                    let filtered = profile.topPicks || [];
-                    
-                    if (topGenreFilter !== 'all') {
-                        const q = topGenreFilter.toLowerCase();
-                        filtered = filtered.filter(m => {
-                            if (!m.genre) return false;
-                            const normalized = m.genre.toLowerCase();
-                            // Special case for Sci-Fi
-                            if (q === 'sci-fi' || q === 'science fiction') {
-                                return normalized.includes('sci-fi') || normalized.includes('science fiction');
-                            }
-                            return normalized.includes(q);
-                        });
-                    }
+                {activeTab === 'top_picks' && (
+                    <div className="top-picks-container profile-anim">
+                        <div className="picks-header">
+                            <h2 className="picks-title">Top Picks</h2>
+                            <div className="picks-line"></div>
+                        </div>
 
-                    if (topMediaTypeFilter !== 'all') {
-                        filtered = filtered.filter(m => m.mediaType === topMediaTypeFilter);
-                    }
-
-                    if (filtered.length > 0) {
-                        return (
-                            <div className="media-grid-minimal">
-                                {filtered.map((media, index) => (
-                                    <MovieCard key={media._id} movie={media} index={index} />
+                        <div className="profile-rec-controls" style={{ 
+                            display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', 
+                            flexWrap: 'wrap', padding: '0 4px' 
+                        }}>
+                            <div style={{ width: '160px' }}>
+                                <CineSelect
+                                    options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))}
+                                    value={topGenreFilter}
+                                    onChange={setTopGenreFilter}
+                                    placeholder="Genre"
+                                />
+                            </div>
+                            <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
+                                {['all', 'movie', 'series'].map(type => (
+                                    <button 
+                                        key={type}
+                                        className={`media-tab ${topMediaTypeFilter === type ? 'active' : ''}`}
+                                        onClick={() => setTopMediaTypeFilter(type)}
+                                        style={{ fontSize: '12px', padding: '0 12px' }}
+                                    >
+                                        {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
+                                    </button>
                                 ))}
                             </div>
-                        );
-                    }
-
-                    return (
-                        <div className="picks-empty-minimal">
-                            <p>No matches found in Top Picks.</p>
                         </div>
-                    );
-                })()}
-            </div>
 
-            {/* Recommendations Received SECTION */}
-            <div className="top-picks-container profile-anim" style={{ marginTop: '60px' }}>
-                <div className="picks-header">
-                    <h2 className="picks-title">
-                        {isOwnProfile ? "Recommended by Friends" : "Recommended to me"}
-                    </h2>
-                    <div className="picks-line"></div>
-                </div>
-
-                {(() => {
-                    const profileId = profile._id?.toString();
-
-                    let filtered = profile.recommendations?.filter(r => {
-                        const recReceiverId = (r.receiver?._id || r.receiver)?.toString();
-                        const recSenderId = (r.sender?._id || r.sender)?.toString();
-
-                        // 1. Filter by profile context
-                        let isValidContext = false;
-                        if (isOwnProfile) isValidContext = (recReceiverId === profileId);
-                        else isValidContext = (recSenderId === profileId && recReceiverId === currentUserId);
-                        
-                        if (!isValidContext) return false;
-
-                        // 2. Filter out if already in watchlist/watched (DISABLED as per user request)
-                        // const alreadyAdded = myMovies?.some(m => m.imdbID === r.imdbID && (m.status === 'watchlist' || m.status === 'watched'));
-                        // if (alreadyAdded) return false;
-
-                        return true;
-                    }) || [];
-
-                    // 3. Group duplicates and count them
-                    const grouped = {};
-                    filtered.forEach(r => {
-                        // Use imdbID or a canonical combination of title + type to group
-                        const canonicalKey = (r.imdbID || (r.mediaTitle + '|' + r.mediaType)).toLowerCase().replace(/\s/g, '');
-                        
-                        if (!grouped[canonicalKey]) {
-                            grouped[canonicalKey] = { 
-                                ...r, 
-                                count: 1, 
-                                allIds: [r._id], 
-                                allSenders: [r.sender] 
-                            };
-                        } else {
-                            grouped[canonicalKey].count += 1;
-                            grouped[canonicalKey].allIds.push(r._id);
-                            grouped[canonicalKey].allSenders.push(r.sender);
-                            // Merge unread status: if any are unread, mark group as unread
-                            if (!r.read) grouped[canonicalKey].read = false;
-                        }
-                    });
-                    
-                    filtered = Object.values(grouped);
-
-                    // 4. Apply Filters
-                    if (recGenreFilter && recGenreFilter !== 'all') {
-                        const q = recGenreFilter.toLowerCase();
-                        filtered = filtered.filter(r => {
-                            if (!r.genre) return false;
-                            const normalized = r.genre.toLowerCase();
-                            // Special case for Sci-Fi
-                            if (q === 'sci-fi' || q === 'science fiction') {
-                                return normalized.includes('sci-fi') || normalized.includes('science fiction');
+                        {(() => {
+                            let filtered = profile.topPicks || [];
+                            
+                            if (topGenreFilter !== 'all') {
+                                const q = topGenreFilter.toLowerCase();
+                                filtered = filtered.filter(m => {
+                                    if (!m.genre) return false;
+                                    const normalized = m.genre.toLowerCase();
+                                    // Special case for Sci-Fi
+                                    if (q === 'sci-fi' || q === 'science fiction') {
+                                        return normalized.includes('sci-fi') || normalized.includes('science fiction');
+                                    }
+                                    return normalized.includes(q);
+                                });
                             }
-                            return normalized.includes(q);
-                        });
-                    }
 
-                    // 4.5 Apply Media Type Filter
-                    if (recMediaTypeFilter !== 'all') {
-                        filtered = filtered.filter(r => r.mediaType === recMediaTypeFilter);
-                    }
-
-                    // 5. Apply Sort
-                    filtered = [...filtered].sort((a, b) => {
-                        const dateA = new Date(a.createdAt);
-                        const dateB = new Date(b.createdAt);
-                        return recSortOrder === 'latest' ? dateB - dateA : dateA - dateB;
-                    });
-
-                    return (
-                        <>
-                            <div className="profile-rec-controls" style={{ 
-                                display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', 
-                                flexWrap: 'wrap', padding: '0 4px' 
-                            }}>
-                                <div style={{ width: '160px' }}>
-                                    <CineSelect
-                                        options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))}
-                                        value={recGenreFilter}
-                                        onChange={setRecGenreFilter}
-                                        placeholder="Genre"
-                                    />
-                                </div>
-                                <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
-                                    {['all', 'movie', 'series'].map(type => (
-                                        <button 
-                                            key={type}
-                                            className={`media-tab ${recMediaTypeFilter === type ? 'active' : ''}`}
-                                            onClick={() => setRecMediaTypeFilter(type)}
-                                            style={{ fontSize: '12px', padding: '0 12px' }}
-                                        >
-                                            {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="filter-toggle-group" style={{ margin: 0, height: '38px' }}>
-                                    <button 
-                                        className={`filter-toggle-btn ${recSortOrder === 'latest' ? 'active' : ''}`}
-                                        onClick={() => setRecSortOrder('latest')}
-                                    >
-                                        Latest
-                                    </button>
-                                    <button 
-                                        className={`filter-toggle-btn ${recSortOrder === 'oldest' ? 'active' : ''}`}
-                                        onClick={() => setRecSortOrder('oldest')}
-                                    >
-                                        Oldest
-                                    </button>
-                                </div>
-                                {recGenreFilter !== 'all' && (
-                                    <button className="btn-clear" onClick={() => setRecGenreFilter('all')}>Clear</button>
-                                )}
-                            </div>
-
-                            {filtered.length > 0 ? (
-                                <div className="media-grid-minimal">
-                                    {filtered.map((rec, index) => {
-                                        const isUnseen = !rec.read && (rec.receiver?._id || rec.receiver)?.toString() === currentUserId;
-                                        
-                                        // Try to find genre in my movies if missing in recommendation
-                                        let displayGenre = rec.genre;
-                                        if (!displayGenre || displayGenre === 'Unknown') {
-                                            const myMatch = myMovies?.find(m => m.imdbID === rec.imdbID);
-                                            if (myMatch && myMatch.genre) displayGenre = myMatch.genre;
-                                        }
-
-                                        return (
-                                        <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible', position: 'relative' }}>
-                                            <MovieCard 
-                                                movie={{
-                                                    _id: rec.imdbID,
-                                                    title: rec.mediaTitle,
-                                                    poster: rec.poster,
-                                                    imdbID: rec.imdbID,
-                                                    mediaType: rec.mediaType,
-                                                    genre: displayGenre,
-                                                    isExternal: true,
-                                                    isRecommendation: true
-                                                }} 
-                                                index={index} 
-                                            />
-                                            {rec.count > 1 && (
-                                                <div 
-                                                    className="rec-count-badge" 
-                                                    title={`Recommended by: ${rec.allSenders?.map(s => s?.name || s?.username || 'Friend').join(', ')}`}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '10px',
-                                                        left: '10px',
-                                                        background: 'rgba(255, 255, 255, 0.95)',
-                                                        color: '#1a1a2e',
-                                                        fontSize: '12px',
-                                                        fontWeight: 'bold',
-                                                        padding: '2px 8px',
-                                                        borderRadius: '12px',
-                                                        zIndex: 15,
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                                                        border: '1px solid rgba(0,0,0,0.1)',
-                                                        cursor: 'help'
-                                                    }}
-                                                >
-                                                    x{rec.count}
-                                                </div>
-                                            )}
-                                            {isUnseen && (
-                                                <div className="rec-unseen-badge" style={{
-                                                    position: 'absolute',
-                                                    top: '-10px',
-                                                    right: '-10px',
-                                                    background: 'linear-gradient(135deg, rgba(255, 59, 48, 0.9), rgba(200, 20, 20, 0.9))',
-                                                    color: 'white',
-                                                    fontSize: '11px',
-                                                    fontWeight: '800',
-                                                    padding: '4px 8px',
-                                                    borderRadius: '12px',
-                                                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                                                    backdropFilter: 'blur(8px)',
-                                                    WebkitBackdropFilter: 'blur(8px)',
-                                                    boxShadow: '0 4px 15px rgba(255, 59, 48, 0.4)',
-                                                    zIndex: 5,
-                                                    letterSpacing: '1px'
-                                                }}>
-                                                    NEW
-                                                </div>
-                                            )}
-                                            {isOwnProfile && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        if (e) e.stopPropagation();
-                                                        const senderNames = rec.allSenders?.map(s => s?.name || s?.username || 'Friend').join(', ');
-                                                        dispatch(showConfirmModal({
-                                                            title: 'Remove Recommendation',
-                                                            message: `This was recommended by ${rec.count} friend${rec.count > 1 ? 's' : ''}${rec.count > 1 ? ` (${senderNames})` : ''}. Are you sure you want to remove the recommendation for "${rec.mediaTitle}"?`,
-                                                            confirmText: 'Remove',
-                                                            cancelText: 'Cancel',
-                                                            isDangerous: true,
-                                                            onConfirm: () => {
-                                                                if (rec.allIds && rec.allIds.length > 0) {
-                                                                    rec.allIds.forEach(id => dismissRecommendation(id));
-                                                                } else {
-                                                                    dismissRecommendation(rec._id);
-                                                                }
-                                                            }
-                                                        }));
-                                                    }}
-                                                    title=""
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '-10px',
-                                                        left: '-10px',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        borderRadius: '50%',
-                                                        background: 'rgba(30, 30, 40, 0.85)',
-                                                        border: '1px solid rgba(255,255,255,0.15)',
-                                                        backdropFilter: 'blur(10px)',
-                                                        WebkitBackdropFilter: 'blur(10px)',
-                                                        color: 'rgba(255,255,255,0.7)',
-                                                        fontSize: '14px',
-                                                        lineHeight: '1',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        zIndex: 10,
-                                                        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-                                                        transition: 'all 0.2s ease'
-                                                    }}
-                                                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,59,48,0.85)'; e.currentTarget.style.color='white'; }}
-                                                    onMouseLeave={e => { e.currentTarget.style.background='rgba(30,30,40,0.85)'; e.currentTarget.style.color='rgba(255,255,255,0.7)'; }}
-                                                >
-                                                    ✕
-                                                </button>
-                                            )}
-                                            <div className="rec-attribution" style={{ marginTop: '10px' }}>
-                                                {isOwnProfile 
-                                                    ? `From @${rec.sender?.username || 'friend'}${rec.count > 1 ? ` and ${rec.count - 1} others` : ''}` 
-                                                    : `To @${profile.username || 'user'}${rec.count > 1 ? ` (shared by ${rec.count} friends)` : ''}`
-                                                }
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                </div>
-                            ) : (
-                                <div className="picks-empty-minimal">
-                                    <p>{isOwnProfile ? "No recommendations received yet." : `No recommendations from ${profile.name || profile.username} yet.`}</p>
-                                </div>
-                            )}
-                        </>
-                    );
-                })()}
-            </div>
-
-            {/* Recommendations Sent SECTION */}
-            <div className="top-picks-container profile-anim" style={{ marginTop: '60px' }}>
-                <div className="picks-header">
-                    <h2 className="picks-title">
-                        {isOwnProfile ? "Recommended to Friends" : "Recommended by me"}
-                    </h2>
-                    <div className="picks-line"></div>
-                </div>
-
-                {(() => {
-                    const profileId = profile._id?.toString();
-
-                    let filtered = profile.recommendations?.filter(r => {
-                        const recSenderId = (r.sender?._id || r.sender)?.toString();
-                        const recReceiverId = (r.receiver?._id || r.receiver)?.toString();
-
-                        if (isOwnProfile) return recSenderId === profileId;
-
-                        // For friend's profile: SHOW ONLY me -> friend
-                        return recSenderId === currentUserId && recReceiverId === profileId;
-                    }) || [];
-
-                    // 3. Group duplicates and count them
-                    const grouped = {};
-                    filtered.forEach(r => {
-                        const canonicalKey = (r.imdbID || (r.mediaTitle + '|' + r.mediaType)).toLowerCase().replace(/\s/g, '');
-                        
-                        if (!grouped[canonicalKey]) {
-                            grouped[canonicalKey] = { 
-                                ...r, 
-                                count: 1, 
-                                allIds: [r._id], 
-                                allReceivers: [r.receiver] 
-                            };
-                        } else {
-                            grouped[canonicalKey].count += 1;
-                            grouped[canonicalKey].allIds.push(r._id);
-                            grouped[canonicalKey].allReceivers.push(r.receiver);
-                        }
-                    });
-                    
-                    filtered = Object.values(grouped);
-
-                    // 4. Apply Filters
-                    if (sentGenreFilter && sentGenreFilter !== 'all') {
-                        const q = sentGenreFilter.toLowerCase();
-                        filtered = filtered.filter(r => {
-                            if (!r.genre) return false;
-                            const normalized = r.genre.toLowerCase();
-                            // Special case for Sci-Fi
-                            if (q === 'sci-fi' || q === 'science fiction') {
-                                return normalized.includes('sci-fi') || normalized.includes('science fiction');
+                            if (topMediaTypeFilter !== 'all') {
+                                filtered = filtered.filter(m => m.mediaType === topMediaTypeFilter);
                             }
-                            return normalized.includes(q);
-                        });
-                    }
 
-                    // 4.5 Apply Media Type Filter
-                    if (sentMediaTypeFilter !== 'all') {
-                        filtered = filtered.filter(r => r.mediaType === sentMediaTypeFilter);
-                    }
+                            // --- UI Deduplication ---
+                            const seen = new Set();
+                            filtered = filtered.filter(m => {
+                                const titleKey = `${m.title?.toLowerCase().trim()}|${m.mediaType || 'movie'}|${m.year || ''}`;
+                                const key = m.imdbID || titleKey;
+                                if (seen.has(key)) return false;
+                                seen.add(key);
+                                return true;
+                            });
 
-                    // 5. Apply Sort
-                    filtered = [...filtered].sort((a, b) => {
-                        const dateA = new Date(a.createdAt);
-                        const dateB = new Date(b.createdAt);
-                        return sentSortOrder === 'latest' ? dateB - dateA : dateA - dateB;
-                    });
+                            if (filtered.length > 0) {
+                                return (
+                                    <div className="media-grid-minimal">
+                                        {filtered.map((media, index) => (
+                                            <MovieCard key={media._id} movie={media} index={index} />
+                                        ))}
+                                    </div>
+                                );
+                            }
 
-                    return (
-                        <>
-                            <div className="profile-rec-controls" style={{ 
-                                display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', 
-                                flexWrap: 'wrap', padding: '0 4px' 
-                            }}>
-                                <div style={{ width: '160px' }}>
-                                    <CineSelect
-                                        options={GENRES.map(g => ({ value: g, label: g === 'all' ? 'All Genres' : g }))}
-                                        value={sentGenreFilter}
-                                        onChange={setSentGenreFilter}
-                                        placeholder="Genre"
-                                    />
-                                </div>
-                                <div className="analytics-media-tabs" style={{ margin: 0, padding: '2px', height: '38px' }}>
-                                    {['all', 'movie', 'series'].map(type => (
-                                        <button 
-                                            key={type}
-                                            className={`media-tab ${sentMediaTypeFilter === type ? 'active' : ''}`}
-                                            onClick={() => setSentMediaTypeFilter(type)}
-                                            style={{ fontSize: '12px', padding: '0 12px' }}
-                                        >
-                                            {type === 'all' ? 'All' : type === 'movie' ? 'Movies' : 'TV Shows'}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="filter-toggle-group" style={{ margin: 0, height: '38px' }}>
-                                    <button 
-                                        className={`filter-toggle-btn ${sentSortOrder === 'latest' ? 'active' : ''}`}
-                                        onClick={() => setSentSortOrder('latest')}
-                                    >
-                                        Latest
-                                    </button>
-                                    <button 
-                                        className={`filter-toggle-btn ${sentSortOrder === 'oldest' ? 'active' : ''}`}
-                                        onClick={() => setSentSortOrder('oldest')}
-                                    >
-                                        Oldest
-                                    </button>
-                                </div>
-                                {sentGenreFilter !== 'all' && (
-                                    <button className="btn-clear" onClick={() => setSentGenreFilter('all')}>Clear</button>
-                                )}
-                            </div>
-
-                            {filtered.length > 0 ? (
-                                <div className="media-grid-minimal">
-                                    {filtered.map((rec, index) => {
-                                        // Try to find genre in my movies if missing in recommendation
-                                        let displayGenre = rec.genre;
-                                        if (!displayGenre || displayGenre === 'Unknown') {
-                                            const myMatch = myMovies?.find(m => m.imdbID === rec.imdbID);
-                                            if (myMatch && myMatch.genre) displayGenre = myMatch.genre;
-                                        }
-                                        
-                                        return (
-                                        <div key={rec._id} className="rec-card-wrapper" style={{ opacity: 1, visibility: 'visible', position: 'relative' }}>
-                                            <MovieCard 
-                                                movie={{
-                                                    _id: rec.imdbID,
-                                                    title: rec.mediaTitle,
-                                                    poster: rec.poster,
-                                                    imdbID: rec.imdbID,
-                                                    mediaType: rec.mediaType,
-                                                    genre: displayGenre,
-                                                    isExternal: true,
-                                                    isRecommendation: true
-                                                }} 
-                                                index={index} 
-                                            />
-                                            {rec.count > 1 && (
-                                                <div 
-                                                    className="rec-count-badge" 
-                                                    title={`Sent to: ${rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ')}`}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '10px',
-                                                        left: '10px',
-                                                        background: 'rgba(255, 255, 255, 0.95)',
-                                                        color: '#1a1a2e',
-                                                        fontSize: '12px',
-                                                        fontWeight: 'bold',
-                                                        padding: '2px 8px',
-                                                        borderRadius: '12px',
-                                                        zIndex: 15,
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                                                        border: '1px solid rgba(0,0,0,0.1)',
-                                                        cursor: 'help'
-                                                    }}
-                                                >
-                                                    x{rec.count}
-                                                </div>
-                                            )}
-                                            {isOwnProfile && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        if (e) e.stopPropagation();
-                                                        const receiverNames = rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ');
-                                                        dispatch(showConfirmModal({
-                                                            title: 'Retract Recommendation',
-                                                            message: `Withdraw your recommendation for "${rec.mediaTitle}" sent to ${rec.count} friend${rec.count > 1 ? 's' : ''}${rec.count > 1 ? ` (${receiverNames})` : ''}?`,
-                                                            confirmText: 'Withdraw',
-                                                            cancelText: 'Cancel',
-                                                            isDangerous: true,
-                                                            onConfirm: () => {
-                                                                if (rec.allIds && rec.allIds.length > 0) {
-                                                                    rec.allIds.forEach(id => dismissRecommendation(id));
-                                                                } else {
-                                                                    dismissRecommendation(rec._id);
-                                                                }
-                                                            }
-                                                        }));
-                                                    }}
-                                                    title=""
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '-10px',
-                                                        left: '-10px',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        borderRadius: '50%',
-                                                        background: 'rgba(30, 30, 40, 0.85)',
-                                                        border: '1px solid rgba(255,255,255,0.15)',
-                                                        backdropFilter: 'blur(10px)',
-                                                        WebkitBackdropFilter: 'blur(10px)',
-                                                        color: 'rgba(255,255,255,0.7)',
-                                                        fontSize: '14px',
-                                                        lineHeight: '1',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        zIndex: 10,
-                                                        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
-                                                        transition: 'all 0.2s ease'
-                                                    }}
-                                                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,59,48,0.85)'; e.currentTarget.style.color='white'; }}
-                                                    onMouseLeave={e => { e.currentTarget.style.background='rgba(30,30,40,0.85)'; e.currentTarget.style.color='rgba(255,255,255,0.7)'; }}
-                                                >
-                                                    ✕
-                                                </button>
-                                            )}
-                                            <div className="rec-attribution" style={{ marginTop: '10px' }}>
-                                                {isOwnProfile 
-                                                    ? `To @${rec.receiver?.username || 'friend'}${rec.count > 1 ? ` and ${rec.count - 1} others` : ''}` 
-                                                    : `From you${rec.count > 1 ? ` (to ${rec.count} friends)` : ''}`
-                                                }
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                </div>
-                            ) : (
+                            return (
                                 <div className="picks-empty-minimal">
-                                    <p>{isOwnProfile ? "Start sharing your favorites with friends!" : `You haven't recommended anything to ${profile.name || profile.username} yet.`}</p>
+                                    <p>No matches found in Top Picks.</p>
                                 </div>
-                            )}
-                        </>
-                    );
-                })()}
+                            );
+                        })()}
+                    </div>
+                )}
+
+                {activeTab === 'received' && (
+                    <div className="top-picks-container profile-anim">
+                        <div className="picks-header">
+                            <h2 className="picks-title">
+                                {isOwnProfile ? "Recommended by Friends" : "Recommended to me"}
+                            </h2>
+                            <div className="picks-line"></div>
+                        </div>
+                        {renderReceivedRecs()}
+                    </div>
+                )}
+
+                {activeTab === 'sent' && (
+                    <div className="top-picks-container profile-anim">
+                        <div className="picks-header">
+                            <h2 className="picks-title">
+                                {isOwnProfile ? "Recommended to Friends" : "Recommended by me"}
+                            </h2>
+                            <div className="picks-line"></div>
+                        </div>
+                        {renderSentRecs()}
+                    </div>
+                )}
             </div>
         </div>
     );

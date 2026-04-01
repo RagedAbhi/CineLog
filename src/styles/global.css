@@ -3729,19 +3729,20 @@ html.lenis {
     gap: 12px;
 }
 
-.stat-item {
+.stat-item-expertise {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
 .stat-name {
-    width: 80px;
+    width: 100px;
     font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--text-secondary);
 }
 
 .stat-bar-bg {
@@ -3766,22 +3767,77 @@ html.lenis {
     min-width: 20px;
 }
 
-.director-highlight {
+.actor-focus-highlight {
     text-align: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
 }
 
-.director-name {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 4px;
+.actor-focus-highlight:hover {
+    background: rgba(100, 255, 218, 0.05);
+    border-color: rgba(100, 255, 218, 0.2);
+    transform: translateY(-5px);
 }
 
-.director-count {
-    font-size: 13px;
+.actor-name {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
     color: var(--accent);
-    font-weight: 600;
+    margin-bottom: 4px;
+    text-shadow: 0 0 20px rgba(100, 255, 218, 0.2);
 }
+
+.actor-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   PROFILE TAB NAVIGATION (PREMIUM)
+   ============================================================ */
+.profile-tabs-nav {
+    position: relative;
+    z-index: 10;
+}
+
+.profile-nav-tab {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.6;
+}
+
+.profile-nav-tab:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.profile-nav-tab.active {
+    opacity: 1;
+    color: var(--accent) !important;
+}
+
+.profile-tab-content {
+    animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 
 /* ============================================================
    PREMIUM NAV ITEMS (Social Page Tabs)

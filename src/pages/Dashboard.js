@@ -1,4 +1,5 @@
 import React, { Component, createRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { connect } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchMovies, addMovie, fetchRecommendations } from '../store/thunks';
@@ -29,7 +30,7 @@ class Dashboard extends Component {
       showRecommendModal: false,
       selectedMedia: null,
       isEditingOrder: false,
-      sectionOrder: ['recent_movies', 'recent_shows', 'watchlist', 'expertise_stats']
+      sectionOrder: ['recent_movies', 'recent_shows', 'watchlist']
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
@@ -222,85 +223,7 @@ class Dashboard extends Component {
     return list[this.state.activeHeroIndex % list.length];
   }
 
-  renderExpertiseStats(index) {
-    const { movies } = this.props;
-    const { isEditingOrder } = this.state;
-    if (movies.length === 0 && !isEditingOrder) return null;
 
-    const genreCounts = {};
-    const directorCounts = {};
-    
-    movies.forEach(m => {
-        if (m.genre) {
-            m.genre.split(', ').forEach(g => {
-                genreCounts[g] = (genreCounts[g] || 0) + 1;
-            });
-        }
-        if (m.director && m.director !== 'N/A') {
-            directorCounts[m.director] = (directorCounts[m.director] || 0) + 1;
-        }
-    });
-
-    const topGenres = Object.entries(genreCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3);
-    
-    const topDirector = Object.entries(directorCounts)
-        .sort((a, b) => b[1] - a[1])[0];
-
-    const getRank = (count) => {
-        if (count >= 30) return { name: 'Cinephile Master', color: '#ffd700' };
-        if (count >= 15) return { name: 'Expert', color: 'var(--accent)' };
-        if (count >= 5) return { name: 'Enthusiast', color: '#00e676' };
-        return { name: 'Novice', color: '#90a4ae' };
-    };
-
-    const rank = getRank(movies.length);
-
-    return (
-        <div className={`media-row-container ${isEditingOrder ? 'editing' : 'reveal'}`} key="expertise_stats">
-            {isEditingOrder && (
-                <div className="section-edit-controls">
-                    <button className="btn-edit-move" onClick={() => this.moveSection(index, -1)} disabled={index === 0}>↑</button>
-                    <button className="btn-edit-move" onClick={() => this.moveSection(index, 1)} disabled={index === this.state.sectionOrder.length - 1}>↓</button>
-                    <div className="section-label-edit">Cinema Expertise</div>
-                </div>
-            )}
-            <div className="row-header">
-                <h3>Cinema Expertise</h3>
-            </div>
-            <div className="expertise-grid">
-                <div className="expertise-card glass-panel main-rank">
-                    <div className="rank-badge" style={{ borderColor: rank.color, color: rank.color }}>{rank.name}</div>
-                    <div className="rank-sub">{movies.length} Titles in Collection</div>
-                </div>
-                
-                <div className="expertise-card glass-panel">
-                    <h4>Top Genres</h4>
-                    <div className="stats-list">
-                        {topGenres.map(([name, count]) => (
-                            <div key={name} className="stat-item">
-                                <span className="stat-name">{name}</span>
-                                <div className="stat-bar-bg"><div className="stat-bar-fill" style={{ width: `${Math.min((count/15)*100, 100)}%` }}></div></div>
-                                <span className="stat-count">{count}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {topDirector && (
-                    <div className="expertise-card glass-panel">
-                        <h4>Director Focus</h4>
-                        <div className="director-highlight">
-                            <div className="director-name">{topDirector[0]}</div>
-                            <div className="director-count">{topDirector[1]} Works Logged</div>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-  }
 
   renderRow(title, items, path, id, index) {
     const { isEditingOrder, sectionOrder } = this.state;
@@ -356,23 +279,40 @@ class Dashboard extends Component {
     const recentlyWatchedMovies = movies
       .filter(m => m.status === 'watched' && m.watchedOn && (m.mediaType === 'movie' || !m.mediaType))
       .sort((a, b) => new Date(b.watchedOn) - new Date(a.watchedOn))
-      .filter((m, i, arr) => arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (x.title === m.title && x.year === m.year)) === i)
+      .filter((m, i, arr) => {
+        const titleKey = `${m.title?.toLowerCase().trim()}|${m.mediaType || 'movie'}|${m.year || ''}`;
+        return arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (`${x.title?.toLowerCase().trim()}|${x.mediaType || 'movie'}|${x.year || ''}` === titleKey)) === i;
+      })
       .slice(0, 10);
 
     const recentlyWatchedShows = movies
       .filter(m => m.status === 'watched' && m.watchedOn && m.mediaType === 'series')
       .sort((a, b) => new Date(b.watchedOn) - new Date(a.watchedOn))
-      .filter((m, i, arr) => arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (x.title === m.title && x.year === m.year)) === i)
+      .filter((m, i, arr) => {
+        const titleKey = `${m.title?.toLowerCase().trim()}|${m.mediaType || 'movie'}|${m.year || ''}`;
+        return arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (`${x.title?.toLowerCase().trim()}|${x.mediaType || 'movie'}|${x.year || ''}` === titleKey)) === i;
+      })
       .slice(0, 10);
 
     const watchlistItems = movies
       .filter(m => m.status === 'watchlist')
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .filter((m, i, arr) => arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (x.title === m.title && x.year === m.year)) === i)
+      .filter((m, i, arr) => {
+        const titleKey = `${m.title?.toLowerCase().trim()}|${m.mediaType || 'movie'}|${m.year || ''}`;
+        const key = m.imdbID || titleKey;
+        return arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (`${x.title?.toLowerCase().trim()}|${x.mediaType || 'movie'}|${x.year || ''}` === titleKey)) === i;
+      })
       .slice(0, 15);
 
     return (
       <div className="dashboard-page">
+        <Helmet>
+          <title>Dashboard | CineLog — Your Movie Journal</title>
+          <meta name="description" content="Explore your recently watched movies, trending TV shows, and personalized recommendations on CineLog." />
+          <meta property="og:title" content="CineLog Dashboard" />
+          <meta property="og:description" content="Your personal cinema vault and social movie journal." />
+          <meta property="og:type" content="website" />
+        </Helmet>
         {/* Full-Page Background (Fixed) */}
         <div className="hero-bg">
           <div
@@ -472,8 +412,7 @@ class Dashboard extends Component {
                 return this.renderRow('Recently Watched TV Shows', recentlyWatchedShows, '/watched', 'recent_shows', index);
               case 'watchlist':
                 return this.renderRow('My Watchlist', watchlistItems, '/watchlist', 'watchlist', index);
-              case 'expertise_stats':
-                return this.renderExpertiseStats(index);
+
 
               default:
                 return null;

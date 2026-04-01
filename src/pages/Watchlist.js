@@ -68,7 +68,9 @@ class Watchlist extends Component {
     // --- UI Deduplication ---
     const seen = new Set();
     list = list.filter(m => {
-        const key = (m.imdbID || m._id || m.title).toString().toLowerCase();
+        // Use a more robust key than just _id to catch true duplicates
+        const titleKey = `${m.title?.toLowerCase().trim()}|${m.mediaType || 'movie'}|${m.year || ''}`;
+        const key = m.imdbID || titleKey;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;

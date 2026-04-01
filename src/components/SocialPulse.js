@@ -36,14 +36,35 @@ const SocialPulse = () => {
         );
     }
 
-    const displayedRecs = showAll ? recommendations : recommendations.slice(0, limit);
+    const groupedRecs = React.useMemo(() => {
+        const grouped = {};
+        recommendations.forEach(rec => {
+            const key = `${rec.mediaTitle?.toLowerCase().trim()}-${rec.mediaType}`;
+            if (!grouped[key]) {
+                grouped[key] = { ...rec, allSenders: [rec.sender], count: 1 };
+            } else {
+                grouped[key].count += 1;
+                const senderId = (rec.sender?._id || rec.sender)?.toString();
+                if (!grouped[key].allSenders.some(s => (s?._id || s)?.toString() === senderId)) {
+                    grouped[key].allSenders.push(rec.sender);
+                }
+                // Keep the most recent timestamp
+                if (new Date(rec.createdAt) > new Date(grouped[key].createdAt)) {
+                    grouped[key].createdAt = rec.createdAt;
+                }
+            }
+        });
+        return Object.values(grouped).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }, [recommendations]);
+
+    const displayedRecs = showAll ? groupedRecs : groupedRecs.slice(0, limit);
 
     return (
         <div className="social-pulse-container glass-panel">
             <div className="pulse-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Clock size={16} />
-                    <span>Recent Activity</span>
+                    <div className="status-pulse-dot"></div>
+                    <span style={{ fontSize: '12px', fontWeight: '800', letterSpacing: '1px', color: 'var(--accent)' }}>LIVE FEED</span>
                 </div>
                 <button 
                     className="btn-clear-pulse" 
@@ -69,33 +90,37 @@ const SocialPulse = () => {
                     <div 
                         key={rec._id} 
                         className="pulse-item"
-                        // Use imdbID specifically for recommendations. 
-                        // rec._id is a Recommendation record ID, NOT a movie ID.
                         onClick={() => navigate(`/movies/${rec.imdbID}?external=true&type=${rec.mediaType || 'movie'}`)}
                     >
                         <div className="pulse-avatar">
-                            {rec.sender?.avatar ? (
-                                <img src={rec.sender.avatar} alt={rec.sender?.name || ''} />
+                            {rec.allSenders[0]?.profilePicture ? (
+                                <img src={rec.allSenders[0].profilePicture} alt="" />
                             ) : (
                                 <User size={14} />
                             )}
                         </div>
                         <div className="pulse-info">
                             <p className="pulse-text">
-                                <strong>{rec.sender?.name || 'Unknown User'}</strong> recommended 
-                                <span> {rec.mediaTitle}</span>
+                                <strong>{rec.allSenders[0]?.name || rec.allSenders[0]?.username || 'Unknown'}</strong>
+                                {rec.allSenders.length > 1 ? ` and ${rec.allSenders.length - 1} others` : ''} recommended 
+                                <span className="pulse-media-title"> {rec.mediaTitle}</span>
                             </p>
-                            <span className="pulse-time">{formatTime(rec.createdAt)}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                { (Date.now() - new Date(rec.createdAt).getTime() < 300000) && (
+                                    <span className="new-badge-tiny">NEW</span>
+                                )}
+                                <span className="pulse-time">{formatTime(rec.createdAt)}</span>
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
-            {recommendations.length > limit && (
+            {groupedRecs.length > limit && (
                 <button 
                     className="pulse-see-more-btn"
                     onClick={() => setShowAll(!showAll)}
                 >
-                    {showAll ? 'Show less' : `See more (${recommendations.length - limit} more)`}
+                    {showAll ? 'Show less' : `See more (${groupedRecs.length - limit} more)`}
                 </button>
             )}
         </div>

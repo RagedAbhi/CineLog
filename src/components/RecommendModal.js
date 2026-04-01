@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import axios from 'axios';
+import config from '../config';
 import { showToast } from '../store/actions';
 import CineSelect from './CineSelect';
 import '../styles/global.css';
@@ -21,7 +22,7 @@ const RecommendModal = ({ movie, onClose, onRecommend }) => {
     const fetchFriends = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/friends', {
+            const res = await axios.get(`${config.API_URL}/api/friends`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setFriends(res.data);
@@ -40,7 +41,7 @@ const RecommendModal = ({ movie, onClose, onRecommend }) => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post('http://localhost:5000/api/recommendations', {
+            const res = await axios.post(`${config.API_URL}/api/recommendations`, {
                 receiverId: selectedFriend,
                 mediaTitle: movie.title,
                 mediaType: movie.mediaType || 'movie',

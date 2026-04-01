@@ -1,6 +1,7 @@
 const Recommendation = require('../models/Recommendation');
 const Friendship = require('../models/Friendship');
 const mongoose = require('mongoose');
+const socketService = require('../services/socketService');
 const https = require('https');
 
 // Helper: verify mediaType and genre from OMDB using native https
@@ -93,6 +94,13 @@ exports.sendRecommendation = async (req, res) => {
             console.log(`Pruned ${idsToDelete.length} old recommendations for user ${receiverId}`);
         }
 
+        // --- Real-Time Notify Receiver ---
+        socketService.toUser(receiverId, 'new_recommendation', {
+            sender: req.user.username,
+            mediaTitle: recommendation.mediaTitle,
+            recommendationId: recommendation._id
+        });
+
         res.status(201).json(recommendation);
     } catch (error) {
         console.error('Error in sendRecommendation:', error);
@@ -103,9 +111,15 @@ exports.sendRecommendation = async (req, res) => {
 // Get recommendations received by the user
 exports.getMyRecommendations = async (req, res) => {
     try {
-        const recommendations = await Recommendation.find({ receiver: req.user.id })
-            .populate('sender', 'username name')
-            .sort({ createdAt: -1 });
+        const recommendations = await Recommendation.find({
+            $or: [
+                { receiver: req.user.id },
+                { sender: req.user.id }
+            ]
+        })
+        .populate('sender', 'username name profilePicture')
+        .populate('receiver', 'username name profilePicture')
+        .sort({ createdAt: -1 });
 
         res.status(200).json(recommendations);
     } catch (error) {

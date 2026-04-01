@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { markChatRead } from '../store/actions';
 import axios from 'axios';
+import config from '../config';
 import { Send, Plus, X, Film, Tv, User, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AddMovieModal from '../components/AddMovieModal';
@@ -29,7 +30,7 @@ const Chat = () => {
         const fetchFriend = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`http://localhost:5000/api/users/${friendId}`, {
+                const res = await axios.get(`${config.API_URL}/api/users/${friendId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setFriend(res.data);
@@ -44,7 +45,7 @@ const Chat = () => {
     const fetchMessages = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get(`http://localhost:5000/api/messages/conversation/${friendId}`, {
+            const res = await axios.get(`${config.API_URL}/api/messages/conversation/${friendId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setMessages(res.data);
@@ -75,7 +76,7 @@ const Chat = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post('http://localhost:5000/api/messages/send', {
+            const res = await axios.post(`${config.API_URL}/api/messages/send`, {
                 receiverId: friendId,
                 text: inputText,
                 mediaAddon: attachedMedia
@@ -130,7 +131,7 @@ const Chat = () => {
                     <div className="chat-user-info">
                         <div className={`chat-avatar-ring ${!status.isOnline ? 'offline' : ''}`}>
                             {friend?.avatar ? 
-                                <img src={friend.avatar.startsWith('http') ? friend.avatar : `http://localhost:5000/${friend.avatar}`} alt="" /> 
+                                <img src={friend.avatar.startsWith('http') ? friend.avatar : `${config.API_URL}/${friend.avatar}`} alt="" /> 
                                 : <div className="user-icon-placeholder"><User size={22} /></div>
                             }
                         </div>

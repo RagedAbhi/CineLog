@@ -7,6 +7,7 @@ const mediaSchema = new mongoose.Schema({
     genre: { type: String, required: true },
     year: { type: Number },
     director: { type: String },
+    cast: { type: String },
     imdbID: { type: String },
     poster: { type: String },
     plot: { type: String },
@@ -15,7 +16,8 @@ const mediaSchema = new mongoose.Schema({
     review: { type: String },
     watchedOn: { type: String },
     addedOn: { type: String, default: () => new Date().toISOString().split('T')[0] },
-    isTopPick: { type: Boolean, default: false }
+    isTopPick: { type: Boolean, default: false },
+    embedding: { type: [Number] } // Vector for Semantic Search (dims: 1536)
 }, { timestamps: true });
  
 mediaSchema.index({ userId: 1, imdbID: 1 }, { unique: true, sparse: true });

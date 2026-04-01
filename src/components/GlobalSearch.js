@@ -1,67 +1,50 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, Bookmark, Send, Check, TrendingUp, Star } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
-import { getMovieDetailsExternal, createMovie } from '../services/movieService';
-import { searchMultiTMDB, getTrendingTMDB, GENRE_MAP, getBatchProvidersTMDB } from '../services/tmdbService';
+import { Eye, Bookmark, Send, TrendingUp, Star, Clock, X } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { getMovieDetailsExternal } from '../services/movieService';
+import { getTrendingTMDB } from '../services/tmdbService';
 import { showToast, showRecommendModal } from '../store/actions';
 import { addMovie } from '../store/thunks';
+import axios from 'axios';
+import config from '../config';
 
 const GlobalSearch = () => {
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState([]);
+    const [results, setResults] = useState({ all: [], movies: [], tvShows: [], people: [] });
     const [trending, setTrending] = useState([]);
+    const [recentSearches, setRecentSearches] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
-    const [selectedIndex, setSelectedIndex] = useState(-1);
-    const [providerData, setProviderData] = useState({}); // { id: [providers] }
+    const [activeFilter, setActiveFilter] = useState('all');
     
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const searchRef = useRef(null);
-    const userMovies = useSelector(state => state.movies.items);
 
-    // Auto-search from URL param
     const location = useLocation();
-    useEffect(() => {
-        const searchParam = new URLSearchParams(location.search).get('search');
-        if (searchParam) {
-            setQuery(searchParam);
-            setIsOpen(true);
-        }
-    }, [location.search]);
     
-    // Calculate user genre/cast/director/type preferences for personalization
-    const userPreferences = useMemo(() => {
-        const prefs = { genres: {}, actors: {}, directors: {}, types: { movie: 0, series: 0 } };
-        userMovies.forEach(m => {
-            // Genres
-            (m.genre?.split(', ') || []).forEach(g => {
-                prefs.genres[g] = (prefs.genres[g] || 0) + 1;
-            });
-            // Actors
-            (m.cast?.split(', ') || []).forEach(a => {
-                prefs.actors[a] = (prefs.actors[a] || 0) + 1;
-            });
-            // Director
-            if (m.director) {
-                prefs.directors[m.director] = (prefs.directors[m.director] || 0) + 1;
-            }
-            // Types
-            if (m.mediaType === 'series') prefs.types.series++;
-            else prefs.types.movie++;
-        });
-        return prefs;
-    }, [userMovies]);
+    // Load recent searches
+    useEffect(() => {
+        const stored = localStorage.getItem('cinelog_recent_searches');
+        if (stored) {
+            try { setRecentSearches(JSON.parse(stored)); } catch(e){}
+        }
+    }, []);
 
-    const typeWeights = useMemo(() => {
-        const total = userMovies.length || 1;
-        return {
-            movie: (userPreferences.types.movie / total) * 50,
-            series: (userPreferences.types.series / total) * 50
-        };
-    }, [userPreferences, userMovies.length]);
+    const saveRecentSearch = (term) => {
+        if (!term.trim()) return;
+        const newSearches = [term, ...recentSearches.filter(t => t.toLowerCase() !== term.toLowerCase())].slice(0, 8);
+        setRecentSearches(newSearches);
+        localStorage.setItem('cinelog_recent_searches', JSON.stringify(newSearches));
+    };
+
+    const clearRecentSearches = (e) => {
+        e.stopPropagation();
+        setRecentSearches([]);
+        localStorage.removeItem('cinelog_recent_searches');
+    };
 
     useEffect(() => {
         const fetchTrending = async () => {
@@ -83,123 +66,31 @@ const GlobalSearch = () => {
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
-            if (query.length > 2) {
+            if (query.trim().length > 2) {
                 setLoading(true);
                 setIsOpen(true);
                 try {
-                    const data = await searchMultiTMDB(query);
-                    
-                    const personalized = data.map(item => {
-                        let score = item.popularity || 0;
-                        let reasons = [];
-
-                        // 1. Media Type Preference
-                        const typeBoost = typeWeights[item.mediaType] || 0;
-                        if (typeBoost > 25) reasons.push(`Top ${item.mediaType === 'series' ? 'Series' : 'Movie'} Pick`);
-
-                        // 2. Genre match
-                        let genreBoost = 0;
-                        let topGenre = '';
-                        item.genreIds.forEach(gid => {
-                            const gName = GENRE_MAP[gid];
-                            const count = userPreferences.genres[gName] || 0;
-                            if (count > genreBoost) {
-                                genreBoost = count;
-                                topGenre = gName;
-                            }
-                        });
-                        
-                        if (topGenre && genreBoost > 2) reasons.push(`Matches your love for ${topGenre}`);
-
-                        // 3. Overview match for favorite actors/directors
-                        let personBoost = 0;
-                        let matchedPerson = '';
-                        const textToSearch = `${item.title} ${item.overview} ${item.subtitle || ''}`.toLowerCase();
-                        
-                        Object.keys(userPreferences.actors).forEach(actor => {
-                            if (textToSearch.includes(actor.toLowerCase())) {
-                                const boost = userPreferences.actors[actor] * 15;
-                                if (boost > personBoost) {
-                                    personBoost = boost;
-                                    matchedPerson = actor;
-                                }
-                            }
-                        });
-
-                        Object.keys(userPreferences.directors).forEach(dir => {
-                            if (textToSearch.includes(dir.toLowerCase())) {
-                                const boost = userPreferences.directors[dir] * 20;
-                                if (boost > personBoost) {
-                                    personBoost = boost;
-                                    matchedPerson = dir;
-                                }
-                            }
-                        });
-                        
-                        if (matchedPerson) reasons.push(`Featured: ${matchedPerson}`);
-
-                        const typeScore = Math.min((typeBoost / 50) * 20, 20);
-                        const genreScore = Math.min((genreBoost / 10) * 40, 40);
-                        const personScore = Math.min((personBoost / 50) * 40, 40);
-                        
-                        const matchPercentage = Math.round(typeScore + genreScore + personScore);
-                        
-                        if (topGenre && genreBoost > 2) reasons.push(topGenre);
-                        if (matchedPerson) reasons.push(matchedPerson);
-                        
-                        let combinedReason = '';
-                        if (reasons.length > 0) {
-                            combinedReason = `Matches your love for ${reasons.join(' & ')}`;
-                        } else if (typeBoost > 25) {
-                            combinedReason = `Top ${item.mediaType === 'series' ? 'Series' : 'Movie'} for you`;
-                        }
-
-                        const totalMatchScore = (genreBoost * 20) + personBoost + typeBoost;
-                        
-                        // Map IDs to human-readable genre string
-                        const genreString = (item.genreIds || [])
-                            .map(gid => GENRE_MAP[gid])
-                            .filter(Boolean)
-                            .join(', ');
-
-                        return { 
-                            ...item, 
-                            genre: genreString,
-                            matchScore: totalMatchScore, 
-                            totalScore: score + totalMatchScore,
-                            matchPercentage: Math.min(matchPercentage, 99),
-                            recommendationReason: combinedReason
-                        };
-                    }).sort((a, b) => b.totalScore - a.totalScore);
-
-                    setResults(personalized || []);
-                    setSelectedIndex(-1);
-                    
-                    // Fetch streaming providers for results in background
-                    if (personalized.length > 0) {
-                        getBatchProvidersTMDB(personalized).then(pResults => {
-                            const pMap = {};
-                            pResults.forEach(pr => { pMap[pr.id] = pr.providers; });
-                            setProviderData(prev => ({ ...prev, ...pMap }));
-                        });
-                    }
+                    const token = localStorage.getItem('token');
+                    const response = await axios.get(`${config.API_URL}/api/search?q=${encodeURIComponent(query)}&type=${activeFilter}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    setResults(response.data);
                 } catch (err) {
                     console.error('Global Search Error:', err);
                 } finally {
                     setLoading(false);
                 }
             } else {
-                setResults([]);
+                setResults({ all: [], movies: [], tvShows: [], people: [] });
             }
-        }, 400);
+        }, 150);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [query, userPreferences, typeWeights]);
+    }, [query, activeFilter]);
 
     const handleQuickAction = async (e, movie, actionType) => {
         e.stopPropagation();
         if (actionLoading) return;
-
         if (actionType === 'recommend') {
             dispatch(showRecommendModal(movie));
             return;
@@ -215,33 +106,148 @@ const GlobalSearch = () => {
                 status: actionType,
                 watchedOn: actionType === 'watched' ? new Date().toISOString().split('T')[0] : null
             }));
-            // Only show success if addMovie didn't throw
             dispatch(showToast(`${movie.title} added to your ${actionType}!`, 'success'));
             setIsOpen(false);
             setQuery('');
         } catch (err) {
-            // Error toast already dispatched by the addMovie thunk
             console.error('Quick Action Error:', err);
         } finally {
             setActionLoading(false);
         }
     };
 
-
-
-    const handleSelect = (movie) => {
+    const handleSelect = (item) => {
+        saveRecentSearch(query || item.title || item.name);
         setIsOpen(false);
         setQuery('');
-        const idToUse = movie.imdbID || movie.id;
-        navigate(`/movies/${idToUse}?external=true&type=${movie.mediaType}`);
+
+        try {
+            const token = localStorage.getItem('token');
+            axios.post(`${config.API_URL}/api/search/track`, {
+                id: item.id.toString(),
+                title: item.title || item.name,
+                mediaType: item.mediaType,
+                genreIds: item.genreIds
+            }, { headers: { Authorization: `Bearer ${token}` } });
+        } catch (e) {}
+
+        if (item.mediaType === 'person') {
+            navigate(`/person/${item.id}`);
+            return;
+        }
+
+        const idToUse = item.imdbID || item.id;
+        navigate(`/movies/${idToUse}?external=true&type=${item.mediaType}`);
     };
 
-    const renderSearchResults = () => {
+    const renderMediaCard = (item) => (
+        <div 
+            key={item.imdbID || item.id} 
+            className="search-item"
+            onClick={() => handleSelect(item)}
+        >
+            <div className="search-item-poster-container">
+                <img 
+                    src={item.poster && item.poster !== 'N/A' ? item.poster : 'https://via.placeholder.com/40x60'} 
+                    alt={item.title} 
+                />
+            </div>
+            <div className="search-item-info">
+                <div className="search-item-header">
+                    <div className="search-item-title-row">
+                        <div className="search-item-title">{item.title}</div>
+                    </div>
+                    {item.rating !== 'N/A' && (
+                        <div className="search-item-rating">
+                            <Star size={12} fill="var(--accent)" />
+                            <span>{item.rating}</span>
+                        </div>
+                    )}
+                </div>
+                <div className="search-item-meta">
+                    <div className="search-item-meta-main">
+                        {item.year} • {item.mediaType}
+                    </div>
+                </div>
+                
+                {item.socialMetadata && (
+                    <div className="search-item-social" style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 'bold', marginTop: '4px' }}>
+                        👥 {item.socialMetadata.text}
+                    </div>
+                )}
+                
+                <div className="search-item-overview">{item.overview?.substring(0, 80)}...</div>
+                
+                <div className="search-item-actions">
+                    <div className="action-icons-group">
+                        <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'watched')} title="Mark as Watched"><Eye size={16} /></button>
+                        <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'watchlist')} title="Add to Watchlist"><Bookmark size={16} /></button>
+                        <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'recommend')} title="Recommend"><Send size={16} /></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderPersonCard = (person) => (
+        <div 
+            key={person.id} 
+            className="search-person-item"
+            onClick={() => handleSelect(person)}
+            style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+        >
+            <img 
+                src={person.image || 'https://via.placeholder.com/50'} 
+                alt={person.name} 
+                style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }}
+            />
+            <div>
+                <div style={{ fontWeight: 'bold', fontSize: '15px' }}>{person.name}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Known for: {person.knownFor || 'Acting'}</div>
+            </div>
+        </div>
+    );
+
+    const renderGroupedResults = () => {
         if (loading) return <div className="search-loading-state"><div className="spinner-medium" />Searching...</div>;
         
-        if (query.length === 0 && trending.length > 0) {
+        const hasQuery = query.trim().length > 2;
+        // Fallback merge just in case backend isn't returning 'all' explicitly yet
+        const allItems = results.all && results.all.length > 0 
+            ? results.all 
+            : [...(results.people || []), ...(results.movies || []), ...(results.tvShows || [])]
+                .sort((a,b) => ((b.personalizationScore || 0) + (b.popularity || 0)/1000) - ((a.personalizationScore || 0) + (a.popularity || 0)/1000));
+                
+        const hasResults = allItems.length > 0;
+
+        if (!hasQuery && (trending.length > 0 || recentSearches.length > 0)) {
             return (
                 <div className="search-discovery-section">
+                    {recentSearches.length > 0 && (
+                        <div style={{ marginBottom: '20px' }}>
+                            <div className="search-section-header" style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Clock size={16} />
+                                    <span>Recent Searches</span>
+                                </div>
+                                <X size={14} style={{ cursor: 'pointer', opacity: 0.5 }} onClick={clearRecentSearches} title="Clear history" />
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '0 15px' }}>
+                                {recentSearches.map(term => (
+                                    <div 
+                                        key={term} 
+                                        onClick={() => { setQuery(term); setIsOpen(true); }}
+                                        style={{ background: 'rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '100px', fontSize: '13px', cursor: 'pointer' }}
+                                    >
+                                        {term}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="search-section-header">
                         <TrendingUp size={16} />
                         <span>Trending Now</span>
@@ -262,85 +268,42 @@ const GlobalSearch = () => {
             );
         }
 
-        if (results.length > 0) {
+        if (hasResults) {
             return (
-                <div className="search-results-list">
-                    {results.map((item, index) => {
-                        const isTopMatch = index === 0 && item.matchScore > 0;
+                <div className="search-results-list" style={{ paddingBottom: '15px' }}>
+                    
+                    {activeFilter === 'all' && allItems.length > 0 && (
+                        <div style={{ marginBottom: '15px' }}>
+                            <div className="search-section-header" style={{ padding: '10px 15px', fontSize: '14px', color: 'var(--accent)' }}>Top Results</div>
+                            {allItems.map(item => item.mediaType === 'person' ? renderPersonCard(item) : renderMediaCard(item))}
+                        </div>
+                    )}
 
-                        return (
-                            <div 
-                                key={item.imdbID || item.id} 
-                                className={`search-item ${index === selectedIndex ? 'selected' : ''}`}
-                                onClick={() => handleSelect(item)}
-                            >
-                                <div className="search-item-poster-container">
-                                    <img 
-                                        src={item.poster && item.poster !== 'N/A' ? item.poster : 'https://via.placeholder.com/40x60'} 
-                                        alt={item.title} 
-                                    />
-                                </div>
-                                <div className="search-item-info">
-                                    <div className="search-item-header">
-                                        <div className="search-item-title-row">
-                                            <div className="search-item-title">{item.title}</div>
-                                        </div>
-                                        {item.rating !== 'N/A' && (
-                                            <div className="search-item-rating">
-                                                <Star size={12} fill="var(--accent)" />
-                                                <span>{item.rating}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="search-item-meta">
-                                        <div className="search-item-meta-main">
-                                            {item.year} • {item.mediaType}
-                                            {item.subtitle && <span className="search-item-subtitle"> • {item.subtitle}</span>}
-                                        </div>
-                                        {providerData[item.id] && providerData[item.id].length > 0 && (
-                                            <div className="search-item-providers">
-                                                {providerData[item.id].map(p => (
-                                                    <img key={p.name} src={p.logo} alt={p.name} title={p.name} className="provider-tiny-logo" />
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="search-item-overview">{item.overview?.substring(0, 80)}...</div>
-                                    
-                                    <div className="search-item-actions">
-                                        <div className="action-icons-group">
-                                            <button 
-                                                className="action-icon-btn"
-                                                onClick={(e) => handleQuickAction(e, item, 'watched')}
-                                                title="Mark as Watched"
-                                            >
-                                                <Eye size={16} />
-                                            </button>
-                                            <button 
-                                                className="action-icon-btn"
-                                                onClick={(e) => handleQuickAction(e, item, 'watchlist')}
-                                                title="Add to Watchlist"
-                                            >
-                                                <Bookmark size={16} />
-                                            </button>
-                                            <button 
-                                                className="action-icon-btn"
-                                                onClick={(e) => handleQuickAction(e, item, 'recommend')}
-                                                title="Recommend"
-                                            >
-                                                <Send size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                    {activeFilter === 'person' && results.people.length > 0 && (
+                        <div style={{ marginBottom: '15px' }}>
+                            <div className="search-section-header" style={{ padding: '10px 15px', fontSize: '14px', color: 'var(--accent)' }}>People</div>
+                            {results.people.map(renderPersonCard)}
+                        </div>
+                    )}
+                    
+                    {activeFilter === 'movie' && results.movies.length > 0 && (
+                        <div style={{ marginBottom: '15px' }}>
+                            <div className="search-section-header" style={{ padding: '10px 15px', fontSize: '14px', color: 'var(--accent)' }}>Movies</div>
+                            {results.movies.map(renderMediaCard)}
+                        </div>
+                    )}
+
+                    {activeFilter === 'tv' && results.tvShows.length > 0 && (
+                        <div>
+                            <div className="search-section-header" style={{ padding: '10px 15px', fontSize: '14px', color: 'var(--accent)' }}>TV Shows</div>
+                            {results.tvShows.map(renderMediaCard)}
+                        </div>
+                    )}
                 </div>
             );
         }
 
-        return !loading && query.length > 2 && <div className="search-no-results">No results found for "{query}"</div>;
+        return !loading && hasQuery && <div className="search-no-results">No results found for "{query}"</div>;
     };
 
     return (
@@ -350,29 +313,38 @@ const GlobalSearch = () => {
                 <input
                     type="text"
                     className="global-search-input"
-                    placeholder="Search titles, actors, genres..."
+                    placeholder="Search movies, tv, people..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (!results.length) return;
-                        if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            setSelectedIndex(prev => (prev < results.length - 1 ? prev + 1 : prev));
-                        } else if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
-                        } else if (e.key === 'Enter' && selectedIndex >= 0) {
-                            handleSelect(results[selectedIndex]);
-                        }
-                    }}
-                    onFocus={() => setIsOpen(results.length > 0 || trending.length > 0)}
+                    onFocus={() => setIsOpen(true)}
                 />
                 {(loading || actionLoading) && <div className="spinner-small" />}
             </div>
 
             {isOpen && (
                 <div className="global-search-dropdown glass-panel" data-lenis-prevent>
-                    {renderSearchResults()}
+                    <div className="search-filter-pills" style={{
+                        display: 'flex', gap: '8px', padding: '12px 15px 12px', overflowX: 'auto',
+                        WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                        {['all', 'movie', 'tv', 'person'].map(f => (
+                            <button 
+                                key={f}
+                                onClick={() => setActiveFilter(f)}
+                                style={{
+                                    padding: '6px 14px', borderRadius: '100px', border: 'none',
+                                    fontSize: '12px', fontWeight: 'bold', textTransform: 'capitalize', cursor: 'pointer',
+                                    background: activeFilter === f ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                                    color: activeFilter === f ? 'black' : 'rgba(255,255,255,0.6)',
+                                    transition: 'all 0.2s ease', whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {f === 'tv' ? 'TV Shows' : f === 'person' ? 'People' : f === 'movie' ? 'Movies' : 'All'}
+                            </button>
+                        ))}
+                    </div>
+                    {renderGroupedResults()}
                 </div>
             )}
         </div>

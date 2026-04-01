@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import config from '../config';
 import { connect } from 'react-redux';
 import axios from 'axios';
 import { fetchMovies, addMovie, deleteMovie, fetchRecommendations } from '../store/thunks';
@@ -27,17 +28,24 @@ class TVShowsPage extends Component {
         this.setState({ showAddModal: false, toast: { message: 'TV Show added!', type: 'success' } });
     }
 
-    handleDismissRec = async (recId, e) => {
+    handleDismissRec = async (recIds, e) => {
         if (e) e.stopPropagation();
         const token = localStorage.getItem('token');
         try {
-            await axios.delete(`http://localhost:5000/api/recommendations/${recId}`, {
-                headers: { Authorization: `Bearer ${token}` }
+            const ids = Array.isArray(recIds) ? recIds : [recIds];
+            await Promise.all(ids.map(id => 
+                axios.delete(`${config.API_URL}/api/recommendations/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            ));
+            
+            const newDismissed = new Set(this.state.dismissedIds);
+            ids.forEach(id => newDismissed.add(id.toString()));
+            
+            this.setState({ 
+                dismissedIds: newDismissed,
+                toast: { message: 'Recommendation(s) dismissed', type: 'success' }
             });
-            this.setState(prev => ({ 
-                dismissedIds: new Set([...prev.dismissedIds, recId.toString()]),
-                toast: { message: 'Recommendation dismissed', type: 'success' }
-            }));
             this.props.fetchRecommendations();
         } catch (err) { 
             console.error('Error dismissing:', err);
@@ -55,6 +63,23 @@ class TVShowsPage extends Component {
             if (!recommendations) return [];
             
             let list = recommendations.filter(r => r.mediaType === 'series' && !this.state.dismissedIds.has(r._id?.toString()));
+            
+            // --- Grouping Logic (Absolute) ---
+            const grouped = {};
+            list.forEach(r => {
+                const canonicalKey = (r.mediaTitle?.toLowerCase().trim() + '|' + r.mediaType).toLowerCase().replace(/\s/g, '');
+                if (!grouped[canonicalKey]) {
+                    grouped[canonicalKey] = { ...r, count: 1, allIds: [r._id], allSenders: [r.sender] };
+                } else {
+                    grouped[canonicalKey].count += 1;
+                    grouped[canonicalKey].allIds.push(r._id);
+                    const currentSenderId = (r.sender?._id || r.sender)?.toString();
+                    if (!grouped[canonicalKey].allSenders.some(s => (s?._id || s)?.toString() === currentSenderId)) {
+                        grouped[canonicalKey].allSenders.push(r.sender);
+                    }
+                }
+            });
+            list = Object.values(grouped);
             
             // Apply Genre Filter
             if (filters.genre && filters.genre !== 'all') {
@@ -202,16 +227,19 @@ class TVShowsPage extends Component {
                     <div className="movie-grid">
                         {filtered.map(rec => (
                             <div key={rec._id} style={{ position: 'relative' }}>
-                                <MovieCard movie={{
-                                    _id: rec.imdbID,
-                                    title: rec.mediaTitle,
-                                    poster: rec.poster,
-                                    imdbID: rec.imdbID,
-                                    mediaType: rec.mediaType,
-                                    isExternal: true
-                                }} />
+                                <MovieCard 
+                                    movie={{
+                                        _id: rec.imdbID,
+                                        title: rec.mediaTitle,
+                                        poster: rec.poster,
+                                        imdbID: rec.imdbID,
+                                        mediaType: rec.mediaType,
+                                        isExternal: true,
+                                        isRecommendation: true
+                                    }} 
+                                />
                                 <button
-                                    onClick={(e) => this.handleDismissRec(rec._id, e)}
+                                    onClick={(e) => this.handleDismissRec(rec.allIds || [rec._id], e)}
                                     title="Remove recommendation"
                                     style={{
                                         position: 'absolute', top: '-8px', left: '-8px',
@@ -228,8 +256,25 @@ class TVShowsPage extends Component {
                                     onMouseEnter={e => { e.currentTarget.style.background='rgba(255,59,48,0.85)'; e.currentTarget.style.color='white'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background='rgba(20,20,30,0.85)'; e.currentTarget.style.color='rgba(255,255,255,0.7)'; }}
                                 >✕</button>
-                                <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                                    From @{rec.sender?.username || 'friend'}
+                                
+                                {rec.count > 1 && (
+                                    <div style={{
+                                        position: 'absolute', top: '10px', left: '10px',
+                                        background: 'var(--accent)', color: 'white',
+                                        fontSize: '9px', fontWeight: '800', padding: '2px 6px',
+                                        borderRadius: '4px', zIndex: 15, boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+                                        textTransform: 'uppercase', letterSpacing: '0.5px'
+                                    }}>
+                                        Multi-Friend Pick
+                                    </div>
+                                )}
+
+                                <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.2' }}>
+                                    {(() => {
+                                        const sender = rec.allSenders?.[0] || rec.sender;
+                                        const senderName = sender?.name || sender?.username || 'friend';
+                                        return `by @${senderName}${rec.count > 1 ? ` and ${rec.count - 1} others` : ''}`;
+                                    })()}
                                 </div>
                             </div>
                         ))}

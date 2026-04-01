@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5000/api/media';
+import config from '../config';
+
+const BASE_URL = `${config.API_URL}/api/media`;
 
 // Helper to get Auth header
 const getAuthHeader = () => {
@@ -134,5 +136,22 @@ export const getMovieDetailsExternal = async (id, mediaType = '') => {
   } catch (err) {
     console.error('Fetch Details Error:', err);
     throw new Error('Could not fetch metadata');
+  }
+};
+
+// ============================================================
+// GET STREAMING PROVIDERS (FROM BACKEND PROXY)
+// ============================================================
+export const getWatchProviders = async (type, id, region = 'US') => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(
+      `${config.API_URL}/api/search/providers/${type}/${id}?region=${region}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  } catch (err) {
+    console.warn('Could not fetch providers:', err);
+    return null;
   }
 };

@@ -10,6 +10,7 @@ import {
   fetchChatsSuccess, showToast
 } from './actions';
 import axios from 'axios';
+import config from '../config';
 
 // ============================================================
 // THUNK: Fetch all movies
@@ -142,7 +143,7 @@ export const fetchRecommendations = () => async (dispatch) => {
     dispatch(fetchRecsRequest());
     try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5000/api/recommendations', {
+        const res = await axios.get(`${config.API_URL}/api/recommendations`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         dispatch(fetchRecsSuccess(res.data));
@@ -158,7 +159,7 @@ export const fetchRecommendations = () => async (dispatch) => {
 export const clearRecentActivity = () => async (dispatch) => {
     try {
         const token = localStorage.getItem('token');
-        await axios.delete('http://localhost:5000/api/recommendations/bulk/clear-all', {
+        await axios.delete(`${config.API_URL}/api/recommendations/bulk/clear-all`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         dispatch(fetchRecsSuccess([]));
@@ -176,7 +177,7 @@ export const fetchRecentChats = () => async (dispatch, getState) => {
         
         const previousUnreadCount = getState().auth.unreadMessages?.length || 0;
         
-        const res = await axios.get('http://localhost:5000/api/messages/recent', {
+        const res = await axios.get(`${config.API_URL}/api/messages/recent`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         

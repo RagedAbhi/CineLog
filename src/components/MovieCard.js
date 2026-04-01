@@ -1,7 +1,6 @@
-import { Component } from 'react';
+import React, { Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStreamingAvailability } from '../services/tmdbService';
-import React from 'react';
 import gsap from 'gsap';
 import { useDispatch, useSelector } from 'react-redux';
 import { Plus, Check, Send, Trash2, Clock } from 'lucide-react';
@@ -43,7 +42,7 @@ class MovieCard extends Component {
 
     if (movie.title) {
       const providers = await fetchStreamingAvailability(movie.title, movie.mediaType || 'movie', movie.year, movie.imdbID);
-      if (providers && providers.length > 0) {
+      if (providers && Array.isArray(providers) && providers.length > 0) {
         this.setState({ streamingProviders: providers });
       }
     }

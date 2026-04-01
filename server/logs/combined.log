@@ -1,0 +1,247 @@
+{"level":"info","message":"Connecting to MongoDB at: mongodb+srv://abhilashkhadanga_db_user:****@cineloguser.exbkqcm.mongodb.net/?appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-02 02:01:07"}
+{"level":"info","message":"Server running on port 3006","service":"cinelog-server","timestamp":"2026-04-02 02:01:07"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-02 02:01:08"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb+srv://abhilashkhadanga_db_user:****@cineloguser.exbkqcm.mongodb.net/?appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-02 02:04:07"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-02 02:04:07"}
+{"level":"info","message":"[Socket] New connection: 0hzGRF22I4P9gImuAAAB","service":"cinelog-server","timestamp":"2026-04-02 02:04:08"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-02 02:04:08"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-02 02:04:09"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:04:54"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:04:54"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:05:21"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:05:21"}
+{"level":"info","message":"GET /movies-list","service":"cinelog-server","timestamp":"2026-04-02 02:05:22"}
+{"level":"info","message":"[Socket] Disconnected: 0hzGRF22I4P9gImuAAAB","service":"cinelog-server","timestamp":"2026-04-02 02:05:22"}
+{"level":"info","message":"GET /","service":"cinelog-server","timestamp":"2026-04-02 02:05:28"}
+{"level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","service":"cinelog-server","timestamp":"2026-04-02 02:05:28"}
+{"level":"info","message":"GET /favicon.ico","service":"cinelog-server","timestamp":"2026-04-02 02:05:28"}
+{"level":"info","message":"GET /","service":"cinelog-server","timestamp":"2026-04-02 02:05:36"}
+{"level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","service":"cinelog-server","timestamp":"2026-04-02 02:05:36"}
+{"level":"info","message":"GET /","service":"cinelog-server","timestamp":"2026-04-02 02:06:04"}
+{"level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","service":"cinelog-server","timestamp":"2026-04-02 02:06:04"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb+srv://abhilashkhadanga_db_user:****@cineloguser.exbkqcm.mongodb.net/?appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-02 02:07:03"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-02 02:07:03"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-02 02:07:05"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-02 02:11:15"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:11:15"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:11:15"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-02 02:11:15"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:11:16"}
+{"level":"info","message":"GET /api/search/providers/movie/687163?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:16"}
+{"level":"info","message":"GET /api/search/providers/movie/329?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:16"}
+{"level":"info","message":"GET /api/search/providers/movie/75656?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:16"}
+{"level":"info","message":"GET /api/search/providers/movie/135397?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:16"}
+{"level":"info","message":"GET /api/search/providers/movie/27205?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:16"}
+{"level":"info","message":"GET /api/search/providers/movie/351286?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:17"}
+{"level":"info","message":"GET /api/search/providers/movie/157336?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:17"}
+{"level":"info","message":"GET /api/search/providers/series/135157?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:17"}
+{"level":"info","message":"GET /api/search/providers/series/61670?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:17"}
+{"level":"info","message":"GET /api/search/providers/series/67018?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:17"}
+{"level":"info","message":"GET /api/search/providers/series/75123?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:17"}
+{"level":"info","message":"GET /api/search/providers/series/67915?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:17"}
+{"level":"info","message":"GET /api/search/providers/series/93846?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:17"}
+{"level":"info","message":"GET /api/search/providers/series/tt11912196?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:18"}
+{"level":"info","message":"GET /api/search/providers/series/285278?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:18"}
+{"level":"info","message":"GET /api/search/providers/movie/330457?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:18"}
+{"level":"info","message":"GET /api/search/providers/series/228689?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:18"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:11:18"}
+{"level":"info","message":"[Socket] New connection: mUCXcPSOlqItIUn3AAAB","service":"cinelog-server","timestamp":"2026-04-02 02:11:18"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-02 02:11:18"}
+{"level":"info","message":"GET /api/search/providers/movie/687163?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/search/providers/movie/330457?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/search/providers/movie/329?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/search/providers/movie/135397?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/search/providers/movie/351286?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/search/providers/movie/75656?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/search/providers/movie/27205?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/search/providers/movie/157336?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:11:22"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:11:25"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:11:35"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:11:46"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:11:46"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:11:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:12:05"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:12:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:12:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:12:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:12:36"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:12:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:12:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:12:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:13:06"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:13:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:13:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:13:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:13:36"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:13:46"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:13:46"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:14:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:14:54"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:14:54"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:15:00"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:15:06"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:15:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:15:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:15:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:15:36"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:15:46"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:15:46"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:15:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:16:06"}
+{"level":"info","message":"[Socket] Disconnected: mUCXcPSOlqItIUn3AAAB","service":"cinelog-server","timestamp":"2026-04-02 02:16:43"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-02 02:17:57"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:17:57"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/movie/687163?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/movie/329?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/movie/135397?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/movie/351286?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/movie/75656?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/movie/27205?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/movie/157336?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/series/135157?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/series/61670?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/series/67018?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:58"}
+{"level":"info","message":"GET /api/search/providers/series/75123?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"GET /api/search/providers/series/67915?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"GET /api/search/providers/series/93846?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"GET /api/search/providers/series/tt11912196?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"GET /api/search/providers/series/285278?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"GET /api/search/providers/movie/330457?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"GET /api/search/providers/series/228689?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"[Socket] New connection: WnlhcZWlclRxaw66AAAD","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-02 02:17:59"}
+{"level":"info","message":"GET /api/search/providers/movie/687163?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/search/providers/movie/330457?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/search/providers/movie/329?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/search/providers/movie/135397?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/search/providers/movie/351286?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/search/providers/movie/75656?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/search/providers/movie/27205?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/search/providers/movie/157336?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:18:00"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:18:07"}
+{"level":"info","message":"[Socket] Disconnected: WnlhcZWlclRxaw66AAAD","service":"cinelog-server","timestamp":"2026-04-02 02:18:07"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-02 02:18:08"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:18:08"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb+srv://abhilashkhadanga_db_user:****@cineloguser.exbkqcm.mongodb.net/?appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-02 02:20:23"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-02 02:20:23"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-02 02:20:24"}
+{"level":"info","message":"POST /api/auth/login","service":"cinelog-server","timestamp":"2026-04-02 02:24:14"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-02 02:24:14"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"[Socket] New connection: 4K8DPBflbRvGLebbAAAB","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/movie/687163?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/movie/329?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/movie/135397?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/movie/351286?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/movie/75656?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/movie/27205?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/movie/157336?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/series/135157?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:15"}
+{"level":"info","message":"GET /api/search/providers/series/61670?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/series/67018?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/series/75123?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/series/67915?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/series/93846?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/series/tt11912196?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/series/285278?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/movie/330457?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/series/228689?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:16"}
+{"level":"info","message":"GET /api/search/providers/movie/687163?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:22"}
+{"level":"info","message":"GET /api/search/providers/movie/330457?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:22"}
+{"level":"info","message":"GET /api/search/providers/movie/351286?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:22"}
+{"level":"info","message":"GET /api/search/providers/movie/75656?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:22"}
+{"level":"info","message":"GET /api/search/providers/movie/329?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:22"}
+{"level":"info","message":"GET /api/search/providers/movie/135397?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:22"}
+{"level":"info","message":"GET /api/search/providers/movie/27205?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:23"}
+{"level":"info","message":"GET /api/search/providers/movie/157336?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:23"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:24:23"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:24:24"}
+{"level":"info","message":"GET /api/search?q=Kin&type=all","service":"cinelog-server","timestamp":"2026-04-02 02:24:32"}
+{"level":"info","message":"GET /api/search?q=King&type=all","service":"cinelog-server","timestamp":"2026-04-02 02:24:32"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:24:34"}
+{"level":"info","message":"[Socket] Disconnected: 4K8DPBflbRvGLebbAAAB","service":"cinelog-server","timestamp":"2026-04-02 02:24:44"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-02 02:24:44"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:24:44"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-02 02:24:44"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:24:44"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:24:44"}
+{"level":"info","message":"GET /api/search/providers/movie/687163?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/search/providers/movie/330457?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/search/providers/movie/329?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/search/providers/movie/135397?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/search/providers/movie/351286?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/search/providers/movie/75656?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/search/providers/movie/27205?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/search/providers/movie/157336?region=US","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"[Socket] New connection: Df8JzsfjOX7R3r8vAAAD","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-02 02:24:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:24:54"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:25:04"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:25:14"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:25:14"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:25:24"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:25:34"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:25:44"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:25:44"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:25:54"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:26:04"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:26:14"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:26:14"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:26:24"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:26:34"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:26:44"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:26:44"}
+{"level":"info","message":"[Socket] Disconnected: Df8JzsfjOX7R3r8vAAAD","service":"cinelog-server","timestamp":"2026-04-02 02:26:48"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-02 02:26:49"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:26:49"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-02 02:26:49"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:26:49"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:26:49"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:26:49"}
+{"level":"info","message":"[Socket] New connection: A_HOauso5f9crMSvAAAF","service":"cinelog-server","timestamp":"2026-04-02 02:26:50"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-02 02:26:50"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:26:59"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:27:09"}
+{"level":"info","message":"[Socket] Disconnected: A_HOauso5f9crMSvAAAF","service":"cinelog-server","timestamp":"2026-04-02 02:27:13"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-02 02:27:15"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:27:15"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-02 02:27:15"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:27:15"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:27:15"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-02 02:27:16"}
+{"level":"info","message":"[Socket] New connection: mgB4rH1ghphlo9_qAAAH","service":"cinelog-server","timestamp":"2026-04-02 02:27:16"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-02 02:27:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:27:25"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:27:35"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:27:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:27:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:27:55"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:28:05"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:28:15"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:28:15"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:28:25"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:28:35"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:28:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:28:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:28:55"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:29:05"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:29:15"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:29:15"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:29:25"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:29:35"}
+{"level":"info","message":"POST /api/users/heartbeat","service":"cinelog-server","timestamp":"2026-04-02 02:29:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:29:45"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:29:55"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-02 02:30:05"}

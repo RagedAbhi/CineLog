@@ -4,8 +4,9 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { showToast } from '../store/actions';
 import { fetchRecommendations } from '../store/thunks';
+import config from '../config';
 import { useNavigate } from 'react-router-dom';
-import SocialPulse from '../components/SocialPulse';
+
 import gsap from 'gsap';
 import '../styles/global.css';
 
@@ -17,6 +18,8 @@ const FriendsPage = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showAllInbox, setShowAllInbox] = useState(false);
+    const [showAllSent, setShowAllSent] = useState(false);
     const dispatch = useDispatch();
     const { user, recommendations, unreadMessages } = useSelector(state => state.auth);
 
@@ -47,14 +50,14 @@ const FriendsPage = () => {
 
     const fetchFriends = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/friends', getApiHeader());
+            const res = await axios.get(`${config.API_URL}/api/friends`, getApiHeader());
             setFriends(res.data);
         } catch (err) { console.error('fetchFriends error:', err); }
     };
 
     const fetchRequests = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/friends/requests', getApiHeader());
+            const res = await axios.get(`${config.API_URL}/api/friends/requests`, getApiHeader());
             setRequests(res.data);
         } catch (err) { console.error('fetchRequests error:', err); }
     };
@@ -64,7 +67,7 @@ const FriendsPage = () => {
         if (!searchQuery.trim()) return;
         setLoading(true);
         try {
-            const res = await axios.get(`http://localhost:5000/api/users/search?username=${searchQuery}`, getApiHeader());
+            const res = await axios.get(`${config.API_URL}/api/users/search?username=${searchQuery}`, getApiHeader());
             setSearchResults(res.data);
         } catch (err) { console.error(err); }
         setLoading(false);
@@ -72,7 +75,7 @@ const FriendsPage = () => {
 
     const sendRequest = async (recipientId) => {
         try {
-            await axios.post('http://localhost:5000/api/friends/request', { recipientId }, getApiHeader());
+            await axios.post(`${config.API_URL}/api/friends/request`, { recipientId }, getApiHeader());
             dispatch(showToast('Request sent!', 'success'));
         } catch (err) { 
             dispatch(showToast(err.response?.data?.message || 'Error sending request', 'error')); 
@@ -81,7 +84,7 @@ const FriendsPage = () => {
 
     const acceptRequest = async (requestId) => {
         try {
-            await axios.post('http://localhost:5000/api/friends/accept', { requestId }, getApiHeader());
+            await axios.post(`${config.API_URL}/api/friends/accept`, { requestId }, getApiHeader());
             fetchFriends();
             fetchRequests();
         } catch (err) { console.error(err); }
@@ -94,9 +97,7 @@ const FriendsPage = () => {
                 <p>Connect with fellow cinephiles</p>
             </div>
 
-            <div style={{ marginBottom: '40px' }}>
-                <SocialPulse />
-            </div>
+
 
             <div style={{
                 display: 'flex',
@@ -191,7 +192,7 @@ const FriendsPage = () => {
                                         <Link to={`/profile/${friend._id}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'inherit' }}>
                                             <div className="avatar-wrapper" style={{ width: '80px', height: '80px', fontSize: '32px', marginBottom: '20px', overflow: 'hidden' }}>
                                                 {friend.profilePicture ? (
-                                                    <img src={friend.profilePicture.startsWith('http') ? friend.profilePicture : `http://localhost:5000/${friend.profilePicture}`} alt={friend.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <img src={friend.profilePicture.startsWith('http') ? friend.profilePicture : `${config.API_URL}/${friend.profilePicture}`} alt={friend.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 ) : (
                                                     (friend.name || friend.username || '?').charAt(0)
                                                 )}
@@ -215,72 +216,96 @@ const FriendsPage = () => {
                            <h3 style={{ marginBottom: '16px', fontSize: '18px', color: 'var(--accent)' }}>Inbox</h3>
                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {(() => {
-                                    const inboxRecs = recommendations.filter(r => (r.receiver?._id || r.receiver) === user?._id);
+                                    const currentUserId = (user?._id || user?.id)?.toString();
+                                    const inboxRecs = (recommendations || []).filter(r => {
+                                        const receiverId = (r.receiver?._id || r.receiver)?.toString();
+                                        return receiverId === currentUserId;
+                                    });
                                     if (inboxRecs.length === 0) return <p style={{ color: 'var(--text-muted)' }}>No recommendations received.</p>;
 
-                                    // Group by imdbID
+                                    // Group by Title and Type fallback for absolute deduplication
                                     const grouped = {};
                                     inboxRecs.forEach(r => {
-                                        const key = r.imdbID || r._id;
+                                        const key = `${r.mediaTitle?.toLowerCase().trim()}-${r.mediaType}`;
                                         if (!grouped[key]) {
                                             grouped[key] = { ...r, count: 1, allIds: [r._id], allSenders: [r.sender] };
                                         } else {
                                             grouped[key].count += 1;
                                             grouped[key].allIds.push(r._id);
-                                            grouped[key].allSenders.push(r.sender);
+                                            // Dedupe senders in list
+                                            const senderId = (r.sender?._id || r.sender)?.toString();
+                                            if (!grouped[key].allSenders.some(s => (s?._id || s)?.toString() === senderId)) {
+                                                grouped[key].allSenders.push(r.sender);
+                                            }
                                         }
                                     });
 
-                                    return Object.values(grouped).map(rec => (
-                                        <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
-                                            <div style={{ position: 'relative' }}>
-                                                <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
-                                                {rec.count > 1 && (
-                                                    <div 
-                                                        title={`Recommended by: ${rec.allSenders.map(s => s.name || s.username).join(', ')}`}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: '-8px',
-                                                            left: '-8px',
-                                                            background: 'white',
-                                                            color: '#1a1a2e',
-                                                            fontSize: '10px',
-                                                            fontWeight: 'bold',
-                                                            padding: '2px 6px',
-                                                            borderRadius: '10px',
-                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                                            cursor: 'help',
-                                                            zIndex: 2
-                                                        }}
-                                                    >
-                                                        x{rec.count}
+                                    const groupedVals = Object.values(grouped);
+                                    const renderedRecs = showAllInbox ? groupedVals : groupedVals.slice(0, 5);
+
+                                    return (
+                                        <>
+                                            {renderedRecs.map(rec => (
+                                                <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
+                                                        {rec.count > 1 && (
+                                                            <div 
+                                                                title={`Recommended by: ${rec.allSenders.map(s => s.name || s.username).join(', ')}`}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: '-8px',
+                                                                    left: '-8px',
+                                                                    background: 'white',
+                                                                    color: '#1a1a2e',
+                                                                    fontSize: '10px',
+                                                                    fontWeight: 'bold',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '10px',
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                                                    cursor: 'help',
+                                                                    zIndex: 2
+                                                                }}
+                                                            >
+                                                                x{rec.count}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                                                    <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
-                                                    <span style={{ 
-                                                        fontSize: '10px', 
-                                                        padding: '1px 6px', 
-                                                        borderRadius: '4px', 
-                                                        background: rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.1)' : 'rgba(255, 74, 147, 0.1)', 
-                                                        color: rec.mediaType === 'series' ? '#4a9eff' : '#ff4a93', 
-                                                        border: `1px solid ${rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.2)' : 'rgba(255, 74, 147, 0.2)'}`,
-                                                        fontWeight: '600',
-                                                        letterSpacing: '0.05em',
-                                                        textTransform: 'uppercase'
-                                                    }}>
-                                                        {rec.mediaType === 'series' ? 'Series' : 'Movie'}
-                                                    </span>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                                            <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
+                                                            <span style={{ 
+                                                                fontSize: '10px', 
+                                                                padding: '1px 6px', 
+                                                                borderRadius: '4px', 
+                                                                background: rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.1)' : 'rgba(255, 74, 147, 0.1)', 
+                                                                color: rec.mediaType === 'series' ? '#4a9eff' : '#ff4a93', 
+                                                                border: `1px solid ${rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.2)' : 'rgba(255, 74, 147, 0.2)'}`,
+                                                                fontWeight: '600',
+                                                                letterSpacing: '0.05em',
+                                                                textTransform: 'uppercase'
+                                                            }}>
+                                                                {rec.mediaType === 'series' ? 'Series' : 'Movie'}
+                                                            </span>
+                                                        </div>
+                                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                            by {rec.allSenders[0]?.name || rec.allSenders[0]?.username || 'Unknown'}{rec.allSenders.length > 1 ? ` and ${rec.allSenders.length - 1} others` : ''} • {rec.message || 'No message'}
+                                                        </p>
+                                                    </div>
+                                                    <button className="btn btn-primary btn-sm" onClick={() => navigate(`/movies/${rec.imdbID}?external=true&type=${rec.mediaType}`)}>View</button>
                                                 </div>
-                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                    From @{rec.sender.username}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
-                                                </p>
-                                            </div>
-                                            <button className="btn btn-primary btn-sm" onClick={() => navigate(`/movies/${rec.imdbID}?external=true&type=${rec.mediaType}`)}>View</button>
-                                        </div>
-                                    ));
+                                            ))}
+                                            {groupedVals.length > 5 && (
+                                                <button 
+                                                    className="btn btn-secondary" 
+                                                    style={{ width: '100%', marginTop: '8px' }}
+                                                    onClick={() => setShowAllInbox(!showAllInbox)}
+                                                >
+                                                    {showAllInbox ? 'Show Less' : `Show All (${groupedVals.length - 5} more)`}
+                                                </button>
+                                            )}
+                                        </>
+                                    );
                                 })()}
                            </div>
                         </div>
@@ -289,100 +314,124 @@ const FriendsPage = () => {
                            <h3 style={{ marginBottom: '16px', fontSize: '18px', color: 'var(--accent)' }}>Sent by You</h3>
                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {(() => {
-                                    const sentRecs = recommendations.filter(r => (r.sender?._id || r.sender) === user?._id);
+                                    const currentUserId = (user?._id || user?.id)?.toString();
+                                    const sentRecs = (recommendations || []).filter(r => {
+                                        const senderId = (r.sender?._id || r.sender)?.toString();
+                                        return senderId === currentUserId;
+                                    });
                                     if (sentRecs.length === 0) return <p style={{ color: 'var(--text-muted)' }}>You haven't sent any recommendations yet.</p>;
 
-                                    // Group by imdbID
+                                    // Group by Title and Type fallback for absolute deduplication
                                     const grouped = {};
                                     sentRecs.forEach(r => {
-                                        const key = r.imdbID || r._id;
+                                        const key = `${r.mediaTitle?.toLowerCase().trim()}-${r.mediaType}`;
                                         if (!grouped[key]) {
                                             grouped[key] = { ...r, count: 1, allIds: [r._id], allReceivers: [r.receiver] };
                                         } else {
                                             grouped[key].count += 1;
                                             grouped[key].allIds.push(r._id);
-                                            grouped[key].allReceivers.push(r.receiver);
+                                            // Dedupe receivers in list
+                                            const receiverId = (r.receiver?._id || r.receiver)?.toString();
+                                            if (!grouped[key].allReceivers.some(re => (re?._id || re)?.toString() === receiverId)) {
+                                                grouped[key].allReceivers.push(r.receiver);
+                                            }
                                         }
                                     });
 
-                                    return Object.values(grouped).map(rec => (
-                                        <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
-                                            <div style={{ position: 'relative' }}>
-                                                <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
-                                                {rec.count > 1 && (
-                                                    <div 
-                                                        title={`Sent to: ${rec.allReceivers.map(re => re.name || re.username).join(', ')}`}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: '-8px',
-                                                            left: '-8px',
-                                                            background: 'white',
-                                                            color: '#1a1a2e',
-                                                            fontSize: '10px',
-                                                            fontWeight: 'bold',
-                                                            padding: '2px 6px',
-                                                            borderRadius: '10px',
-                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                                            cursor: 'help',
-                                                            zIndex: 2
+                                    const groupedVals = Object.values(grouped);
+                                    const renderedRecs = showAllSent ? groupedVals : groupedVals.slice(0, 5);
+
+                                    return (
+                                        <>
+                                            {renderedRecs.map(rec => (
+                                                <div key={rec._id} className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <img src={rec.poster} style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} alt="" />
+                                                        {rec.count > 1 && (
+                                                            <div 
+                                                                title={`Sent to: ${rec.allReceivers.map(re => re.name || re.username).join(', ')}`}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: '-8px',
+                                                                    left: '-8px',
+                                                                    background: 'white',
+                                                                    color: '#1a1a2e',
+                                                                    fontSize: '10px',
+                                                                    fontWeight: 'bold',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '10px',
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                                                    cursor: 'help',
+                                                                    zIndex: 2
+                                                                }}
+                                                            >
+                                                                x{rec.count}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                                            <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
+                                                            <span style={{ 
+                                                                fontSize: '10px', 
+                                                                padding: '1px 6px', 
+                                                                borderRadius: '4px', 
+                                                                background: rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.1)' : 'rgba(255, 74, 147, 0.1)', 
+                                                                color: rec.mediaType === 'series' ? '#4a9eff' : '#ff4a93', 
+                                                                border: `1px solid ${rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.2)' : 'rgba(255, 74, 147, 0.2)'}`,
+                                                                fontWeight: '600',
+                                                                letterSpacing: '0.05em',
+                                                                textTransform: 'uppercase'
+                                                            }}>
+                                                                {rec.mediaType === 'series' ? 'Series' : 'Movie'}
+                                                            </span>
+                                                        </div>
+                                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                            To {rec.allReceivers[0]?.name || rec.allReceivers[0]?.username || 'Unknown'}{rec.allReceivers.length > 1 ? ` and ${rec.allReceivers.length - 1} others` : ''} • {rec.message || 'No message'}
+                                                        </p>
+                                                    </div>
+                                                    <button 
+                                                        className="btn btn-secondary btn-sm" 
+                                                        style={{ color: 'var(--red)', borderColor: 'rgba(255, 59, 48, 0.2)' }}
+                                                        onClick={() => {
+                                                            const receiverNames = rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ');
+                                                            dispatch(showConfirmModal({
+                                                                title: 'Unrecommend',
+                                                                message: `Withdraw your recommendation for "${rec.mediaTitle}" sent to ${rec.count} friend${rec.count > 1 ? 's' : ''}${rec.count > 1 ? ` (${receiverNames})` : ''}?`,
+                                                                confirmText: 'Unrecommend',
+                                                                cancelText: 'Cancel',
+                                                                isDangerous: true,
+                                                                onConfirm: async () => {
+                                                                    try {
+                                                                        if (rec.allIds && rec.allIds.length > 0) {
+                                                                            await Promise.all(rec.allIds.map(id => axios.delete(`${config.API_URL}/api/recommendations/${id}`, getApiHeader())));
+                                                                        } else {
+                                                                            await axios.delete(`${config.API_URL}/api/recommendations/${rec._id}`, getApiHeader());
+                                                                        }
+                                                                        dispatch(fetchRecommendations());
+                                                                        dispatch(showToast('Recommendation(s) withdrawn'));
+                                                                    } catch (err) {
+                                                                        dispatch(showToast('Error withdrawing recommendation', 'error'));
+                                                                    }
+                                                                }
+                                                            }));
                                                         }}
                                                     >
-                                                        x{rec.count}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                                                    <h4 style={{ margin: 0 }}>{rec.mediaTitle}</h4>
-                                                    <span style={{ 
-                                                        fontSize: '10px', 
-                                                        padding: '1px 6px', 
-                                                        borderRadius: '4px', 
-                                                        background: rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.1)' : 'rgba(255, 74, 147, 0.1)', 
-                                                        color: rec.mediaType === 'series' ? '#4a9eff' : '#ff4a93', 
-                                                        border: `1px solid ${rec.mediaType === 'series' ? 'rgba(74, 158, 255, 0.2)' : 'rgba(255, 74, 147, 0.2)'}`,
-                                                        fontWeight: '600',
-                                                        letterSpacing: '0.05em',
-                                                        textTransform: 'uppercase'
-                                                    }}>
-                                                        {rec.mediaType === 'series' ? 'Series' : 'Movie'}
-                                                    </span>
+                                                        Withdraw
+                                                    </button>
                                                 </div>
-                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                    To @{rec.receiver.username}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''} • {rec.message || 'No message'}
-                                                </p>
-                                            </div>
-                                            <button 
-                                                className="btn btn-secondary btn-sm" 
-                                                style={{ color: 'var(--red)', borderColor: 'rgba(255, 59, 48, 0.2)' }}
-                                                onClick={() => {
-                                                    const receiverNames = rec.allReceivers?.map(re => re?.name || re?.username || 'Friend').join(', ');
-                                                    dispatch(showConfirmModal({
-                                                        title: 'Unrecommend',
-                                                        message: `Withdraw your recommendation for "${rec.mediaTitle}" sent to ${rec.count} friend${rec.count > 1 ? 's' : ''}${rec.count > 1 ? ` (${receiverNames})` : ''}?`,
-                                                        confirmText: 'Unrecommend',
-                                                        cancelText: 'Cancel',
-                                                        isDangerous: true,
-                                                        onConfirm: async () => {
-                                                            try {
-                                                                if (rec.allIds && rec.allIds.length > 0) {
-                                                                    await Promise.all(rec.allIds.map(id => axios.delete(`http://localhost:5000/api/recommendations/${id}`, apiHeader)));
-                                                                } else {
-                                                                    await axios.delete(`http://localhost:5000/api/recommendations/${rec._id}`, apiHeader);
-                                                                }
-                                                                dispatch(fetchRecommendations());
-                                                                dispatch(showToast('Recommendation(s) withdrawn'));
-                                                            } catch (err) {
-                                                                dispatch(showToast('Error withdrawing recommendation', 'error'));
-                                                            }
-                                                        }
-                                                    }));
-                                                }}
-                                            >
-                                                Withdraw
-                                            </button>
-                                        </div>
-                                    ));
+                                            ))}
+                                            {groupedVals.length > 5 && (
+                                                <button 
+                                                    className="btn btn-secondary" 
+                                                    style={{ width: '100%', marginTop: '8px' }}
+                                                    onClick={() => setShowAllSent(!showAllSent)}
+                                                >
+                                                    {showAllSent ? 'Show Less' : `Show All (${groupedVals.length - 5} more)`}
+                                                </button>
+                                            )}
+                                        </>
+                                    );
                                 })()}
                            </div>
                         </div>

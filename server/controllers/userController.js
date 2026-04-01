@@ -21,11 +21,41 @@ exports.getMe = async (req, res) => {
             ]
         }).populate('sender receiver', 'username name');
 
+        // Calculate Expertise Summary
+        const watchedMedia = await Media.find({ userId: new mongoose.Types.ObjectId(userId), status: 'watched' });
+        const genreCounts = {};
+        const actorCounts = {};
+        
+        watchedMedia.forEach(m => {
+            if (m.genre) {
+                m.genre.split(', ').forEach(g => {
+                    genreCounts[g] = (genreCounts[g] || 0) + 1;
+                });
+            }
+            if (m.cast && m.cast !== 'N/A') {
+                m.cast.split(', ').forEach(a => {
+                    actorCounts[a] = (actorCounts[a] || 0) + 1;
+                });
+            }
+        });
+
+        const topGenres = Object.entries(genreCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([name, count]) => ({ name, count }));
+        
+        const topActor = Object.entries(actorCounts)
+            .sort((a, b) => b[1] - a[1])[0];
 
         const userObj = user.toObject();
         res.status(200).json({
             ...userObj,
-            recommendations
+            recommendations,
+            expertise: {
+                totalWatched: watchedMedia.length,
+                topGenres,
+                topActor: topActor ? { name: topActor[0], count: topActor[1] } : null
+            }
         });
     } catch (error) {
         console.error('[getMe] Error:', error);
@@ -92,7 +122,7 @@ exports.getUserProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Fetch recommendations involving the target user - Explicitly cast to ObjectId
+        // Fetch recommendations involving the target user
         const recommendations = await Recommendation.find({
             $or: [
                 { sender: new mongoose.Types.ObjectId(userId) }, 
@@ -100,10 +130,41 @@ exports.getUserProfile = async (req, res) => {
             ]
         }).populate('sender receiver', 'username name');
 
+        // Calculate Expertise Summary
+        const watchedMedia = await Media.find({ userId: new mongoose.Types.ObjectId(userId), status: 'watched' });
+        const genreCounts = {};
+        const actorCounts = {};
+        
+        watchedMedia.forEach(m => {
+            if (m.genre) {
+                m.genre.split(', ').forEach(g => {
+                    genreCounts[g] = (genreCounts[g] || 0) + 1;
+                });
+            }
+            if (m.cast && m.cast !== 'N/A') {
+                m.cast.split(', ').forEach(a => {
+                    actorCounts[a] = (actorCounts[a] || 0) + 1;
+                });
+            }
+        });
+
+        const topGenres = Object.entries(genreCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([name, count]) => ({ name, count }));
+        
+        const topActor = Object.entries(actorCounts)
+            .sort((a, b) => b[1] - a[1])[0];
+
         const userObj = user.toObject();
         res.status(200).json({
             ...userObj,
-            recommendations
+            recommendations,
+            expertise: {
+                totalWatched: watchedMedia.length,
+                topGenres,
+                topActor: topActor ? { name: topActor[0], count: topActor[1] } : null
+            }
         });
     } catch (error) {
         console.error('[getUserProfile] Error:', error);

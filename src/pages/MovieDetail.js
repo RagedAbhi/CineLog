@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Star, Clock, Calendar, Film, Trash2, Edit3, Share2, ArrowLeft, MoreVertical, PlayCircle, ExternalLink, MessageCircle, Heart, CheckCircle, Info } from 'lucide-react';
 import { connect } from 'react-redux';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -10,6 +11,7 @@ import { getMovieDetailsExternal } from '../services/movieService';
 import { showToast, showRecommendModal, showConfirmModal } from '../store/actions';
 import axios from 'axios';
 import gsap from 'gsap';
+import config from '../config';
 
 function MovieDetailWrapper(props) {
   const navigate = useNavigate();
@@ -49,7 +51,6 @@ class MovieDetail extends Component {
 
   loadInitialData = () => {
     const movie = this.getMovie();
-    console.log('DEBUG: Initial getMovie check:', movie ? movie.title : 'NULL');
     if (movie && (!this.props.isExternal || movie.status)) {
       this.fetchStreamingInfo();
       this.initAnimations();
@@ -79,16 +80,14 @@ class MovieDetail extends Component {
   }
 
   fetchMovieDirectly = async () => {
-    console.log('DEBUG: fetchMovieDirectly for', this.props.movieId);
     this.setState({ localLoading: true });
     try {
         const token = localStorage.getItem('token');
         try {
-            const res = await axios.get(`http://localhost:5000/api/media/${this.props.movieId}`, {
+            const res = await axios.get(`${config.API_URL}/api/media/${this.props.movieId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data) {
-                console.log('DEBUG: Found in library via direct API');
                 this.setState({ externalMovie: { ...res.data, isExternalRec: false }, localLoading: false }, () => {
                     this.fetchStreamingInfo();
                     this.initAnimations();
@@ -96,31 +95,26 @@ class MovieDetail extends Component {
                 return;
             }
         } catch (mediaErr) {
-            console.log('DEBUG: Not in library (404 expected)', mediaErr.response?.status);
             this.fetchRecommendationFallback();
         }
     } catch (err) {
-        console.error('DEBUG: Direct fetch failed:', err);
         this.setState({ localLoading: false });
     }
   }
 
   async componentDidUpdate(prevProps) {
     if (prevProps.movies.length === 0 && this.props.movies.length > 0) {
-      console.log('DEBUG: Movies loaded into Redux, re-checking getMovie');
       this.loadInitialData();
     }
     if (prevProps.movieId !== this.props.movieId) {
-      console.log('DEBUG: movieId changed, reloading...');
       this.loadInitialData();
     }
   }
 
   fetchRecommendationFallback = async () => {
-    console.log('DEBUG: fetchRecommendationFallback for', this.props.movieId);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:5000/api/recommendations/${this.props.movieId}`, {
+      const res = await axios.get(`${config.API_URL}/api/recommendations/${this.props.movieId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const rec = res.data;
@@ -147,10 +141,9 @@ class MovieDetail extends Component {
     // If we're looking at a recommendation and the stored rec has no genre (or "Unknown"), fix it.
     if (movie && movie.isExternalRec && movie._id && (!movie.genre || movie.genre === 'Unknown' || movie.genre === '')) {
       if (freshDetails && freshDetails.genre && freshDetails.genre !== 'Unknown') {
-        console.log(`[MovieDetail] Healing recommendation ${movie._id} with genre: ${freshDetails.genre}`);
         try {
           const token = localStorage.getItem('token');
-          await axios.patch(`http://localhost:5000/api/recommendations/${movie._id}/metadata`, 
+          await axios.patch(`${config.API_URL}/api/recommendations/${movie._id}/metadata`, 
             { genre: freshDetails.genre },
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -188,7 +181,7 @@ class MovieDetail extends Component {
       const res = await fetchStreamingAvailability(movie.title, movie.mediaType || 'movie', movie.year, movie.imdbID);
       if (res && res.error) {
         this.setState({ ottError: res.error });
-      } else if (res) {
+      } else if (res && Array.isArray(res)) {
         this.setState({ streamingProviders: res, ottError: null });
       }
     }
@@ -204,11 +197,7 @@ class MovieDetail extends Component {
             <div className="setup-icon">ℹ️</div>
             <div className="setup-content">
               <h4>OTT Links Disabled</h4>
-              <p>Please add a valid <strong>TMDB API Key</strong> to your <code>.env</code> file to see where to watch this movie.</p>
-              <div className="setup-steps">
-                <span>1. Get key at <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer">TheMovieDB.org</a></span>
-                <span>2. Open <code>.env</code> and set <code>REACT_APP_TMDB_API_KEY</code></span>
-              </div>
+              <p>Please add a valid <strong>TMDB API Key</strong> to your <code>.env</code> file to see where to watch.</p>
             </div>
           </div>
         </div>
@@ -252,7 +241,7 @@ class MovieDetail extends Component {
     const movie = this.getMovie();
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.patch(`http://localhost:5000/api/users/profile/top-picks`, {
+      const response = await axios.patch(`${config.API_URL}/api/users/profile/top-picks`, {
         mediaId: movie._id
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -421,6 +410,16 @@ class MovieDetail extends Component {
 
     return (
       <div className="detail-page container-fluid" style={{ minHeight: '100vh', padding: '40px 0' }}>
+        <Helmet>
+          <title>{`${movie.title} (${movie.year}) | CineLog`}</title>
+          <meta name="description" content={movie.plot || `View details and your personal review for ${movie.title} on CineLog.`} />
+          <meta property="og:title" content={`${movie.title} (${movie.year}) - CineLog`} />
+          <meta property="og:description" content={movie.plot || `Your movie journal for ${movie.title}.`} />
+          <meta property="og:image" content={movie.poster} />
+          <meta property="og:type" content="video.movie" />
+          <meta name="twitter:card" content="summary_large_image" />
+        </Helmet>
+
         {/* Full Bleed Backdrop */}
         {movie.poster && (
           <div className="detail-hero-backdrop">

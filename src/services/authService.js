@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/auth';
+import config from '../config';
+
+const API_URL = `${config.API_URL}/api/auth`;
 
 export const signup = async (userData) => {
     const response = await axios.post(`${API_URL}/signup`, userData);
@@ -25,7 +27,7 @@ export const logout = () => {
 export const getMe = async () => {
     const token = localStorage.getItem('token');
     if (!token) return null;
-    const response = await axios.get('http://localhost:5000/api/users/me', {
+    const response = await axios.get(`${config.API_URL}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
