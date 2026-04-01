@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://your-backend-url.com/api/:path*"
+      "destination": "https://cinelog-wdaj.onrender.com/api/:path*"
     },
     {
       "source": "/socket.io/:path*",
-      "destination": "https://your-backend-url.com/socket.io/:path*"
+      "destination": "https://cinelog-wdaj.onrender.com/socket.io/:path*"
     },
     {
       "source": "/(.*)",
