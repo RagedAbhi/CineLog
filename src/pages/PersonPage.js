@@ -16,6 +16,7 @@ const PersonPage = () => {
     const [activeTab, setActiveTab] = useState('actedIn'); // 'actedIn' | 'directed'
     const [filterQuery, setFilterQuery] = useState('');
     const [selectedGenre, setSelectedGenre] = useState('All');
+    const [isBioExpanded, setIsBioExpanded] = useState(false);
     
     const containerRef = useRef(null);
 
@@ -119,7 +120,29 @@ const PersonPage = () => {
                         </div>
 
                         {person.info.bio && (
-                            <p className="person-bio">{person.info.bio.slice(0, 400)}{person.info.bio.length > 400 ? '...' : ''}</p>
+                            <div className="person-bio-container">
+                                <p className="person-bio">
+                                    {(() => {
+                                        const bioText = person.info.bio;
+                                        const THRESHOLD = 350;
+                                        const isTruncated = bioText.length > THRESHOLD;
+                                        
+                                        if (!isTruncated) return bioText;
+                                        
+                                        return (
+                                            <>
+                                                {isBioExpanded ? bioText : `${bioText.slice(0, THRESHOLD)}...`}
+                                                <button 
+                                                    className="bio-toggle-btn"
+                                                    onClick={() => setIsBioExpanded(!isBioExpanded)}
+                                                >
+                                                    {isBioExpanded ? 'Show Less' : 'See More'}
+                                                </button>
+                                            </>
+                                        );
+                                    })()}
+                                </p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -287,9 +310,29 @@ const PersonPage = () => {
                 }
                 .person-bio {
                     color: rgba(255,255,255,0.7);
-                    line-height: 1.6;
+                    line-height: 1.8;
                     font-size: 15px;
-                    max-width: 800px;
+                    max-width: 850px;
+                }
+                .bio-toggle-btn {
+                    display: inline-block;
+                    background: none;
+                    border: none;
+                    color: var(--accent);
+                    font-weight: 700;
+                    font-size: 13px;
+                    margin-left: 8px;
+                    cursor: pointer;
+                    text-transform: uppercase;
+                    letter-spacing: 0.8px;
+                    padding: 0;
+                    transition: all 0.3s ease;
+                    opacity: 0.8;
+                }
+                .bio-toggle-btn:hover {
+                    opacity: 1;
+                    text-decoration: underline;
+                    filter: drop-shadow(0 0 5px var(--accent));
                 }
                 .person-stats {
                     display: flex;

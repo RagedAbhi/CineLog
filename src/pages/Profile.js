@@ -38,6 +38,7 @@ const Profile = () => {
     const [topGenreFilter, setTopGenreFilter] = useState('all');
     const [topMediaTypeFilter, setTopMediaTypeFilter] = useState('all');
     const [activeTab, setActiveTab] = useState('expertise'); // ['expertise', 'top_picks', 'received', 'sent']
+    const [isBioExpanded, setIsBioExpanded] = useState(false);
     
     const fileInputRef = useRef(null);
 
@@ -164,7 +165,20 @@ const Profile = () => {
                                 />
                                 {rec.count > 1 && <div className="rec-count-badge">Multi-Friend Pick</div>}
                                 <div className="rec-attribution" style={{ marginTop: '10px' }}>
-                                    by @{rec.sender?.username || 'friend'}{rec.allSenders?.length > 1 ? ` and ${rec.allSenders.length - 1} others` : ''}
+                                    by @{rec.sender?.username || 'friend'}
+                                    {rec.allSenders?.length > 1 ? (
+                                        <span className="others-trigger" onClick={(e) => e.stopPropagation()}>
+                                            {` and ${rec.allSenders.length - 1} others`}
+                                            <span className="others-tooltip">
+                                                <span className="tooltip-header">Recommended by:</span>
+                                                {rec.allSenders.map((s, i) => (
+                                                    <span key={i} className="tooltip-user">
+                                                        {s.name || s.username || 'Unknown User'}
+                                                    </span>
+                                                ))}
+                                            </span>
+                                        </span>
+                                    ) : ''}
                                 </div>
                             </div>
                         ))}
@@ -194,6 +208,7 @@ const Profile = () => {
             } else {
                 grouped[canonicalKey].count += 1;
                 grouped[canonicalKey].allIds.push(r._id);
+                if (r.receiver) grouped[canonicalKey].allReceivers.push(r.receiver);
             }
         });
         
@@ -236,7 +251,20 @@ const Profile = () => {
                                     index={index} 
                                 />
                                 <div className="rec-attribution" style={{ marginTop: '10px' }}>
-                                    to @{rec.receiver?.username || 'friend'}{rec.count > 1 ? ` and ${rec.count - 1} others` : ''}
+                                    to @{rec.receiver?.username || 'friend'}
+                                    {rec.count > 1 ? (
+                                        <span className="others-trigger" onClick={(e) => e.stopPropagation()}>
+                                            {` and ${rec.count - 1} others`}
+                                            <span className="others-tooltip">
+                                                <span className="tooltip-header">Sent to:</span>
+                                                {rec.allReceivers?.map((s, i) => (
+                                                    <span key={i} className="tooltip-user">
+                                                        {s.name || s.username || 'Unknown User'}
+                                                    </span>
+                                                ))}
+                                            </span>
+                                        </span>
+                                    ) : ''}
                                 </div>
                             </div>
                         ))}
@@ -443,9 +471,9 @@ const Profile = () => {
     return (
         <div className="container-fluid">
             <Helmet>
-                <title>{profile ? `${profile.name} (@${profile.username}) | CineLog` : 'Profile | CineLog'}</title>
-                <meta name="description" content={profile?.bio || `View ${profile?.name}'s cinema expertise and top movie picks on CineLog.`} />
-                <meta property="og:title" content={`${profile?.name} on CineLog`} />
+                <title>{profile ? `${profile.name} (@${profile.username}) | Cuerates` : 'Profile | Cuerates'}</title>
+                <meta name="description" content={profile?.bio || `View ${profile?.name}'s cinema expertise and top movie picks on Cuerates.`} />
+                <meta property="og:title" content={`${profile?.name} on Cuerates`} />
                 <meta property="og:description" content={profile?.bio || 'Check out my movie journal and recommendations!'} />
                 <meta property="og:image" content={profile?.profilePicture} />
                 <meta property="og:type" content="profile" />
@@ -515,7 +543,25 @@ const Profile = () => {
                                 </div>
                             </div>
                             <div className="profile-bio-minimal">
-                                {profile.bio || "No bio yet. Deep into cinematic experiences."}
+                                {(() => {
+                                    const bioText = profile.bio || "No bio yet. Deep into cinematic experiences.";
+                                    const THRESHOLD = 160;
+                                    const shouldTruncate = bioText.length > THRESHOLD;
+                                    
+                                    if (!shouldTruncate) return bioText;
+                                    
+                                    return (
+                                        <>
+                                            {isBioExpanded ? bioText : `${bioText.slice(0, THRESHOLD)}...`}
+                                            <button 
+                                                className="bio-toggle-btn"
+                                                onClick={() => setIsBioExpanded(!isBioExpanded)}
+                                            >
+                                                {isBioExpanded ? 'Show Less' : 'See More'}
+                                            </button>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </>
                     ) : (

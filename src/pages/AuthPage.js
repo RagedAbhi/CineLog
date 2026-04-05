@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { signup, login } from '../store/thunks';
 import '../styles/global.css';
+import CueratesLogo from '../components/CueratesLogo';
 
 const AuthPage = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -35,13 +36,17 @@ const AuthPage = () => {
     };
 
     return (
-        <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: '#030213', color: 'white' }}>
+            {/* Image Based Background for Login */}
+            <div className="liquid-bg-wrapper">
+                <div className="image-blob-bg"></div>
+            </div>
+
             <div className="auth-card glass-panel-premium" style={{ width: '100%', maxWidth: '440px' }}>
-                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                    <h1 className="auth-logo">CineLog</h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '15px', fontWeight: 500 }}>
-                        {isLogin ? 'Welcome back! Ready for a movie?' : 'Start your personal movie diary today.'}
-                    </p>
+                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <div className="auth-brand-column">
+                    <CueratesLogo layout="vertical" />
+                </div>
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

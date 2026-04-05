@@ -102,7 +102,22 @@ const SocialPulse = () => {
                         <div className="pulse-info">
                             <p className="pulse-text">
                                 <strong>{rec.allSenders[0]?.name || rec.allSenders[0]?.username || 'Unknown'}</strong>
-                                {rec.allSenders.length > 1 ? ` and ${rec.allSenders.length - 1} others` : ''} recommended 
+                                {rec.allSenders.length > 1 ? (
+                                    <span 
+                                        className="others-trigger"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {` and ${rec.allSenders.length - 1} others`}
+                                        <span className="others-tooltip">
+                                            <span className="tooltip-header">Recommended by:</span>
+                                            {rec.allSenders.map((s, i) => (
+                                                <span key={i} className="tooltip-user">
+                                                    {s.name || s.username || 'Unknown User'}
+                                                </span>
+                                            ))}
+                                        </span>
+                                    </span>
+                                ) : ''} recommended 
                                 <span className="pulse-media-title"> {rec.mediaTitle}</span>
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

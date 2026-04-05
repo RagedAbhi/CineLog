@@ -411,9 +411,9 @@ class MovieDetail extends Component {
     return (
       <div className="detail-page container-fluid" style={{ minHeight: '100vh', padding: '40px 0' }}>
         <Helmet>
-          <title>{`${movie.title} (${movie.year}) | CineLog`}</title>
-          <meta name="description" content={movie.plot || `View details and your personal review for ${movie.title} on CineLog.`} />
-          <meta property="og:title" content={`${movie.title} (${movie.year}) - CineLog`} />
+          <title>{`${movie.title} (${movie.year}) | Cuerates`}</title>
+          <meta name="description" content={movie.plot || `View details and your personal review for ${movie.title} on Cuerates.`} />
+          <meta property="og:title" content={`${movie.title} (${movie.year}) - Cuerates`} />
           <meta property="og:description" content={movie.plot || `Your movie journal for ${movie.title}.`} />
           <meta property="og:image" content={movie.poster} />
           <meta property="og:type" content="video.movie" />

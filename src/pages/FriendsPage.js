@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { showToast } from '../store/actions';
+import { showToast, showConfirmModal } from '../store/actions';
 import { fetchRecommendations } from '../store/thunks';
 import config from '../config';
 import { useNavigate } from 'react-router-dom';

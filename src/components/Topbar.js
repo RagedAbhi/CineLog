@@ -6,6 +6,7 @@ import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-
 import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, BarChart3 } from 'lucide-react';
 
 import GlobalSearch from './GlobalSearch';
+import CueratesLogo from './CueratesLogo';
 
 const Topbar = () => {
     const location = useLocation();
@@ -85,8 +86,8 @@ const Topbar = () => {
             <div className="topbar-inner">
                 {/* Left: Logo & Search */}
                 <div className="topbar-left">
-                    <NavLink to="/" className="topbar-logo-premium">
-                        CINELOG<span className="logo-dot">.</span>
+                    <NavLink to="/" className="hover:opacity-80 transition-opacity">
+                        <CueratesLogo layout="horizontal" size={40} />
                     </NavLink>
 
                     {!isMobile && (

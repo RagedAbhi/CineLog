@@ -273,7 +273,24 @@ class TVShowsPage extends Component {
                                     {(() => {
                                         const sender = rec.allSenders?.[0] || rec.sender;
                                         const senderName = sender?.name || sender?.username || 'friend';
-                                        return `by @${senderName}${rec.count > 1 ? ` and ${rec.count - 1} others` : ''}`;
+                                        return (
+                                            <>
+                                                by @{senderName}
+                                                {rec.count > 1 ? (
+                                                    <span className="others-trigger" onClick={(e) => e.stopPropagation()}>
+                                                        {` and ${rec.count - 1} others`}
+                                                        <span className="others-tooltip">
+                                                            <span className="tooltip-header">Recommended by:</span>
+                                                            {(rec.allSenders || []).map((s, i) => (
+                                                                <span key={i} className="tooltip-user">
+                                                                    {s.name || s.username || 'Unknown User'}
+                                                                </span>
+                                                            ))}
+                                                        </span>
+                                                    </span>
+                                                ) : ''}
+                                            </>
+                                        );
                                     })()}
                                 </div>
                             </div>

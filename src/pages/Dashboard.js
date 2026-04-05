@@ -307,9 +307,9 @@ class Dashboard extends Component {
     return (
       <div className="dashboard-page">
         <Helmet>
-          <title>Dashboard | CineLog — Your Movie Journal</title>
-          <meta name="description" content="Explore your recently watched movies, trending TV shows, and personalized recommendations on CineLog." />
-          <meta property="og:title" content="CineLog Dashboard" />
+          <title>Dashboard | Cuerates — Your Movie Journal</title>
+          <meta name="description" content="Explore your recently watched movies, trending TV shows, and personalized recommendations on Cuerates." />
+          <meta property="og:title" content="Cuerates Dashboard" />
           <meta property="og:description" content="Your personal cinema vault and social movie journal." />
           <meta property="og:type" content="website" />
         </Helmet>

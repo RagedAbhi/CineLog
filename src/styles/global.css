@@ -1,65 +1,149 @@
+@import "tailwindcss";
+
 @import url('https://db.onlinewebfonts.com/c/28c1220a7b53a29037c88b68fc33d01f?family=Larken');
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@100;200;300&display=swap');
 
-/* ============================================================
-   CSS VARIABLES
-   ============================================================ */
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  /* Liquid Glass Palette */
-  --bg: #000000;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --bg-elevated: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.06);
-  --border-light: rgba(255, 255, 255, 0.12);
+  --font-size: 16px;
+  --background: #030213; /* Unequivocal Root Dark */
+  --foreground: #f8fafc; /* Premium Light Text */
+  --card: #0a0a1a;
+  --card-foreground: #f8fafc;
+  --popover: #0a0a1a;
+  --popover-foreground: #f8fafc;
+  --primary: #f8fafc;
+  --primary-foreground: #030213;
+  --secondary: #1e1b4b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e1b4b;
+  --muted-foreground: #94a3b8;
+  --accent: #2e1065;
+  --accent-foreground: #f8fafc;
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fef2f2;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.05);
+  --input-background: #030213;
+  --switch-background: #334155;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #4c1d95;
+  --chart-1: #6366f1;
+  --chart-2: #10b981;
+  --chart-3: #f59e0b;
+  --chart-4: #8b5cf6;
+  --chart-5: #ef4444;
+  --radius: 0.625rem;
   
-  /* iOS 18 Vibrant Accents - Bluish Purple */
-  --accent: #818CF8;
-  --accent-secondary: #6366F1;
-  --accent-gradient: linear-gradient(135deg, #6366F1, #8B5CF6, #D946EF);
-  --accent-dim: rgba(129, 140, 248, 0.1);
-  --accent-glow: rgba(129, 140, 248, 0.4);
-  
-  --red: #FF3B30;
-  --red-dim: rgba(255, 59, 48, 0.15);
-  --green: #34C759;
-  --green-dim: rgba(52, 199, 89, 0.15);
-  
-  /* Typography & Glass */
-  --text-primary: #FFFFFF;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-muted: rgba(255, 255, 255, 0.45);
-  
+  /* Legacy Liquid Glass Compatibility */
   --font-display: 'Larken', system-ui, -apple-system, sans-serif;
   --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
-  
-  /* Liquid Physics */
-  --radius: 32px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
   --radius-xl: 32px;
-  --glass-blur: blur(60px);
-  --glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  
-  --shadow-premium: 0 20px 50px -10px rgba(0, 0, 0, 0.5);
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --bouncy: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --bg: var(--background);
+  --text-primary: var(--foreground);
 }
 
-/* No-scroll utility for modals */
-body.modal-open {
-  overflow: hidden !important;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ============================================================
-   RESET & BASE
-   ============================================================ */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    background: #030213 !important; /* Force Dark Background */
+    color: var(--foreground) !important;
+    @apply text-foreground;
+  }
+
+  /* Global Typography Force Rule to bypass legacy black-text rules */
+  h1, h2, h3, h4, h5, h6, p, span, label, li, a, input, select, textarea {
+    color: var(--foreground) !important;
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
 }
 
 html {
@@ -439,7 +523,7 @@ img {
 
 .user-email-small {
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--muted-foreground);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -456,7 +540,7 @@ img {
     align-items: center;
     gap: 12px;
     padding: 10px 15px;
-    color: var(--text-secondary);
+    color: var(--foreground);
     font-size: 13px;
     font-weight: 500;
     border-radius: 10px;
@@ -1076,9 +1160,9 @@ img {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--text-secondary);
+  color: var(--muted-foreground);
   margin-bottom: 8px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .form-input {
@@ -1086,7 +1170,7 @@ img {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
+  color: var(--foreground);
   padding: 14px 18px;
   font-size: 15px;
   outline: none;
@@ -1908,11 +1992,11 @@ textarea.form-input {
 }
 
 .bio-luminescent {
-  box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+  box-shadow: 0 0 20px var(--accent-dim);
 }
 
 .bio-luminescent:hover {
-  box-shadow: 0 0 40px rgba(0, 242, 255, 0.4);
+  box-shadow: 0 0 40px var(--accent-glow);
   border-color: var(--accent);
 }
 
@@ -2493,6 +2577,7 @@ html.lenis {
 
 .rec-card-wrapper:hover {
   transform: translateY(-5px);
+  z-index: 10;
 }
 
 .rec-attribution {
@@ -2645,9 +2730,9 @@ html.lenis {
 }
 
 .media-tab.active {
-    background: var(--accent);
-    color: #000;
-    box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+    background: #ffffff;
+    color: #000000;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
 }
 
 .analytics-dynamic-content {
@@ -2864,6 +2949,28 @@ html.lenis {
     color: var(--text-secondary);
     font-size: 16px;
     line-height: 1.8;
+}
+
+.bio-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 13px;
+    margin-left: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0;
+    display: inline-block;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+}
+
+.bio-toggle-btn:hover {
+    opacity: 1;
+    text-decoration: underline;
+    filter: drop-shadow(0 0 5px var(--accent));
 }
 
 .minimal-edit-btn {
@@ -3865,4 +3972,77 @@ html.lenis {
 .nav-item-premium.active {
     background: rgba(255, 255, 255, 0.15);
     color: #ffffff;
+}
+
+/* ============================================================
+   REC HOVER TOOLTIP (UNIVERSAL)
+   ============================================================ */
+.others-trigger {
+    position: relative;
+    color: var(--accent);
+    cursor: help;
+    font-weight: 700;
+    display: inline-block;
+    padding: 2px 4px;
+    margin: -2px 0;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.others-trigger:hover {
+    background: rgba(100, 255, 218, 0.1);
+}
+
+.others-tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    transform: translateY(10px);
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(100, 255, 218, 0.2);
+    padding: 12px;
+    border-radius: 12px;
+    width: max-content;
+    min-width: 160px;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.others-trigger:hover .others-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.tooltip-header {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    font-weight: 800;
+    display: block;
+    opacity: 0.8;
+}
+
+.tooltip-user {
+    font-size: 13px;
+    color: #fff;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: block;
+    line-height: 1.2;
+}
+
+.tooltip-user:last-child {
+    border-bottom: none;
 }

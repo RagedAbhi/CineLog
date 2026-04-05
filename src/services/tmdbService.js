@@ -94,9 +94,13 @@ export const fetchStreamingAvailability = async (title, type, year, imdbID = nul
             'Sony Liv': 'SonyLiv',
             'Sony LIV': 'SonyLiv',
             'SonyLiv': 'SonyLiv',
+            'Jio': 'JioCinema',
             'Apple TV': 'AppleTV',
             'Apple TV Plus': 'AppleTV',
             'Apple TV+': 'AppleTV',
+            'Apple TV App': 'AppleTV',
+            'Apple iTunes': 'AppleTV',
+            'iTunes': 'AppleTV',
             'Rakuten Viki': 'Rakuten Viki',
             'Viki': 'Rakuten Viki',
             'JioCinema': 'JioCinema',
@@ -322,6 +326,32 @@ export const GENRE_MAP = {
 };
 
 export const getBatchProvidersTMDB = async (items) => {
+    // Shared mapping from search implementation
+    const platformMap = {
+        'Netflix': 'Netflix',
+        'Amazon Prime Video': 'Amazon Prime',
+        'Amazon Prime Video with Ads': 'Amazon Prime',
+        'Prime Video': 'Amazon Prime',
+        'Amazon Video': 'Amazon Prime',
+        'Disney Plus Hotstar': 'Hotstar',
+        'Disney+ Hotstar': 'Hotstar',
+        'Zee5': 'Zee5',
+        'ZEE5': 'Zee5',
+        'Sony Liv': 'SonyLiv',
+        'Sony LIV': 'SonyLiv',
+        'SonyLiv': 'SonyLiv',
+        'Apple TV': 'AppleTV',
+        'Apple TV Plus': 'AppleTV',
+        'Apple TV+': 'AppleTV',
+        'Apple TV App': 'AppleTV',
+        'Apple iTunes': 'AppleTV',
+        'iTunes': 'AppleTV',
+        'Rakuten Viki': 'Rakuten Viki',
+        'JioCinema': 'JioCinema',
+        'Jio Cinema': 'JioCinema',
+        'YouTube': 'YouTube'
+    };
+
     try {
         const results = await Promise.all(items.slice(0, 8).map(async (item) => {
             const type = item.mediaType === 'series' ? 'tv' : 'movie';
@@ -329,11 +359,31 @@ export const getBatchProvidersTMDB = async (items) => {
                 const res = await axios.get(`${BASE_URL}/${type}/${item.id}/watch/providers`, {
                     params: { api_key: TMDB_API_KEY }
                 });
-                const providers = res.data.results?.IN?.flatrate || [];
-                return { id: item.id, providers: providers.slice(0, 3).map(p => ({
-                    name: p.provider_name,
-                    logo: `https://image.tmdb.org/t/p/original${p.logo_path}`
-                })) };
+                
+                const india = res.data.results?.IN || {};
+                
+                // Combine flatrate, rent, and buy to capture Apple TV and others
+                const allRaw = [
+                    ...(india.flatrate || []),
+                    ...(india.buy || []),
+                    ...(india.rent || [])
+                ];
+
+                const uniqueMapped = [];
+                const seen = new Set();
+
+                allRaw.forEach(p => {
+                    const mapped = platformMap[p.provider_name];
+                    if (mapped && !seen.has(mapped)) {
+                        uniqueMapped.push({
+                            name: mapped,
+                            logo: `https://image.tmdb.org/t/p/original${p.logo_path}`
+                        });
+                        seen.add(mapped);
+                    }
+                });
+
+                return { id: item.id, providers: uniqueMapped.slice(0, 3) };
             } catch (err) {
                 return { id: item.id, providers: [] };
             }

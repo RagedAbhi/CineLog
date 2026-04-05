@@ -127,7 +127,7 @@ const App = () => {
   }
 
   return (
-    <div className="app-layout lenis-scroll">
+    <div className="app-layout dark lenis-scroll">
       <Toast />
       
       <ConfirmModal 
