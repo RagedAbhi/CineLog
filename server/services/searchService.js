@@ -1,4 +1,5 @@
 const axios = require('axios');
+const https = require('https');
 const SearchCache = require('../models/SearchCache');
 const UserBehavior = require('../models/UserBehavior');
 const Media = require('../models/Media');
@@ -7,6 +8,10 @@ const algoliaService = require('./algoliaService');
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const BASE_URL = 'https://api.themoviedb.org/3';
+
+// Force IPv4 to prevent ECONNRESET connection drops from TMDB via ISP routing
+const httpsAgent = new https.Agent({ family: 4 });
+
 
 const CACHE_TTL_HOURS = 24;
 
@@ -40,6 +45,7 @@ exports.searchMulti = async (query, type, userId) => {
 
         const [response, algoliaHits] = await Promise.all([
             axios.get(`${BASE_URL}${endpoint}`, {
+                httpsAgent,
                 params: {
                     api_key: TMDB_API_KEY,
                     query: query,
@@ -66,6 +72,7 @@ exports.searchMulti = async (query, type, userId) => {
         ) {
             try {
                 const creditsRes = await axios.get(`${BASE_URL}/person/${topPerson.id}/movie_credits`, {
+                    httpsAgent,
                     params: { api_key: TMDB_API_KEY, language: 'en-US' }
                 });
                 
@@ -163,8 +170,8 @@ exports.getPersonDetails = async (personId) => {
 
     // Fetch Details + Credits
     const [info, credits] = await Promise.all([
-        axios.get(`${BASE_URL}/person/${personId}`, { params: { api_key: TMDB_API_KEY } }),
-        axios.get(`${BASE_URL}/person/${personId}/combined_credits`, { params: { api_key: TMDB_API_KEY } })
+        axios.get(`${BASE_URL}/person/${personId}`, { httpsAgent, params: { api_key: TMDB_API_KEY } }),
+        axios.get(`${BASE_URL}/person/${personId}/combined_credits`, { httpsAgent, params: { api_key: TMDB_API_KEY } })
     ]);
 
     const results = {
@@ -281,6 +288,7 @@ exports.getWatchProviders = async (type, id, region = 'IN') => {
     try {
         const endpoint = type === 'series' || type === 'tv' ? `/tv/${id}/watch/providers` : `/movie/${id}/watch/providers`;
         const response = await axios.get(`${BASE_URL}${endpoint}`, {
+            httpsAgent,
             params: { api_key: TMDB_API_KEY }
         });
 

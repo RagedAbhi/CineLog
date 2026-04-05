@@ -1,6 +1,5 @@
 const searchService = require('../services/searchService');
 const UserBehavior = require('../models/UserBehavior');
-const embeddingService = require('../services/embeddingService');
 const Media = require('../models/Media');
 const logger = require('../utils/logger');
 
@@ -90,47 +89,13 @@ exports.trackInteraction = async (req, res) => {
 };
 
 /**
- * AI-Powered Semantic Search
+ * AI-Powered Semantic Search (Temporarily Disabled)
  * GET /api/search/semantic?q=
  */
 exports.semanticSearch = async (req, res) => {
     try {
-        const { q } = req.query;
-        if (!q) return res.status(400).json({ message: 'Query is required' });
-
-        // 1. Generate Query Embedding
-        const queryVector = await embeddingService.generateEmbedding(q);
-        if (!queryVector) {
-            return res.status(500).json({ message: 'Failed to generate search vector' });
-        }
-
-        // 2. Perform MongoDB Atlas Vector Search
-        // Note: Needs a Vector Search Index named 'vector_index' on the 'media' collection
-        const results = await Media.aggregate([
-            {
-                $vectorSearch: {
-                    index: "vector_index", 
-                    path: "embedding",
-                    queryVector: queryVector,
-                    numCandidates: 100,
-                    limit: 12
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    title: 1,
-                    poster: 1,
-                    year: 1,
-                    plot: 1,
-                    mediaType: 1,
-                    genre: 1,
-                    score: { $meta: "vectorSearchScore" }
-                }
-            }
-        ]);
-
-        res.status(200).json(results);
+        // OpenAI disabled temporarily as per request
+        res.status(200).json([]); 
     } catch (error) {
         logger.error('[SearchController] Semantic search failed:', error);
         res.status(500).json({ message: 'AI Search failed', error: error.message });
