@@ -16,6 +16,7 @@ const friendRoutes = require('./routes/friendRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const searchRoutes = require('./routes/searchRoutes');
+const watchRoomRoutes = require('./routes/watchRoomRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -58,6 +59,7 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/rooms', watchRoomRoutes);
 
 // Database Connection
 const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cinelog';

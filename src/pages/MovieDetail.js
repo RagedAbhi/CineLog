@@ -6,6 +6,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie } from '../store/thunks';
 import MarkWatchedModal from '../components/MarkWatchedModal';
 import AddMovieModal from '../components/AddMovieModal';
+import WatchTogetherModal from '../components/WatchTogetherModal';
 import { fetchStreamingAvailability } from '../services/tmdbService';
 import { getMovieDetailsExternal } from '../services/movieService';
 import { showToast, showRecommendModal, showConfirmModal } from '../store/actions';
@@ -33,7 +34,9 @@ class MovieDetail extends Component {
       hoverRating: 0,
       editForm: {},
       externalMovie: null,
-      localLoading: false
+      localLoading: false,
+      showWatchTogether: false,
+      watchTogetherNetflixUrl: null
     };
   }
 
@@ -206,6 +209,10 @@ class MovieDetail extends Component {
 
     if (!streamingProviders || streamingProviders.length === 0) return null;
 
+    const netflixProvider = streamingProviders.find(p =>
+      p.name.toLowerCase().includes('netflix')
+    );
+
     return (
       <div className="detail-ott-section">
         <div className="detail-label">Available on OTT (India):</div>
@@ -224,6 +231,19 @@ class MovieDetail extends Component {
             </a>
           ))}
         </div>
+
+        {netflixProvider && (
+          <button
+            className="wt-trigger-btn"
+            onClick={() => this.setState({
+              showWatchTogether: true,
+              watchTogetherNetflixUrl: netflixProvider.link
+            })}
+          >
+            <span className="wt-trigger-n">N</span>
+            Watch Together on Netflix
+          </button>
+        )}
       </div>
     );
   }
@@ -665,6 +685,14 @@ class MovieDetail extends Component {
                 </div>
               </div>
             </div>
+          )}
+
+          {this.state.showWatchTogether && (
+            <WatchTogetherModal
+              movie={this.getMovie()}
+              netflixUrl={this.state.watchTogetherNetflixUrl}
+              onClose={() => this.setState({ showWatchTogether: false, watchTogetherNetflixUrl: null })}
+            />
           )}
 
           {this.state.showMarkWatched && (

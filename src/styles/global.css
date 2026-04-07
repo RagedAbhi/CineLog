@@ -3,6 +3,7 @@
 @import url('https://db.onlinewebfonts.com/c/28c1220a7b53a29037c88b68fc33d01f?family=Larken');
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@100;200;300&display=swap');
+@import './watch-together.css';
 
 @custom-variant dark (&:is(.dark *));
 

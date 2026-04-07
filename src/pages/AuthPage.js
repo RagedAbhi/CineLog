@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { signup, login } from '../store/thunks';
 import '../styles/global.css';
 import CueratesLogo from '../components/CueratesLogo';
+import ExtensionPromptModal from '../components/ExtensionPromptModal';
 
 const AuthPage = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -13,6 +14,7 @@ const AuthPage = () => {
         name: ''
     });
     const [error, setError] = useState('');
+    const [showExtPrompt, setShowExtPrompt] = useState(false);
 
     const dispatch = useDispatch();
     const { loading, error: authError } = useSelector(state => state.auth);
@@ -29,6 +31,10 @@ const AuthPage = () => {
                 await dispatch(login({ email: formData.email, password: formData.password }));
             } else {
                 await dispatch(signup(formData));
+                // Show extension prompt after new account creation (only if not already seen)
+                if (!localStorage.getItem('extensionPromptSeen')) {
+                    setShowExtPrompt(true);
+                }
             }
         } catch (err) {
             setError(err.message);
@@ -36,6 +42,7 @@ const AuthPage = () => {
     };
 
     return (
+        <>
         <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: '#030213', color: 'white' }}>
             {/* Image Based Background for Login */}
             <div className="liquid-bg-wrapper">
@@ -93,6 +100,11 @@ const AuthPage = () => {
                 </div>
             </div>
         </div>
+
+        {showExtPrompt && (
+            <ExtensionPromptModal onClose={() => setShowExtPrompt(false)} />
+        )}
+        </>
     );
 };
 
