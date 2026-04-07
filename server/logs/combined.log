@@ -2523,3 +2523,5 @@
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 00:04:26"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 00:04:36"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 00:04:46"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 00:04:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 00:05:06"}
