@@ -47,6 +47,21 @@ exports.init = (httpServer) => {
             socket.to(`room:${roomCode}`).emit('room:synced', { action, currentTime, socketId: socket.id });
         });
 
+        // FIX #4: Late joiner requests current playback state from host
+        // Sends the request to everyone ELSE in the room (the host will respond)
+        socket.on('room:request_state', ({ roomCode }) => {
+            if (!roomCode) return;
+            socket.to(`room:${roomCode}`).emit('room:state_request', { requesterSocketId: socket.id });
+        });
+
+        // FIX #4: Host sends back current state — forward ONLY to the requester
+        socket.on('room:state_response', ({ roomCode, state }) => {
+            if (!roomCode || !state) return;
+            // Broadcast to the whole room so the newly joined tab gets it
+            // (background.js will filter to only Netflix tabs)
+            socket.to(`room:${roomCode}`).emit('room:state_response', { state });
+        });
+
         // Relay chat to everyone in the room (including sender)
         socket.on('room:chat', ({ roomCode, message, userId, username, avatar }) => {
             if (!roomCode) return;

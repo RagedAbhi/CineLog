@@ -7,11 +7,13 @@
  * - Receives sync commands from background and applies them to the video.
  * - Injects a minimal chat overlay on the Netflix page.
  * - Auto-joins room if ?clroom=XXXX is in the URL.
+ * - Requests current playback state from others when joining late (catch-up).
  */
 
 (function () {
     'use strict';
 
+    const BACKEND_URL = 'http://127.0.0.1:5000'; // FIX #1: Use local dev server, not Render
     const SYNC_DEBOUNCE_MS = 300;
     const SEEK_TOLERANCE_S = 2; // seconds of drift before forcing a seek
 
@@ -21,6 +23,7 @@
     let roomCode = null;
     let currentUser = null;
     let chatOverlayVisible = true;
+    let videoWatcherInterval = null; // FIX #3: persistent video watcher handle
 
     // ── Init ────────────────────────────────────────────────────────────────
 
@@ -41,8 +44,10 @@
             chrome.storage.local.get(['cinelogToken', 'cinelogUser'], ({ cinelogToken, cinelogUser }) => {
                 if (cinelogToken && roomCode) {
                     currentUser = cinelogUser || null;
-                    waitForVideo();
+                    startVideoWatcher(); // FIX #3: use persistent watcher
                     injectChatOverlay();
+                    // FIX #4: Request state from existing room members (catch-up)
+                    requestRoomState();
                 }
             });
         });
@@ -55,7 +60,8 @@
         if (!cinelogToken) return;
 
         try {
-            const res = await fetch(`https://cinelog-wdaj.onrender.com/api/rooms/${code}/join`, {
+            // FIX #1: Use BACKEND_URL constant, not hardcoded Render URL
+            const res = await fetch(`${BACKEND_URL}/api/rooms/${code}/join`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -71,26 +77,37 @@
         }
     }
 
-    // ── Video listener ──────────────────────────────────────────────────────
+    // ── FIX #4: Catch-up: request current state from host ──────────────────
 
-    function waitForVideo() {
-        const observer = new MutationObserver(() => {
+    function requestRoomState() {
+        // Give other members a moment to be ready, then ask for current state
+        setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'CINELOG_REQUEST_STATE' });
+        }, 1500);
+    }
+
+    // ── FIX #3: Persistent video watcher ───────────────────────────────────
+    // Instead of a one-shot MutationObserver that stops when video is found,
+    // we poll every second so any new <video> (e.g. after title navigation) is picked up.
+
+    function startVideoWatcher() {
+        if (videoWatcherInterval) return; // already running
+        videoWatcherInterval = setInterval(() => {
             const v = document.querySelector('video');
             if (v && v !== video) {
                 video = v;
                 attachVideoListeners();
-                observer.disconnect();
+                console.log('[CineLog] New video element detected & listeners attached');
             }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        // Also check immediately
-        const v = document.querySelector('video');
-        if (v) { video = v; attachVideoListeners(); observer.disconnect(); }
+        }, 1000);
     }
 
     function attachVideoListeners() {
         if (!video) return;
+        // Remove old listeners first to avoid duplicates
+        video.removeEventListener('play', onPlay);
+        video.removeEventListener('pause', onPause);
+        video.removeEventListener('seeked', onSeeked);
 
         video.addEventListener('play', onPlay);
         video.addEventListener('pause', onPause);
@@ -105,35 +122,69 @@
         }, SYNC_DEBOUNCE_MS);
     }
 
-    function onPlay() { emitSync('play', video.currentTime); }
-    function onPause() { emitSync('pause', video.currentTime); }
-    function onSeeked() { emitSync('seek', video.currentTime); }
+    function onPlay()   { emitSync('play',  video.currentTime); }
+    function onPause()  { emitSync('pause', video.currentTime); }
+    function onSeeked() { emitSync('seek',  video.currentTime); }
 
     // ── Receive sync from background ────────────────────────────────────────
 
     chrome.runtime.onMessage.addListener((message) => {
-        if (!video) return;
 
         switch (message.type) {
+
             case 'CINELOG_SYNC': {
+                if (!video) return;
                 const { action, currentTime } = message.payload;
+
+                // FIX #2: Set isSyncing flag BEFORE triggering video actions,
+                // and clear it AFTER the event fully settles (1000ms gives buffer
+                // for Netflix's own async event chain to complete).
                 isSyncing = true;
-                try {
-                    if (action === 'play') {
-                        applySeekIfNeeded(currentTime);
-                        video.play().catch(() => {});
-                    } else if (action === 'pause') {
-                        applySeekIfNeeded(currentTime);
-                        video.pause();
-                    } else if (action === 'seek') {
-                        video.currentTime = currentTime;
-                    }
-                } finally {
-                    // Release guard after a short delay to allow events to settle
-                    setTimeout(() => { isSyncing = false; }, 500);
+                clearTimeout(syncTimeout); // cancel any pending outbound sync
+
+                if (action === 'play') {
+                    applySeekIfNeeded(currentTime);
+                    video.play().catch(() => {});
+                } else if (action === 'pause') {
+                    applySeekIfNeeded(currentTime);
+                    video.pause();
+                } else if (action === 'seek') {
+                    video.currentTime = currentTime;
                 }
+
+                setTimeout(() => { isSyncing = false; }, 1000);
                 break;
             }
+
+            // FIX #4: Someone new joined and is asking for current state
+            case 'CINELOG_STATE_REQUEST': {
+                if (!video) return;
+                chrome.runtime.sendMessage({
+                    type: 'CINELOG_EMIT_STATE_RESPONSE',
+                    state: {
+                        currentTime: video.currentTime,
+                        paused: video.paused
+                    }
+                });
+                break;
+            }
+
+            // FIX #4: We received the state from the host — seek to catch up
+            case 'CINELOG_STATE_RESPONSE': {
+                if (!video) return;
+                const { currentTime, paused } = message.state;
+                isSyncing = true;
+                video.currentTime = currentTime;
+                if (paused) {
+                    video.pause();
+                } else {
+                    video.play().catch(() => {});
+                }
+                showBadge(`Synced to ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`);
+                setTimeout(() => { isSyncing = false; }, 1000);
+                break;
+            }
+
             case 'CINELOG_CHAT': {
                 appendChatMessage(message.payload);
                 break;

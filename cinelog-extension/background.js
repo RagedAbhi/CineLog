@@ -37,6 +37,16 @@ function connectSocket(token) {
         broadcastToNetflixTab({ type: 'CINELOG_SYNC', payload: data });
     });
 
+    // FIX #4: Someone requested state — forward to this tab's content script
+    socket.on('room:state_request', () => {
+        broadcastToNetflixTab({ type: 'CINELOG_STATE_REQUEST' });
+    });
+
+    // FIX #4: Host responded with state — forward back to the requester only
+    socket.on('room:state_response', (data) => {
+        broadcastToNetflixTab({ type: 'CINELOG_STATE_RESPONSE', state: data.state });
+    });
+
     socket.on('room:member_join', (data) => {
         broadcastToNetflixTab({ type: 'CINELOG_MEMBER_JOIN', payload: data });
         notifyPopup({ type: 'ROOM_UPDATE', payload: data });
@@ -140,6 +150,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 socket.emit('room:chat', {
                     roomCode: currentRoomCode,
                     ...message.payload
+                });
+            }
+            sendResponse({ ok: true });
+            break;
+        }
+
+        // FIX #4: Content script requests current state from room (catch-up for late joiner)
+        case 'CINELOG_REQUEST_STATE': {
+            if (socket && currentRoomCode) {
+                socket.emit('room:request_state', { roomCode: currentRoomCode });
+            }
+            sendResponse({ ok: true });
+            break;
+        }
+
+        // FIX #4: Content script (host) replied with its current state
+        case 'CINELOG_EMIT_STATE_RESPONSE': {
+            if (socket && currentRoomCode) {
+                socket.emit('room:state_response', {
+                    roomCode: currentRoomCode,
+                    state: message.state
                 });
             }
             sendResponse({ ok: true });
