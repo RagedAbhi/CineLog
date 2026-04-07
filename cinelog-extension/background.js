@@ -10,7 +10,7 @@
 
 import { io } from 'https://cdn.socket.io/4.7.5/socket.io.esm.min.js';
 
-const BACKEND_URL = 'https://cinelog-wdaj.onrender.com';
+const BACKEND_URL = 'http://127.0.0.1:5000';
 
 let socket = null;
 let currentRoomCode = null;

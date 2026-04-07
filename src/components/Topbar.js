@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/thunks';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, BarChart3 } from 'lucide-react';
+import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, BarChart3, Puzzle } from 'lucide-react';
 
 import GlobalSearch from './GlobalSearch';
 import CueratesLogo from './CueratesLogo';
@@ -133,6 +133,21 @@ const Topbar = () => {
                     )}
 
                     <div className="topbar-actions-premium" ref={dropdownRef}>
+
+                        {/* Extension Install Button */}
+                        {!isMobile && (
+                            <a
+                                href="https://github.com/RagedAbhi/cinelog"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="extension-install-btn"
+                                title="Install Cuerates Extension"
+                            >
+                                <Puzzle size={15} />
+                                <span>Get Extension</span>
+                            </a>
+                        )}
+
                         <div 
                             className={`profile-trigger ${dropdownOpen ? 'active' : ''}`}
                             onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -172,7 +187,18 @@ const Topbar = () => {
                                     </NavLink>
                                     
                                     <div className="dropdown-divider" />
-                                    
+
+                                    <a
+                                        href="https://github.com/RagedAbhi/cinelog"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="dropdown-item"
+                                        onClick={() => setDropdownOpen(false)}
+                                    >
+                                        <Puzzle size={16} />
+                                        <span>Get Extension</span>
+                                    </a>
+
                                     <button className="dropdown-item logout" onClick={onLogout}>
                                         <LogOut size={16} />
                                         <span>Log out</span>
