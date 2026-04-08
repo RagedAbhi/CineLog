@@ -485,7 +485,7 @@ const Profile = () => {
                     {isOwnProfile && !isEditing && (
                         <button
                             onClick={() => setIsEditing(true)}
-                            className="minimal-edit-btn"
+                            className="btn btn-secondary btn-sm"
                         >
                             Edit Profile
                         </button>
@@ -578,16 +578,16 @@ const Profile = () => {
                                 <textarea value={formData.bio} onChange={e => setFormData({ ...formData, bio: e.target.value })} rows={3} />
                             </div>
                             <div className="form-actions-minimal">
-                                <button type="submit" className="btn-minimal-save">Save</button>
-                                <button type="button" className="btn-minimal-cancel" onClick={() => setIsEditing(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-accent">Save</button>
+                                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>Cancel</button>
                             </div>
                         </form>
                     )}
 
                     {isOwnProfile && !isEditing && !isChangingPassword && (
                         <button 
-                            className="minimal-edit-btn" 
-                            style={{ marginTop: '12px', opacity: 0.7 }}
+                            className="btn btn-secondary btn-sm" 
+                            style={{ marginTop: '12px' }}
                             onClick={() => setIsChangingPassword(true)}
                         >
                             Change Password
@@ -616,8 +616,8 @@ const Profile = () => {
                                 />
                             </div>
                             <div className="form-actions-minimal">
-                                <button type="submit" className="btn-minimal-save">Update Password</button>
-                                <button type="button" className="btn-minimal-cancel" onClick={() => setIsChangingPassword(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-accent">Update</button>
+                                <button type="button" className="btn btn-secondary" onClick={() => setIsChangingPassword(false)}>Cancel</button>
                             </div>
                         </form>
                     )}

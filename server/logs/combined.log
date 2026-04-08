@@ -3958,3 +3958,12 @@
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:26:56"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:27:56"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:28:56"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb://abhilashkhadanga_db_user:****@ac-rzqxfhz-shard-00-00.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-01.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-02.exbkqcm.mongodb.net:27017/?ssl=true&replicaSet=atlas-580zg9-shard-0&authSource=admin&appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-09 04:03:46"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-09 04:03:46"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-09 04:03:46"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb://abhilashkhadanga_db_user:****@ac-rzqxfhz-shard-00-00.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-01.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-02.exbkqcm.mongodb.net:27017/?ssl=true&replicaSet=atlas-580zg9-shard-0&authSource=admin&appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-09 04:14:10"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-09 04:14:10"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-09 04:14:11"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb://abhilashkhadanga_db_user:****@ac-rzqxfhz-shard-00-00.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-01.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-02.exbkqcm.mongodb.net:27017/?ssl=true&replicaSet=atlas-580zg9-shard-0&authSource=admin&appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-09 04:26:10"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-09 04:26:11"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-09 04:26:12"}

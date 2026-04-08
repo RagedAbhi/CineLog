@@ -20,7 +20,7 @@
     "socket.io-client": "^4.8.3"
   },
   "scripts": {
-    "start": "set \"NODE_OPTIONS=--max-old-space-size=8192\" && react-scripts start",
+    "start": "set \"NODE_OPTIONS=--max-old-space-size=4096\" && react-scripts start",
     "build": "react-scripts build",
     "server": "npm run dev --prefix server",
     "dev": "concurrently \"npm run server\" \"npm start\""

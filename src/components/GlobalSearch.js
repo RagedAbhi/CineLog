@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, Bookmark, Send, TrendingUp, Star, Clock, X } from 'lucide-react';
+import { Eye, Bookmark, Send, TrendingUp, Star, Clock, X, PlayCircle } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { getMovieDetailsExternal } from '../services/movieService';
-import { getTrendingTMDB } from '../services/tmdbService';
-import { showToast, showRecommendModal } from '../store/actions';
+import { fetchStreamingAvailability, fetchTrailerID, getTrendingTMDB } from '../services/tmdbService';
+import { showToast, showRecommendModal, showTrailerModal } from '../store/actions';
 import { addMovie } from '../store/thunks';
 import axios from 'axios';
 import config from '../config';
@@ -116,6 +116,21 @@ const GlobalSearch = () => {
         }
     };
 
+    const handlePlayTrailer = async (e, movie) => {
+        e.stopPropagation();
+        try {
+            dispatch(showToast('Fetching trailer...', 'info'));
+            const videoId = await fetchTrailerID(movie);
+            if (videoId) {
+                dispatch(showTrailerModal(videoId));
+            } else {
+                dispatch(showToast('No trailer found on YouTube', 'error'));
+            }
+        } catch (err) {
+            dispatch(showToast('Failed to load trailer', 'error'));
+        }
+    };
+
     const handleSelect = (item) => {
         saveRecentSearch(query || item.title || item.name);
         setIsOpen(false);
@@ -180,6 +195,7 @@ const GlobalSearch = () => {
                 
                 <div className="search-item-actions">
                     <div className="action-icons-group">
+                        <button className="action-icon-btn" onClick={(e) => handlePlayTrailer(e, item)} title="Play Trailer"><PlayCircle size={16} /></button>
                         <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'watched')} title="Mark as Watched"><Eye size={16} /></button>
                         <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'watchlist')} title="Add to Watchlist"><Bookmark size={16} /></button>
                         <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'recommend')} title="Recommend"><Send size={16} /></button>

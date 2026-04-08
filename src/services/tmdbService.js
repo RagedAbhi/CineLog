@@ -394,3 +394,72 @@ export const getBatchProvidersTMDB = async (items) => {
         return [];
     }
 };
+
+/**
+ * Internal helper to resolve a TMDB ID from a mixed movie object.
+ */
+const resolveTMDBId = async (movie) => {
+    if (!TMDB_API_KEY) return null;
+    
+    // 1. Direct ID check
+    if (movie.tmdbId && !isNaN(movie.tmdbId)) return movie.tmdbId;
+    if (movie.id && !isNaN(movie.id)) return movie.id;
+
+    const tmdbType = movie.mediaType === 'series' ? 'tv' : 'movie';
+
+    // 2. IMDB ID Lookup
+    if (movie.imdbID && movie.imdbID.startsWith('tt')) {
+        try {
+            const findResponse = await axios.get(`${BASE_URL}/find/${movie.imdbID}`, {
+                params: { api_key: TMDB_API_KEY, external_source: 'imdb_id' }
+            });
+            const result = (tmdbType === 'tv' ? findResponse.data.tv_results : findResponse.data.movie_results)?.[0];
+            if (result) return result.id;
+        } catch (e) {}
+    }
+
+    // 3. Search Fallback (Title + Year)
+    if (movie.title) {
+        try {
+            const cleanYear = movie.year ? String(movie.year).match(/\d{4}/)?.[0] : null;
+            const searchParams = { api_key: TMDB_API_KEY, query: movie.title };
+            if (cleanYear) {
+                if (tmdbType === 'movie') searchParams.year = cleanYear;
+                else searchParams.first_air_date_year = cleanYear;
+            }
+            const searchResponse = await axios.get(`${BASE_URL}/search/${tmdbType}`, { params: searchParams });
+            const result = searchResponse.data.results[0];
+            if (result) return result.id;
+        } catch (e) {}
+    }
+
+    return null;
+};
+
+/**
+ * Fetches the YouTube trailer ID for a specific movie or TV show.
+ * Handles automatic ID resolution if the provided ID is missing or invalid.
+ */
+export const fetchTrailerID = async (movie) => {
+    if (!TMDB_API_KEY || !movie) return null;
+    
+    const tmdbId = await resolveTMDBId(movie);
+    if (!tmdbId) return null;
+
+    const type = movie.mediaType === 'series' ? 'tv' : 'movie';
+    try {
+        const response = await axios.get(`${BASE_URL}/${type}/${tmdbId}/videos`, {
+            params: { api_key: TMDB_API_KEY }
+        });
+        const videos = response.data.results || [];
+        // Priority order: Official Trailer -> Trailer -> Teaser -> Any YouTube video
+        const trailer = videos.find(v => v.site === 'YouTube' && v.type === 'Trailer' && (v.name.includes('Official') || v.official)) ||
+                        videos.find(v => v.site === 'YouTube' && v.type === 'Trailer') || 
+                        videos.find(v => v.site === 'YouTube' && v.type === 'Teaser') ||
+                        videos.find(v => v.site === 'YouTube');
+        return trailer ? trailer.key : null;
+    } catch (e) {
+        console.error('Error fetching trailer:', e);
+        return null;
+    }
+};

@@ -38,6 +38,8 @@ export const SHOW_RECOMMEND_MODAL = 'SHOW_RECOMMEND_MODAL';
 export const HIDE_RECOMMEND_MODAL = 'HIDE_RECOMMEND_MODAL';
 export const SHOW_CONFIRM_MODAL = 'SHOW_CONFIRM_MODAL';
 export const HIDE_CONFIRM_MODAL = 'HIDE_CONFIRM_MODAL';
+export const SHOW_TRAILER_MODAL = 'SHOW_TRAILER_MODAL';
+export const HIDE_TRAILER_MODAL = 'HIDE_TRAILER_MODAL';
 
 // ============================================================
 // ACTION CREATORS
@@ -94,6 +96,15 @@ export const showConfirmModal = (config) => ({
 
 export const hideConfirmModal = () => ({
   type: HIDE_CONFIRM_MODAL
+});
+
+export const showTrailerModal = (youtubeId) => ({
+  type: SHOW_TRAILER_MODAL,
+  payload: youtubeId
+});
+
+export const hideTrailerModal = () => ({
+  type: HIDE_TRAILER_MODAL
 });
 
 export const hideToast = () => ({ type: HIDE_TOAST });

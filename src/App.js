@@ -10,6 +10,7 @@ import Topbar from './components/Topbar';
 import Toast from './components/Toast';
 import RecommendModal from './components/RecommendModal';
 import ConfirmModal from './components/ConfirmModal';
+import TrailerModal from './components/TrailerModal';
 import Dashboard from './pages/Dashboard';
 import MoviesPage from './pages/MoviesPage';
 import TVShowsPage from './pages/TVShowsPage';
@@ -184,6 +185,8 @@ const App = () => {
           </AnimatePresence>
         </main>
       </div>
+
+      <TrailerModal />
     </div>
   );
 };

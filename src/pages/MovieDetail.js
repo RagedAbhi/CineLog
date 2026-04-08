@@ -7,9 +7,9 @@ import { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie } from '
 import MarkWatchedModal from '../components/MarkWatchedModal';
 import AddMovieModal from '../components/AddMovieModal';
 import WatchTogetherModal from '../components/WatchTogetherModal';
-import { fetchStreamingAvailability } from '../services/tmdbService';
+import { fetchStreamingAvailability, fetchTrailerID } from '../services/tmdbService';
 import { getMovieDetailsExternal } from '../services/movieService';
-import { showToast, showRecommendModal, showConfirmModal } from '../store/actions';
+import { showToast, showRecommendModal, showConfirmModal, showTrailerModal } from '../store/actions';
 import axios from 'axios';
 import gsap from 'gsap';
 import config from '../config';
@@ -288,6 +288,21 @@ class MovieDetail extends Component {
     this.props.showRecommendModal(movie);
   }
 
+  handlePlayTrailer = async () => {
+    const movie = this.getMovie();
+    try {
+      this.props.showToast('Fetching trailer...', 'info');
+      const videoId = await fetchTrailerID(movie);
+      if (videoId) {
+        this.props.showTrailerModal(videoId);
+      } else {
+        this.props.showToast('No trailer found on YouTube', 'error');
+      }
+    } catch (err) {
+      this.props.showToast('Failed to load trailer', 'error');
+    }
+  }
+
   startEditing = () => {
     const movie = this.getMovie();
     this.setState({
@@ -482,19 +497,25 @@ class MovieDetail extends Component {
                     </button>
                   )}
                   {movie.isExternalRec && (
-                    <button className="btn btn-secondary glass-panel" onClick={this.handleAddToWatchlist}>
+                    <button className="btn btn-secondary" onClick={this.handleAddToWatchlist}>
                       + Add to Watchlist
                     </button>
                   )}
-                  <button className="btn btn-secondary glass-panel" onClick={this.handleRecommendClick}>
+                  <button className="btn btn-secondary" onClick={this.handleRecommendClick}>
                     ✉ Recommend to Friend
+                  </button>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={this.handlePlayTrailer}
+                  >
+                    ▶ Watch Trailer
                   </button>
                   {!movie.isExternalRec && (
                     <div style={{ display: 'flex', gap: '12px' }}>
-                      <button className="btn btn-secondary glass-panel" style={{ flex: 1 }} onClick={this.startEditing}>
+                      <button className="btn btn-secondary" style={{ flex: 1 }} onClick={this.startEditing}>
                         ✎ Edit
                       </button>
-                      <button className="btn btn-danger" style={{ flex: 1, background: 'rgba(238, 82, 83, 0.1)', borderColor: 'rgba(238, 82, 83, 0.2)' }} onClick={this.handleDelete}>
+                      <button className="btn btn-danger" style={{ flex: 1 }} onClick={this.handleDelete}>
                         ✕ Remove
                       </button>
                     </div>
@@ -680,8 +701,8 @@ class MovieDetail extends Component {
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: '20px' }}>
-                  <button className="btn btn-primary" style={{ padding: '16px 48px', borderRadius: '100px', fontSize: '16px', fontWeight: '700', background: 'var(--accent)', color: '#000' }} onClick={this.handleEditSave}>Save Changes</button>
-                  <button className="btn btn-secondary" style={{ padding: '16px 48px', borderRadius: '100px', fontSize: '16px', fontWeight: '600' }} onClick={() => this.setState({ editing: false })}>Cancel</button>
+                  <button className="btn btn-accent" onClick={this.handleEditSave}>Save Changes</button>
+                  <button className="btn btn-secondary" onClick={() => this.setState({ editing: false })}>Cancel</button>
                 </div>
               </div>
             </div>
@@ -730,6 +751,6 @@ const mapStateToProps = (state) => ({
   loading: state.movies.loading
 });
 
-const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie, showToast, showRecommendModal, showConfirmModal };
+const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie, showToast, showRecommendModal, showConfirmModal, showTrailerModal };
 
 export default connect(mapStateToProps, mapDispatchToProps)(MovieDetailWrapper);

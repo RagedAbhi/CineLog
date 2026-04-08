@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchStreamingAvailability } from '../services/tmdbService';
+import { fetchStreamingAvailability, fetchTrailerID } from '../services/tmdbService';
 import gsap from 'gsap';
 import { useDispatch, useSelector } from 'react-redux';
-import { Plus, Check, Send, Trash2, Clock } from 'lucide-react';
+import { Plus, Check, Send, Trash2, Play } from 'lucide-react';
 import { addMovie, deleteMovie, markAsWatched } from '../store/thunks';
-import { showRecommendModal, showToast, showConfirmModal } from '../store/actions';
+import { showRecommendModal, showToast, showConfirmModal, showTrailerModal } from '../store/actions';
 
 // Wrapper to provide navigate and redux to class component
 function MovieCardWrapper(props) {
@@ -134,6 +134,30 @@ class MovieCard extends Component {
     dispatch(showRecommendModal(movie));
   };
 
+  handlePlayTrailer = async (e) => {
+    e.stopPropagation();
+    const { movie, dispatch } = this.props;
+    
+    // TMDB ID usually comes in as 'id' or '_id' 
+    const tmdbId = movie.id || movie._id;
+    if (!tmdbId && !movie.imdbID) {
+      dispatch(showToast('Trailer unavailable for this title', 'error'));
+      return;
+    }
+
+    try {
+      dispatch(showToast('Fetching trailer...', 'info'));
+      const videoId = await fetchTrailerID(movie);
+      if (videoId) {
+        dispatch(showTrailerModal(videoId));
+      } else {
+        dispatch(showToast('No trailer found on YouTube', 'error'));
+      }
+    } catch (err) {
+      dispatch(showToast('Failed to load trailer', 'error'));
+    }
+  };
+
   render() {
     const { movie, navigate, userMovies } = this.props;
     const { streamingProviders } = this.state;
@@ -162,7 +186,6 @@ class MovieCard extends Component {
         }}
         style={{ cursor: (movie._id || movie.imdbID) ? 'pointer' : 'default' }}
       >
-        {/* Quick Actions Overlay */}
         <div className="movie-card-quick-actions">
           <button 
             className={`card-action-btn ${inWatchlist ? 'remove' : ''}`} 
@@ -179,7 +202,6 @@ class MovieCard extends Component {
           >
             {isWatched ? <Trash2 size={18} /> : <Check size={18} />}
           </button>
-
           <button 
             className="card-action-btn" 
             onClick={this.handleRecommend}
@@ -223,6 +245,13 @@ class MovieCard extends Component {
                 <span>{userCopy?.userRating || movie.rating}/10</span>
               </div>
             )}
+
+            <button 
+                className="btn-trailer-overlay"
+                onClick={this.handlePlayTrailer}
+            >
+                <Play size={14} fill="currentColor" /> WATCH TRAILER
+            </button>
 
             {streamingProviders && streamingProviders.length > 0 && (
               <div className="ott-platforms-inline" style={{ marginTop: '12px' }}>
