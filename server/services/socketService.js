@@ -85,6 +85,7 @@ exports.init = (httpServer) => {
             // Generate a technical system message for the chat
             const timeStr = new Date(currentTime * 1000).toISOString().substr(11, 8);
 
+            let message = null;
             if (action === 'play') message = `${name} played the video`;
             else if (action === 'pause') message = `${name} paused the video`;
             else if (action === 'seek') message = `${name} seeked to ${timeStr}`;

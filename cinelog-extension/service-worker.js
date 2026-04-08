@@ -3,7 +3,7 @@
  * Lightweight Auth/Storage Bridge
  */
 
-const BACKEND_URL = 'http://127.0.0.1:5000';
+const BACKEND_URL = 'https://mighty-ghosts-shave.loca.lt';
 
 console.log('[CineLog] Service Worker v4.1 Active');
 

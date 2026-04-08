@@ -3725,3 +3725,51 @@
 {"level":"info","message":"[Sync Log] Room: A43AE4 | User: RagedAbhi | Action: play","service":"cinelog-server","timestamp":"2026-04-08 21:33:51"}
 {"level":"info","message":"[Sync Log] Room: A43AE4 | User: RagedAbhi | Action: pause","service":"cinelog-server","timestamp":"2026-04-08 21:33:52"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:34:00"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb://abhilashkhadanga_db_user:****@ac-rzqxfhz-shard-00-00.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-01.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-02.exbkqcm.mongodb.net:27017/?ssl=true&replicaSet=atlas-580zg9-shard-0&authSource=admin&appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-08 21:41:38"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-08 21:41:38"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-08 21:41:39"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:41:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:42:35"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-08 21:42:37"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-08 21:42:37"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:42:37"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-08 21:42:37"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-08 21:42:39"}
+{"level":"info","message":"GET /uploads/69b32908faf5a5c7630aa027-1774652483618.JPG","service":"cinelog-server","timestamp":"2026-04-08 21:42:39"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-08 21:42:40"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:42:48"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:42:58"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:43:08"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:43:18"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:43:28"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:43:38"}
+{"level":"info","message":"POST /api/auth/login","service":"cinelog-server","timestamp":"2026-04-08 21:43:49"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:43:56"}
+{"level":"info","message":"POST /api/rooms/A43AE4/join","service":"cinelog-server","timestamp":"2026-04-08 21:44:20"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room A43AE4","service":"cinelog-server","timestamp":"2026-04-08 21:44:20"}
+{"level":"info","message":"GET /uploads/69b32908faf5a5c7630aa027-1774652483618.JPG","service":"cinelog-server","timestamp":"2026-04-08 21:44:20"}
+{"level":"info","message":"[Socket Auth] Success: howl:) (IKFF6n3UXHcE_tvyAAAF)","service":"cinelog-server","timestamp":"2026-04-08 21:44:21"}
+{"level":"info","message":"[Socket] New connection: IKFF6n3UXHcE_tvyAAAF","service":"cinelog-server","timestamp":"2026-04-08 21:44:21"}
+{"level":"info","message":"[Socket] howl:) (IKFF6n3UXHcE_tvyAAAF) joined room A43AE4","service":"cinelog-server","timestamp":"2026-04-08 21:44:21"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:44:56"}
+{"level":"info","message":"[Sync Log] Room: A43AE4 | User: howl:) | Action: play","service":"cinelog-server","timestamp":"2026-04-08 21:44:57"}
+{"level":"info","message":"[Sync Log] Room: A43AE4 | User: howl:) | Action: pause","service":"cinelog-server","timestamp":"2026-04-08 21:44:59"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:45:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:46:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:47:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:48:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:49:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:50:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:51:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:52:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:53:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:54:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:55:56"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb://abhilashkhadanga_db_user:****@ac-rzqxfhz-shard-00-00.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-01.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-02.exbkqcm.mongodb.net:27017/?ssl=true&replicaSet=atlas-580zg9-shard-0&authSource=admin&appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-08 21:56:13"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-08 21:56:13"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-08 21:56:14"}
+{"level":"info","message":"[Socket Auth] Success: howl:) (QKBuFMAKpfw_WUvqAAAB)","service":"cinelog-server","timestamp":"2026-04-08 21:56:19"}
+{"level":"info","message":"[Socket] New connection: QKBuFMAKpfw_WUvqAAAB","service":"cinelog-server","timestamp":"2026-04-08 21:56:19"}
+{"level":"info","message":"[Socket] howl:) (QKBuFMAKpfw_WUvqAAAB) joined room A43AE4","service":"cinelog-server","timestamp":"2026-04-08 21:56:19"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:56:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 21:57:56"}
