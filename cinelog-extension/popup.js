@@ -3,7 +3,7 @@
  * Handles login, room join/leave, and live member display.
  */
 
-const BACKEND_URL = 'http://127.0.0.1:5000';
+const BACKEND_URL = 'https://cuerates.onrender.com';
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);

@@ -10,8 +10,8 @@
   ],
   "host_permissions": [
     "https://www.netflix.com/*",
-    "http://127.0.0.1:5000/*",
-    "ws://127.0.0.1:5000/*"
+    "https://cuerates.onrender.com/*",
+    "wss://cuerates.onrender.com/*"
   ],
   "background": {
     "service_worker": "service-worker.js"
