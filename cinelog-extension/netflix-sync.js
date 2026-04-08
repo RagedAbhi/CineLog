@@ -7,9 +7,9 @@
     'use strict';
 
     const BACKEND_URL      = 'https://cuerates.onrender.com';
-    const SYNC_DEBOUNCE_MS = 300;
-    const SEEK_TOLERANCE_S = 2;
-    const ECHO_WINDOW_MS   = 1200;
+    const SYNC_DEBOUNCE_MS = 500;
+    const SEEK_TOLERANCE_S = 1.0;
+    const ECHO_WINDOW_MS   = 1500;
 
     let socket      = null;
     let video       = null;
@@ -21,6 +21,8 @@
     let watcher     = null;
     let overlayVisible = true;
     let lastRemoteAction = 0;
+    let lastAppliedPos   = -1;
+    let lastAppliedAction = null;
 
     console.log('%c🎬 [CineLog] Sync Engine v4.0 Active', 'color: #818cf8; font-size: 14px; font-weight: bold;');
 
@@ -37,26 +39,60 @@
 
     function emitSync(action, currentTime) {
         if (!socket?.connected || !roomCode) return;
+        
+        // SYNC SHIELD: Don't echo back what we just received from the server
+        const isEchoOfRemote = (action === lastAppliedAction && Math.abs(currentTime - lastAppliedPos) < 0.5);
+        if (isEchoOfRemote) {
+            console.log(`[CineLog] Sync Shield: Ignoring echo of remote ${action}`);
+            return;
+        }
+
         clearTimeout(syncTimer);
         syncTimer = setTimeout(() => {
+            console.log(`[CineLog] Outgoing Sync: ${action} at ${formatTime(currentTime)}`);
             socket.emit('room:sync', { roomCode, action, currentTime });
         }, SYNC_DEBOUNCE_MS);
     }
 
     function applySync(action, targetTime) {
         if (!video) return;
+        
+        // Track what we applied to ignore it in emitSync
+        lastAppliedPos = targetTime;
+        lastAppliedAction = action;
+        
         isSyncing = true;
         markRemoteAction();
+
+        console.log(`[CineLog] Applying Remote Sync: ${action} at ${formatTime(targetTime)}`);
 
         if (Math.abs(video.currentTime - targetTime) > SEEK_TOLERANCE_S) {
             video.currentTime = targetTime;
         }
 
-        if (action === 'play')  video.play().catch(() => {});
-        if (action === 'pause') video.pause();
-        if (action === 'seek')  video.currentTime = targetTime;
+        if (action === 'play') {
+            video.play().catch(() => {
+                showBadge('⚠️ Play blocked — click anywhere to allow audio', 5000);
+            });
+        } 
+        else if (action === 'pause') {
+            video.pause();
+        }
+        else if (action === 'seek') {
+            video.currentTime = targetTime;
+        }
 
-        setTimeout(() => { isSyncing = false; }, 1000);
+        // Keep shield active for a bit longer to catch late events
+        setTimeout(() => { 
+            isSyncing = false; 
+            // We clear the applied refs after a delay to allow manual seeks again
+            setTimeout(() => {
+                if (Date.now() - lastRemoteAction > 2000) {
+                    lastAppliedPos = -1;
+                    lastAppliedAction = null;
+                }
+            }, 1000);
+        }, 1500);
     }
 
     // ── Socket Management ────────────────────────────────────────────────────
@@ -261,6 +297,7 @@
             overlayVisible = !overlayVisible;
             document.getElementById('cl-chat-messages').style.display = overlayVisible ? 'flex' : 'none';
             document.getElementById('cl-chat-input-row').style.display = overlayVisible ? 'flex' : 'none';
+            document.getElementById('cinelog-chat-overlay').style.width = overlayVisible ? '300px' : '120px';
             document.getElementById('cl-chat-toggle').textContent = overlayVisible ? '—' : '+';
         };
         document.getElementById('cl-chat-send').onclick = sendChat;
