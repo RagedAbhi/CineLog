@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    const BACKEND_URL      = 'https://c3e0e43af2330c.lhr.life';
+    const BACKEND_URL      = 'https://save-upper-beam-corp.trycloudflare.com';
     const SYNC_DEBOUNCE_MS = 300;
     const SEEK_TOLERANCE_S = 2;
     const ECHO_WINDOW_MS   = 1200;
