@@ -172,7 +172,16 @@
                 isSyncing = true;
                 video.currentTime = currentTime;
                 if (paused) video.pause(); else video.play().catch(() => {});
-                showBadge('Synced with room');
+                
+                const mins = Math.floor(currentTime / 60);
+                const secs = String(Math.floor(currentTime % 60)).padStart(2, '0');
+                const timeLabel = `${mins}:${secs}`;
+                
+                showBadge(`Synced to ${timeLabel}`);
+                
+                // Also show in chat as a system message
+                appendChatMessage({ message: `Room synced to ${timeLabel}`, isSystem: true });
+
                 setTimeout(() => { isSyncing = false; }, 1000);
                 break;
             }
@@ -219,13 +228,21 @@
         }});
     }
 
-    function appendChatMessage({ username, message, userId }) {
+    function appendChatMessage({ username, message, userId, isSystem }) {
         const container = document.getElementById('cl-chat-messages');
         if (!container) return;
-        const isOwn = userId && currentUser && userId === (currentUser._id || currentUser.id);
+
         const div = document.createElement('div');
-        div.className = `cl-msg${isOwn ? ' cl-msg-own' : ''}`;
-        div.innerHTML = `<span class="cl-msg-user">${String(username).replace(/</g,'&lt;')}</span><span class="cl-msg-text">${String(message).replace(/</g,'&lt;')}</span>`;
+        
+        if (isSystem) {
+            div.className = 'cl-msg-system';
+            div.innerHTML = `<span class="cl-msg-text-system">${String(message).replace(/</g,'&lt;')}</span>`;
+        } else {
+            const isOwn = userId && currentUser && userId === (currentUser._id || currentUser.id);
+            div.className = `cl-msg${isOwn ? ' cl-msg-own' : ''}`;
+            div.innerHTML = `<span class="cl-msg-user">${String(username).replace(/</g,'&lt;')}</span><span class="cl-msg-text">${String(message).replace(/</g,'&lt;')}</span>`;
+        }
+
         container.appendChild(div);
         container.scrollTop = container.scrollHeight;
         if (container.children.length > 50) container.children[0].remove();
@@ -256,8 +273,10 @@
             #cl-chat-messages { height: 220px; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
             .cl-msg { display: flex; flex-direction: column; gap: 2px; }
             .cl-msg-own { align-items: flex-end; }
+            .cl-msg-system { align-items: center; margin: 4px 0; }
             .cl-msg-user { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 600; }
             .cl-msg-text { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 6px 12px; font-size: 13px; max-width: 85%; }
+            .cl-msg-text-system { font-size: 11px; color: rgba(255,255,255,0.3); font-style: italic; }
             .cl-msg-own .cl-msg-text { background: rgba(129,140,248,0.2); }
             #cl-chat-input-row { display: flex; border-top: 1px solid rgba(255,255,255,0.06); }
             #cl-chat-input { flex: 1; background: transparent; border: none; padding: 12px; color: #fff; outline: none; font-size: 13px; }

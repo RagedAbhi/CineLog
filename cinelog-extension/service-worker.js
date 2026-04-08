@@ -119,7 +119,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         case 'CINELOG_EMIT_SYNC': {
             if (socket && currentRoomCode) {
-                socket.emit('room:sync', { roomCode: currentRoomCode, ...message });
+                chrome.storage.local.get('cinelogUser', ({ cinelogUser }) => {
+                    socket.emit('room:sync', { 
+                        roomCode: currentRoomCode, 
+                        ...message,
+                        username: cinelogUser?.username || 'You'
+                    });
+                });
             }
             sendResponse({ ok: true });
             break;

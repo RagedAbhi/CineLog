@@ -42,9 +42,28 @@ exports.init = (httpServer) => {
         });
 
         // Relay play/pause/seek to everyone else in the room
-        socket.on('room:sync', ({ roomCode, action, currentTime }) => {
+        socket.on('room:sync', ({ roomCode, action, currentTime, username }) => {
             if (!roomCode) return;
+            
+            // Broadcast the sync action to other members
             socket.to(`room:${roomCode}`).emit('room:synced', { action, currentTime, socketId: socket.id });
+
+            // Generate a technical system message for the chat
+            const timeStr = new Date(currentTime * 1000).toISOString().substr(11, 8);
+            let message = '';
+            const name = username || 'Someone';
+
+            if (action === 'play') message = `${name} played the video`;
+            else if (action === 'pause') message = `${name} paused the video`;
+            else if (action === 'seek') message = `${name} seeked to ${timeStr}`;
+
+            if (message) {
+                io.to(`room:${roomCode}`).emit('room:message', { 
+                    message, 
+                    isSystem: true, 
+                    timestamp: new Date() 
+                });
+            }
         });
 
         // FIX #4: Late joiner requests current playback state from host
