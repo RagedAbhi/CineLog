@@ -3,7 +3,7 @@
  * Lightweight Auth/Storage Bridge
  */
 
-const BACKEND_URL = 'https://save-upper-beam-corp.trycloudflare.com';
+const BACKEND_URL = 'https://203f444e6b83de.lhr.life';
 
 console.log('[CineLog] Service Worker v4.1 Active');
 

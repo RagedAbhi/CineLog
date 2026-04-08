@@ -3919,3 +3919,42 @@
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:13:56"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:14:56"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:15:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:16:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:17:56"}
+{"level":"info","message":"GET /","service":"cinelog-server","timestamp":"2026-04-08 23:18:00"}
+{"level":"info","message":"GET /","service":"cinelog-server","timestamp":"2026-04-08 23:18:51"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:18:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:19:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:20:56"}
+{"level":"info","message":"POST /api/auth/login","service":"cinelog-server","timestamp":"2026-04-08 23:21:54"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:21:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:22:42"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:22:48"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:22:58"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:23:08"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:23:18"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:23:27"}
+{"level":"info","message":"POST /api/rooms/97E229/leave","service":"cinelog-server","timestamp":"2026-04-08 23:23:30"}
+{"level":"info","message":"[Socket] Event 'room:dissolved' sent to room 97E229","service":"cinelog-server","timestamp":"2026-04-08 23:23:30"}
+{"level":"info","message":"POST /api/rooms","service":"cinelog-server","timestamp":"2026-04-08 23:23:35"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:23:37"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:23:48"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:23:58"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:24:08"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:24:18"}
+{"level":"info","message":"POST /api/rooms/517B89/join","service":"cinelog-server","timestamp":"2026-04-08 23:24:19"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room 517B89","service":"cinelog-server","timestamp":"2026-04-08 23:24:20"}
+{"level":"info","message":"GET /uploads/69b32908faf5a5c7630aa027-1774652483618.JPG","service":"cinelog-server","timestamp":"2026-04-08 23:24:20"}
+{"level":"info","message":"[Socket Auth] Success: howl:) (j4zgHDxFZalcl07LAAAD)","service":"cinelog-server","timestamp":"2026-04-08 23:24:21"}
+{"level":"info","message":"[Socket] New connection: j4zgHDxFZalcl07LAAAD","service":"cinelog-server","timestamp":"2026-04-08 23:24:21"}
+{"level":"info","message":"[Socket] howl:) (j4zgHDxFZalcl07LAAAD) joined room 517B89","service":"cinelog-server","timestamp":"2026-04-08 23:24:21"}
+{"level":"info","message":"[Sync Log] Room: 517B89 | User: howl:) | Action: play","service":"cinelog-server","timestamp":"2026-04-08 23:24:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:24:28"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:24:38"}
+{"level":"info","message":"[Sync Log] Room: 517B89 | User: howl:) | Action: pause","service":"cinelog-server","timestamp":"2026-04-08 23:24:39"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:24:56"}
+{"level":"info","message":"GET /","service":"cinelog-server","timestamp":"2026-04-08 23:25:17"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:25:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:26:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:27:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 23:28:56"}
