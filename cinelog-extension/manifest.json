@@ -14,8 +14,7 @@
     "ws://127.0.0.1:5000/*"
   ],
   "background": {
-    "service_worker": "service-worker.js",
-    "type": "module"
+    "service_worker": "service-worker.js"
   },
   "content_scripts": [
     {
