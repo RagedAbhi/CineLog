@@ -152,9 +152,11 @@
                 pendingSync = { action, currentTime };
                 showSyncPrompt(action, currentTime);
             } else {
-                // If it's a minor update (just play/pause without seek), we can auto-apply if within tolerance
-                if (action === 'play' || action === 'pause') {
-                    applySync(action, video.currentTime);
+                // Real-time synchronization for Play/Pause if already at the correct time
+                if (action === 'play' && video.paused) {
+                    applySync('play', video.currentTime);
+                } else if (action === 'pause' && !video.paused) {
+                    applySync('pause', video.currentTime);
                 }
             }
         }
@@ -229,6 +231,19 @@
         if (isWatchPage) {
             injectOverlay();
             showBadge(`🎬 Connected to ${roomCode}`);
+
+            // STATE PERSISTENCE: Check if we reloaded into a paused state
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('clpaused') === '1') {
+                const pauseInterval = setInterval(() => {
+                    if (video) {
+                        video.pause();
+                        clearInterval(pauseInterval);
+                        console.log('[CineLog] State Persistence: Applied initial pause');
+                    }
+                }, 200);
+                setTimeout(() => clearInterval(pauseInterval), 10000);
+            }
         } else {
             showBadge(`🎬 Joined ${roomCode}! Watch a title to sync.`, 5000);
         }
@@ -430,6 +445,13 @@
                 const url = new URL(window.location.href);
                 url.searchParams.set('t', Math.floor(pendingSync.currentTime));
                 url.searchParams.set('clroom', roomCode);
+                
+                // If the host is paused, tell the reloaded page to pause too
+                if (pendingSync.action === 'pause') {
+                    url.searchParams.set('clpaused', '1');
+                } else {
+                    url.searchParams.delete('clpaused');
+                }
                 
                 hideSyncPrompt();
                 showBadge('🚀 Snapping to Host... (Native Sync)');
