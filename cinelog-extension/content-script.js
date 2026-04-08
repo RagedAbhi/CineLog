@@ -1,118 +1,28 @@
 /**
  * CineLog Extension — Content Script (injected into netflix.com/watch/*)
  *
- * Responsibilities:
- * - Finds the Netflix <video> element and attaches play/pause/seek listeners.
- * - Sends sync events to the background service worker.
- * - Receives sync commands from background and applies them to the video.
- * - Injects a minimal chat overlay on the Netflix page.
- * - Auto-joins room if ?clroom=XXXX is in the URL.
- * - Requests current playback state from others when joining late (catch-up).
+ * KEY FIX: The overlay and video watcher now initialize dynamically when
+ * the user joins a room from the popup, without requiring a page refresh.
+ * The background worker sends CINELOG_ROOM_JOINED after any room join.
  */
 
 (function () {
     'use strict';
 
-    const BACKEND_URL = 'http://127.0.0.1:5000'; // FIX #1: Use local dev server, not Render
+    const BACKEND_URL = 'http://127.0.0.1:5000';
     const SYNC_DEBOUNCE_MS = 300;
-    const SEEK_TOLERANCE_S = 2; // seconds of drift before forcing a seek
+    const SEEK_TOLERANCE_S = 2;
 
     let video = null;
-    let isSyncing = false; // guard against echo loops
+    let isSyncing = false;
     let syncTimeout = null;
     let roomCode = null;
     let currentUser = null;
     let chatOverlayVisible = true;
-    let videoWatcherInterval = null; // FIX #3: persistent video watcher handle
+    let videoWatcherInterval = null;
+    let initialized = false; // guard: don't double-init
 
-    // ── Init ────────────────────────────────────────────────────────────────
-
-    function init() {
-        // Check URL for room code
-        const params = new URLSearchParams(window.location.search);
-        const urlRoom = params.get('clroom');
-
-        chrome.storage.session.get('roomCode', ({ roomCode: storedRoom }) => {
-            roomCode = urlRoom || storedRoom || null;
-
-            if (roomCode && urlRoom) {
-                // Store it so it persists through Netflix's own redirects
-                chrome.storage.session.set({ roomCode });
-                autoJoinRoom(roomCode);
-            }
-
-            chrome.storage.local.get(['cinelogToken', 'cinelogUser'], ({ cinelogToken, cinelogUser }) => {
-                if (cinelogToken && roomCode) {
-                    currentUser = cinelogUser || null;
-                    startVideoWatcher(); // FIX #3: use persistent watcher
-                    injectChatOverlay();
-                    // FIX #4: Request state from existing room members (catch-up)
-                    requestRoomState();
-                }
-            });
-        });
-    }
-
-    // ── Auto-join via REST ──────────────────────────────────────────────────
-
-    async function autoJoinRoom(code) {
-        const { cinelogToken } = await chrome.storage.local.get('cinelogToken');
-        if (!cinelogToken) return;
-
-        try {
-            // FIX #1: Use BACKEND_URL constant, not hardcoded Render URL
-            const res = await fetch(`${BACKEND_URL}/api/rooms/${code}/join`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${cinelogToken}`
-                }
-            });
-            if (res.ok) {
-                chrome.runtime.sendMessage({ type: 'CINELOG_JOIN_ROOM', roomCode: code });
-                showBadge(`Joined room ${code}`);
-            }
-        } catch (e) {
-            console.warn('[CineLog] Auto-join failed:', e);
-        }
-    }
-
-    // ── FIX #4: Catch-up: request current state from host ──────────────────
-
-    function requestRoomState() {
-        // Give other members a moment to be ready, then ask for current state
-        setTimeout(() => {
-            chrome.runtime.sendMessage({ type: 'CINELOG_REQUEST_STATE' });
-        }, 1500);
-    }
-
-    // ── FIX #3: Persistent video watcher ───────────────────────────────────
-    // Instead of a one-shot MutationObserver that stops when video is found,
-    // we poll every second so any new <video> (e.g. after title navigation) is picked up.
-
-    function startVideoWatcher() {
-        if (videoWatcherInterval) return; // already running
-        videoWatcherInterval = setInterval(() => {
-            const v = document.querySelector('video');
-            if (v && v !== video) {
-                video = v;
-                attachVideoListeners();
-                console.log('[CineLog] New video element detected & listeners attached');
-            }
-        }, 1000);
-    }
-
-    function attachVideoListeners() {
-        if (!video) return;
-        // Remove old listeners first to avoid duplicates
-        video.removeEventListener('play', onPlay);
-        video.removeEventListener('pause', onPause);
-        video.removeEventListener('seeked', onSeeked);
-
-        video.addEventListener('play', onPlay);
-        video.addEventListener('pause', onPause);
-        video.addEventListener('seeked', onSeeked);
-    }
+    // ── Helpers ─────────────────────────────────────────────────────────────
 
     function emitSync(action, currentTime) {
         if (isSyncing) return;
@@ -126,21 +36,159 @@
     function onPause()  { emitSync('pause', video.currentTime); }
     function onSeeked() { emitSync('seek',  video.currentTime); }
 
-    // ── Receive sync from background ────────────────────────────────────────
+    function applySeekIfNeeded(targetTime) {
+        if (Math.abs(video.currentTime - targetTime) > SEEK_TOLERANCE_S) {
+            video.currentTime = targetTime;
+        }
+    }
+
+    function attachVideoListeners() {
+        if (!video) return;
+        video.removeEventListener('play', onPlay);
+        video.removeEventListener('pause', onPause);
+        video.removeEventListener('seeked', onSeeked);
+        video.addEventListener('play', onPlay);
+        video.addEventListener('pause', onPause);
+        video.addEventListener('seeked', onSeeked);
+        console.log('[CineLog] Video listeners attached');
+    }
+
+    // ── Persistent video watcher ─────────────────────────────────────────────
+    // Polls every second so any new <video> (e.g. after title navigation) gets picked up
+
+    function startVideoWatcher() {
+        if (videoWatcherInterval) return;
+        videoWatcherInterval = setInterval(() => {
+            const v = document.querySelector('video');
+            if (v && v !== video) {
+                video = v;
+                attachVideoListeners();
+            }
+        }, 1000);
+        // Also check immediately
+        const v = document.querySelector('video');
+        if (v) { video = v; attachVideoListeners(); }
+    }
+
+    function stopVideoWatcher() {
+        if (videoWatcherInterval) {
+            clearInterval(videoWatcherInterval);
+            videoWatcherInterval = null;
+        }
+        if (video) {
+            video.removeEventListener('play', onPlay);
+            video.removeEventListener('pause', onPause);
+            video.removeEventListener('seeked', onSeeked);
+            video = null;
+        }
+    }
+
+    // ── Core initializer ─────────────────────────────────────────────────────
+    // Called either at page load (if already in a room) OR dynamically
+    // when the background sends CINELOG_ROOM_JOINED
+
+    function activate(code, user) {
+        if (initialized) return;
+        initialized = true;
+        roomCode = code;
+        currentUser = user;
+
+        console.log('[CineLog] Activated for room:', roomCode);
+        startVideoWatcher();
+        injectChatOverlay();
+        showBadge(`🎬 CineLog • Room ${roomCode}`);
+
+        // Request current state from existing members (catch-up for late joiner)
+        setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'CINELOG_REQUEST_STATE' });
+        }, 1500);
+    }
+
+    function deactivate() {
+        initialized = false;
+        roomCode = null;
+        stopVideoWatcher();
+        const overlay = document.getElementById('cinelog-chat-overlay');
+        if (overlay) overlay.remove();
+        showBadge('CineLog • Left room');
+    }
+
+    // ── Auto-join via REST (for ?clroom= URL param) ──────────────────────────
+
+    async function autoJoinRoom(code) {
+        const { cinelogToken } = await chrome.storage.local.get('cinelogToken');
+        if (!cinelogToken) return;
+
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/rooms/${code}/join`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${cinelogToken}`
+                }
+            });
+            if (res.ok) {
+                chrome.runtime.sendMessage({ type: 'CINELOG_JOIN_ROOM', roomCode: code });
+                // activate() will be called when background echoes CINELOG_ROOM_JOINED
+            }
+        } catch (e) {
+            console.warn('[CineLog] Auto-join failed:', e);
+        }
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    // Only activates if already in a room at page load time
+
+    function init() {
+        const params = new URLSearchParams(window.location.search);
+        const urlRoom = params.get('clroom');
+
+        chrome.storage.session.get('roomCode', ({ roomCode: storedRoom }) => {
+            const code = urlRoom || storedRoom || null;
+
+            if (urlRoom) {
+                chrome.storage.session.set({ roomCode: urlRoom });
+                autoJoinRoom(urlRoom);
+                return; // activate() triggered by CINELOG_ROOM_JOINED echo
+            }
+
+            if (code) {
+                chrome.storage.local.get(['cinelogToken', 'cinelogUser'], ({ cinelogToken, cinelogUser }) => {
+                    if (cinelogToken) {
+                        activate(code, cinelogUser || null);
+                    }
+                });
+            }
+        });
+    }
+
+    // ── Message listener ─────────────────────────────────────────────────────
 
     chrome.runtime.onMessage.addListener((message) => {
 
         switch (message.type) {
 
+            // KEY FIX: Background fires this when popup joins a room.
+            // This makes overlay appear WITHOUT a Netflix page refresh.
+            case 'CINELOG_ROOM_JOINED': {
+                chrome.storage.local.get('cinelogUser', ({ cinelogUser }) => {
+                    activate(message.roomCode, cinelogUser || null);
+                });
+                break;
+            }
+
+            // Room left from popup
+            case 'CINELOG_ROOM_LEFT': {
+                deactivate();
+                break;
+            }
+
             case 'CINELOG_SYNC': {
                 if (!video) return;
                 const { action, currentTime } = message.payload;
 
-                // FIX #2: Set isSyncing flag BEFORE triggering video actions,
-                // and clear it AFTER the event fully settles (1000ms gives buffer
-                // for Netflix's own async event chain to complete).
                 isSyncing = true;
-                clearTimeout(syncTimeout); // cancel any pending outbound sync
+                clearTimeout(syncTimeout);
 
                 if (action === 'play') {
                     applySeekIfNeeded(currentTime);
@@ -156,7 +204,7 @@
                 break;
             }
 
-            // FIX #4: Someone new joined and is asking for current state
+            // Someone new joined and is asking for current state
             case 'CINELOG_STATE_REQUEST': {
                 if (!video) return;
                 chrome.runtime.sendMessage({
@@ -169,7 +217,7 @@
                 break;
             }
 
-            // FIX #4: We received the state from the host — seek to catch up
+            // We received the state from another member — seek to catch up
             case 'CINELOG_STATE_RESPONSE': {
                 if (!video) return;
                 const { currentTime, paused } = message.state;
@@ -180,7 +228,9 @@
                 } else {
                     video.play().catch(() => {});
                 }
-                showBadge(`Synced to ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`);
+                const mins = Math.floor(currentTime / 60);
+                const secs = String(Math.floor(currentTime % 60)).padStart(2, '0');
+                showBadge(`Synced to ${mins}:${secs}`);
                 setTimeout(() => { isSyncing = false; }, 1000);
                 break;
             }
@@ -189,28 +239,26 @@
                 appendChatMessage(message.payload);
                 break;
             }
+
             case 'CINELOG_MEMBER_JOIN': {
                 showBadge(`${message.payload.user?.username || 'Someone'} joined`);
                 break;
             }
+
             case 'CINELOG_MEMBER_LEFT': {
                 showBadge(`${message.payload.user?.username || 'Someone'} left`);
                 break;
             }
+
             case 'CINELOG_DISSOLVED': {
                 showBadge('Host ended the room', 4000);
+                deactivate();
                 break;
             }
         }
     });
 
-    function applySeekIfNeeded(targetTime) {
-        if (Math.abs(video.currentTime - targetTime) > SEEK_TOLERANCE_S) {
-            video.currentTime = targetTime;
-        }
-    }
-
-    // ── Chat overlay ────────────────────────────────────────────────────────
+    // ── Chat overlay ─────────────────────────────────────────────────────────
 
     function injectChatOverlay() {
         if (document.getElementById('cinelog-chat-overlay')) return;
@@ -219,7 +267,7 @@
         overlay.id = 'cinelog-chat-overlay';
         overlay.innerHTML = `
             <div id="cl-chat-header">
-                <span>💬 CineLog</span>
+                <span>🎬 CineLog</span>
                 <button id="cl-chat-toggle">—</button>
             </div>
             <div id="cl-chat-messages"></div>
@@ -251,12 +299,12 @@
     function sendChat() {
         const input = document.getElementById('cl-chat-input');
         if (!input || !input.value.trim()) return;
-        const message = input.value.trim();
+        const text = input.value.trim();
         input.value = '';
         chrome.runtime.sendMessage({
             type: 'CINELOG_EMIT_CHAT',
             payload: {
-                message,
+                message: text,
                 userId: currentUser?._id,
                 username: currentUser?.username || 'You',
                 avatar: currentUser?.profilePicture
@@ -275,7 +323,6 @@
         container.appendChild(div);
         container.scrollTop = container.scrollHeight;
 
-        // Auto-fade older messages (keep last 30)
         const msgs = container.querySelectorAll('.cl-msg');
         if (msgs.length > 30) msgs[0].remove();
     }
@@ -298,7 +345,7 @@
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // ── Injected styles ─────────────────────────────────────────────────────
+    // ── Styles ───────────────────────────────────────────────────────────────
 
     function injectChatStyles() {
         if (document.getElementById('cl-chat-styles')) return;
@@ -411,7 +458,7 @@
         document.head.appendChild(style);
     }
 
-    // ── Start ───────────────────────────────────────────────────────────────
+    // ── Start ─────────────────────────────────────────────────────────────────
     init();
 
 })();

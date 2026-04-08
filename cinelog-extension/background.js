@@ -116,6 +116,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             currentRoomCode = roomCode;
             chrome.storage.session.set({ roomCode });
             if (socket) socket.emit('room:join_socket', roomCode);
+            // Notify any open Netflix tabs so they initialize immediately
+            broadcastToNetflixTab({ type: 'CINELOG_ROOM_JOINED', roomCode });
             sendResponse({ ok: true });
             break;
         }
@@ -125,6 +127,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (socket && currentRoomCode) {
                 socket.emit('room:leave_socket', currentRoomCode);
             }
+            // Notify Netflix tabs to remove overlay
+            broadcastToNetflixTab({ type: 'CINELOG_ROOM_LEFT' });
             currentRoomCode = null;
             chrome.storage.session.remove('roomCode');
             sendResponse({ ok: true });
