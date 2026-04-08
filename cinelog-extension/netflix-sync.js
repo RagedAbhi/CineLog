@@ -7,9 +7,9 @@
     'use strict';
 
     const BACKEND_URL      = 'https://cuerates.onrender.com';
-    const SYNC_DEBOUNCE_MS = 500;
-    const SEEK_TOLERANCE_S = 1.0;
-    const ECHO_WINDOW_MS   = 1500;
+    const SYNC_DEBOUNCE_MS = 800;
+    const SEEK_TOLERANCE_S = 3.0;
+    const ECHO_WINDOW_MS   = 2500;
 
     let socket      = null;
     let video       = null;
@@ -23,6 +23,7 @@
     let lastRemoteAction = 0;
     let lastAppliedPos   = -1;
     let lastAppliedAction = null;
+    let handshakeShield  = true; // Start with shield active
 
     console.log('%c🎬 [CineLog] Sync Engine v4.0 Active', 'color: #818cf8; font-size: 14px; font-weight: bold;');
 
@@ -38,12 +39,11 @@
     function onSeeked() { if (!isSyncing && !isEcho()) emitSync('seek',  video.currentTime); }
 
     function emitSync(action, currentTime) {
-        if (!socket?.connected || !roomCode) return;
+        if (!socket?.connected || !roomCode || handshakeShield) return;
         
         // SYNC SHIELD: Don't echo back what we just received from the server
-        const isEchoOfRemote = (action === lastAppliedAction && Math.abs(currentTime - lastAppliedPos) < 0.5);
+        const isEchoOfRemote = (action === lastAppliedAction && Math.abs(currentTime - lastAppliedPos) < 1.0);
         if (isEchoOfRemote) {
-            console.log(`[CineLog] Sync Shield: Ignoring echo of remote ${action}`);
             return;
         }
 
@@ -135,13 +135,12 @@
 
         socket.on('room:state_response', ({ state }) => {
             if (!state) return;
-            // Delay initial state application by 2s to ensure player stability for joiners
+            // Longer delay for initial state to ensure DRM stability
             setTimeout(() => {
                 applySync(state.paused ? 'pause' : 'play', state.currentTime);
                 const t = formatTime(state.currentTime);
                 showBadge(`⏱ Synced to ${t}`);
-                appendChatMessage({ message: `Room synced to ${t}`, isSystem: true });
-            }, 2000);
+            }, 3000);
         });
 
         socket.on('room:message', (data) => {
@@ -205,6 +204,10 @@
 
         startWatcher();
         connectSocket(token);
+
+        // ACTIVATE HANDSHAKE SHIELD (Wait 3s before allowing outgoing syncs)
+        handshakeShield = true;
+        setTimeout(() => { handshakeShield = false; console.log('[CineLog] Handshake shield released'); }, 3000);
 
         const isWatchPage = window.location.pathname.includes('/watch/');
         if (isWatchPage) {
@@ -297,11 +300,33 @@
         document.body.appendChild(overlay);
         injectStyles();
         document.getElementById('cl-chat-toggle').onclick = () => {
+            // DETACH MODE: For browsers like Opera, we actually remove the box to clear DRM flags
             overlayVisible = !overlayVisible;
-            document.getElementById('cl-chat-messages').style.display = overlayVisible ? 'flex' : 'none';
-            document.getElementById('cl-chat-input-row').style.display = overlayVisible ? 'flex' : 'none';
-            document.getElementById('cinelog-chat-overlay').style.width = overlayVisible ? '300px' : '120px';
-            document.getElementById('cl-chat-toggle').textContent = overlayVisible ? '—' : '+';
+            const messages = document.getElementById('cl-chat-messages');
+            const inputRow = document.getElementById('cl-chat-input-row');
+            const overlay = document.getElementById('cinelog-chat-overlay');
+
+            if (!overlayVisible) {
+                // Shrink and hide content
+                messages.style.display = 'none';
+                inputRow.style.display = 'none';
+                overlay.style.width = '40px';
+                overlay.style.height = '40px';
+                overlay.style.borderRadius = '50%';
+                overlay.style.background = 'rgba(129,140,248,0.5)';
+                document.getElementById('cl-chat-toggle').textContent = '+';
+                document.getElementById('cl-chat-header').style.display = 'none';
+            } else {
+                // Restore
+                messages.style.display = 'flex';
+                inputRow.style.display = 'flex';
+                overlay.style.width = '300px';
+                overlay.style.height = 'auto';
+                overlay.style.borderRadius = '18px';
+                overlay.style.background = 'rgba(8,8,16,0.94)';
+                document.getElementById('cl-chat-toggle').textContent = '—';
+                document.getElementById('cl-chat-header').style.display = 'flex';
+            }
         };
         document.getElementById('cl-chat-send').onclick = sendChat;
         document.getElementById('cl-chat-input').onkeydown = (e) => { if (e.key === 'Enter') sendChat(); };
