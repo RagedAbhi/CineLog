@@ -24,6 +24,7 @@
     let lastAppliedPos   = -1;
     let lastAppliedAction = null;
     let handshakeShield  = true; // Start with shield active
+    let pendingSync      = null; // { action, currentTime }
 
     console.log('%c🎬 [CineLog] Sync Engine v4.0 Active', 'color: #818cf8; font-size: 14px; font-weight: bold;');
 
@@ -122,7 +123,7 @@
         });
 
         socket.on('room:synced', ({ action, currentTime }) => {
-            applySync(action, currentTime);
+            handleIncomingSync(action, currentTime);
         });
 
         socket.on('room:state_request', () => {
@@ -135,13 +136,28 @@
 
         socket.on('room:state_response', ({ state }) => {
             if (!state) return;
-            // Longer delay for initial state to ensure DRM stability
+            // Delay initial state to allow player load
             setTimeout(() => {
-                applySync(state.paused ? 'pause' : 'play', state.currentTime);
-                const t = formatTime(state.currentTime);
-                showBadge(`⏱ Synced to ${t}`);
+                handleIncomingSync(state.paused ? 'pause' : 'play', state.currentTime, true);
             }, 3000);
         });
+
+        function handleIncomingSync(action, currentTime, isInitial = false) {
+            if (!video) return;
+            
+            const delta = Math.abs(video.currentTime - currentTime);
+            const needsSync = delta > SEEK_TOLERANCE_S || isInitial;
+
+            if (needsSync) {
+                pendingSync = { action, currentTime };
+                showSyncPrompt(action, currentTime);
+            } else {
+                // If it's a minor update (just play/pause without seek), we can auto-apply if within tolerance
+                if (action === 'play' || action === 'pause') {
+                    applySync(action, video.currentTime);
+                }
+            }
+        }
 
         socket.on('room:message', (data) => {
             appendChatMessage(data);
@@ -387,7 +403,38 @@
         badge.textContent = text;
         badge.style.opacity = '1';
         clearTimeout(badge._t);
-        badge._t = setTimeout(() => { badge.style.opacity = '0'; }, duration);
+        badge._t = setTimeout(() => { if (badge) badge.style.opacity = '0'; }, duration);
+    }
+
+    function showSyncPrompt(action, time) {
+        let prompt = document.getElementById('cl-sync-prompt');
+        if (!prompt) {
+            prompt = document.createElement('div');
+            prompt.id = 'cl-sync-prompt';
+            document.body.appendChild(prompt);
+        }
+        
+        prompt.innerHTML = `
+            <div class="cl-sync-content">
+                <span class="cl-sync-icon">🎬</span>
+                <span class="cl-sync-text">Out of sync with host (${formatTime(time)})</span>
+                <button id="cl-sync-now-btn">Click to Sync</button>
+            </div>
+        `;
+        prompt.classList.add('visible');
+
+        document.getElementById('cl-sync-now-btn').onclick = () => {
+            if (pendingSync) {
+                applySync(pendingSync.action, pendingSync.currentTime);
+                pendingSync = null;
+                hideSyncPrompt();
+            }
+        };
+    }
+
+    function hideSyncPrompt() {
+        const prompt = document.getElementById('cl-sync-prompt');
+        if (prompt) prompt.classList.remove('visible');
     }
 
     function injectStyles() {
@@ -414,6 +461,15 @@
             #cl-chat-input-row { display:flex; border-top:1px solid rgba(255,255,255,0.06); }
             #cl-chat-input { flex:1; background:transparent; border:none; padding:11px 12px; color:#fff; outline:none; font-size:13px; }
             #cl-chat-send  { width:42px; background:none; border:none; border-left:1px solid rgba(255,255,255,0.06); color:#818cf8; cursor:pointer; font-size:14px; }
+
+            /* Sync Prompt Banner */
+            #cl-sync-prompt { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: center; padding: 20px; z-index: 2147483647; transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; }
+            #cl-sync-prompt.visible { transform: translateY(0); }
+            .cl-sync-content { pointer-events: auto; display: flex; align-items: center; gap: 15px; background: rgba(8, 8, 16, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(129, 140, 248, 0.3); padding: 12px 24px; border-radius: 100px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+            .cl-sync-text { color: #fff; font-size: 14px; font-weight: 500; font-family: system-ui, sans-serif; }
+            #cl-sync-now-btn { background: #818cf8; color: #000; border: none; padding: 6px 16px; border-radius: 100px; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform 0.2s; }
+            #cl-sync-now-btn:hover { transform: scale(1.05); }
+            #cl-sync-now-btn:active { transform: scale(0.95); }
         `;
         document.head.appendChild(s);
     }
