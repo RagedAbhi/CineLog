@@ -425,9 +425,18 @@
 
         document.getElementById('cl-sync-now-btn').onclick = () => {
             if (pendingSync) {
-                applySync(pendingSync.action, pendingSync.currentTime);
-                pendingSync = null;
+                // NATIVE SYNC: We reload the page with the timestamp in the URL.
+                // This bypasses DRM manipulation detection because Netflix handles the seek natively on load.
+                const url = new URL(window.location.href);
+                url.searchParams.set('t', Math.floor(pendingSync.currentTime));
+                url.searchParams.set('clroom', roomCode);
+                
                 hideSyncPrompt();
+                showBadge('🚀 Snapping to Host... (Native Sync)');
+                
+                setTimeout(() => {
+                    window.location.href = url.toString();
+                }, 500);
             }
         };
     }
