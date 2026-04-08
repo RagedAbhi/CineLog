@@ -238,8 +238,9 @@ exports.uploadAvatar = async (req, res) => {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Store the full URL to the uploaded file
-        const fileUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+        // Store the full URL to the uploaded file - dynamic for production/local
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
         user.profilePicture = fileUrl;
         
         await user.save();
