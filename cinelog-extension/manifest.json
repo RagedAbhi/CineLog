@@ -6,8 +6,19 @@
   "permissions": [
     "storage",
     "tabs",
-    "activeTab"
+    "activeTab",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess"
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
   "host_permissions": [
     "https://www.netflix.com/*",
     "http://127.0.0.1:5000/*",
