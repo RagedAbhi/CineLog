@@ -6,25 +6,12 @@
   "permissions": [
     "storage",
     "tabs",
-    "activeTab",
-    "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess"
+    "activeTab"
   ],
-  "declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "ruleset_1",
-        "enabled": true,
-        "path": "rules.json"
-      }
-    ]
-  },
   "host_permissions": [
     "https://www.netflix.com/*",
     "http://127.0.0.1:5000/*",
-    "ws://127.0.0.1:5000/*",
-    "https://*.lhr.life/*",
-    "wss://*.lhr.life/*"
+    "ws://127.0.0.1:5000/*"
   ],
   "background": {
     "service_worker": "service-worker.js"

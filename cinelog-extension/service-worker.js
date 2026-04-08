@@ -3,7 +3,7 @@
  * Lightweight Auth/Storage Bridge
  */
 
-const BACKEND_URL = 'https://203f444e6b83de.lhr.life';
+const BACKEND_URL = 'http://127.0.0.1:5000';
 
 console.log('[CineLog] Service Worker v4.1 Active');
 
