@@ -1,14 +1,17 @@
 /**
- * CineLog Extension — Netflix Sync v3.0
- * Lightweight UI & Event Relay
+ * CineLog Extension — Netflix Sync v4.0
+ * Direct-Connection Architecture (Stable)
  */
 
 (function () {
     'use strict';
 
+    const BACKEND_URL      = 'http://127.0.0.1:5000';
     const SYNC_DEBOUNCE_MS = 300;
     const SEEK_TOLERANCE_S = 2;
+    const ECHO_WINDOW_MS   = 1200;
 
+    let socket      = null;
     let video       = null;
     let roomCode    = null;
     let currentUser = null;
@@ -17,28 +20,33 @@
     let syncTimer   = null;
     let watcher     = null;
     let overlayVisible = true;
+    let lastRemoteAction = 0;
 
-    console.log('%c🎬 [CineLog] Sync Engine v3.0 Loaded', 'color: #818cf8; font-size: 14px; font-weight: bold;');
+    console.log('%c🎬 [CineLog] Sync Engine v4.0 Active', 'color: #818cf8; font-size: 14px; font-weight: bold;');
 
-    // ── Sync Relay ───────────────────────────────────────────────────────────
+    // ── Echo Prevention ──────────────────────────────────────────────────────
 
-    function onPlay()   { if (!isSyncing) emitSync('play',  video.currentTime); }
-    function onPause()  { if (!isSyncing) emitSync('pause', video.currentTime); }
-    function onSeeked() { if (!isSyncing) emitSync('seek',  video.currentTime); }
+    function markRemoteAction() { lastRemoteAction = Date.now(); }
+    function isEcho() { return Date.now() - lastRemoteAction < ECHO_WINDOW_MS; }
+
+    // ── Sync Logic ───────────────────────────────────────────────────────────
+
+    function onPlay()   { if (!isSyncing && !isEcho()) emitSync('play',  video.currentTime); }
+    function onPause()  { if (!isSyncing && !isEcho()) emitSync('pause', video.currentTime); }
+    function onSeeked() { if (!isSyncing && !isEcho()) emitSync('seek',  video.currentTime); }
 
     function emitSync(action, currentTime) {
+        if (!socket?.connected || !roomCode) return;
         clearTimeout(syncTimer);
         syncTimer = setTimeout(() => {
-            chrome.runtime.sendMessage({ 
-                type: 'CINELOG_EMIT_SYNC', 
-                payload: { action, currentTime } 
-            });
+            socket.emit('room:sync', { roomCode, action, currentTime });
         }, SYNC_DEBOUNCE_MS);
     }
 
     function applySync(action, targetTime) {
         if (!video) return;
         isSyncing = true;
+        markRemoteAction();
 
         if (Math.abs(video.currentTime - targetTime) > SEEK_TOLERANCE_S) {
             video.currentTime = targetTime;
@@ -49,6 +57,77 @@
         if (action === 'seek')  video.currentTime = targetTime;
 
         setTimeout(() => { isSyncing = false; }, 1000);
+    }
+
+    // ── Socket Management ────────────────────────────────────────────────────
+
+    async function connectSocket(token) {
+        if (socket?.connected) return;
+        if (socket) socket.disconnect();
+
+        // 'io' is available globally via socket.io.min.js injected via manifest
+        socket = io(BACKEND_URL, {
+            transports: ['websocket'],
+            auth: { token }
+        });
+
+        socket.on('connect', () => {
+            console.log('[CineLog] Socket Connected:', socket.id);
+            updateStatusUI('connected');
+            if (roomCode) {
+                socket.emit('room:join_socket', roomCode);
+                setTimeout(() => socket.emit('room:request_state', { roomCode }), 1000);
+            }
+        });
+
+        socket.on('connect_error', (err) => {
+            console.error('[CineLog] Socket Connection Error:', err.message);
+            updateStatusUI('error', err.message);
+        });
+
+        socket.on('room:synced', ({ action, currentTime }) => {
+            applySync(action, currentTime);
+        });
+
+        socket.on('room:state_request', () => {
+            if (!video) return;
+            socket.emit('room:state_response', {
+                roomCode,
+                state: { currentTime: video.currentTime, paused: video.paused }
+            });
+        });
+
+        socket.on('room:state_response', ({ state }) => {
+            if (!state) return;
+            applySync(state.paused ? 'pause' : 'play', state.currentTime);
+            const t = formatTime(state.currentTime);
+            showBadge(`⏱ Synced to ${t}`);
+            appendChatMessage({ message: `Room synced to ${t}`, isSystem: true });
+        });
+
+        socket.on('room:message', (data) => {
+            appendChatMessage(data);
+        });
+
+        socket.on('room:member_join', ({ user }) => {
+            const name = user?.username || 'A friend';
+            showBadge(`${name} joined`);
+            appendChatMessage({ message: `${name} joined the room`, isSystem: true });
+        });
+
+        socket.on('room:member_left', ({ user }) => {
+            showBadge(`${user?.username || 'Friend'} left`);
+        });
+
+        socket.on('room:dissolved', () => {
+            showBadge('Host ended session', 5000);
+            deactivate();
+        });
+
+        socket.on('disconnect', () => {
+            console.log('[CineLog] Socket Disconnected');
+            updateStatusUI('disconnected');
+        });
     }
 
     // ── Video Watcher ────────────────────────────────────────────────────────
@@ -79,24 +158,21 @@
 
     // ── Activation ───────────────────────────────────────────────────────────
 
-    function activate(code, user) {
+    async function activate(code, user, token) {
         if (activated && roomCode === code) return;
         activated   = true;
         roomCode    = code;
         currentUser = user;
 
         startWatcher();
+        connectSocket(token);
 
         const isWatchPage = window.location.pathname.includes('/watch/');
         if (isWatchPage) {
             injectOverlay();
             showBadge(`🎬 Connected to ${roomCode}`);
-            // Request catch-up state
-            setTimeout(() => {
-                chrome.runtime.sendMessage({ type: 'CINELOG_REQUEST_STATE' });
-            }, 1500);
         } else {
-            showBadge(`🎬 Joined ${roomCode}! Watch a title to start sync.`, 5000);
+            showBadge(`🎬 Joined ${roomCode}! Watch a title to sync.`, 5000);
         }
     }
 
@@ -104,56 +180,56 @@
         activated = false;
         roomCode = null;
         if (watcher) { clearInterval(watcher); watcher = null; }
+        if (socket) { socket.disconnect(); socket = null; }
         document.getElementById('cinelog-chat-overlay')?.remove();
         showBadge('CineLog: Room Left');
     }
 
-    // ── Communication ────────────────────────────────────────────────────────
+    // ── Communication & Init ─────────────────────────────────────────────────
+
+    async function autoJoinRoom(code) {
+        const { cinelogToken } = await chrome.storage.local.get('cinelogToken');
+        if (!cinelogToken) return;
+
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/rooms/${code}/join`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cinelogToken}` }
+            });
+            if (res.ok) {
+                chrome.runtime.sendMessage({ type: 'CINELOG_JOIN_ROOM', roomCode: code });
+            }
+        } catch (e) { console.warn('[CineLog] Auto-join error:', e); }
+    }
+
+    async function init() {
+        const urlRoom = new URLSearchParams(window.location.search).get('clroom');
+        
+        chrome.runtime.sendMessage({ type: 'CINELOG_GET_STATUS' }, async (status) => {
+            if (chrome.runtime.lastError || !status) return;
+
+            const { cinelogToken, cinelogUser } = await chrome.storage.local.get(['cinelogToken', 'cinelogUser']);
+            if (!cinelogToken) return;
+
+            const code = urlRoom || status.roomCode;
+            if (urlRoom && urlRoom !== status.roomCode) {
+                await autoJoinRoom(urlRoom);
+                activate(urlRoom, cinelogUser, cinelogToken);
+            } else if (code) {
+                activate(code, cinelogUser, cinelogToken);
+            }
+        });
+    }
 
     chrome.runtime.onMessage.addListener((message) => {
-        switch (message.type) {
-            case 'CINELOG_ROOM_JOINED':
-                activate(message.roomCode, null);
-                // Refresh full status to get user data
-                init();
-                break;
-            case 'CINELOG_ROOM_LEFT':
-                deactivate();
-                break;
-            case 'CINELOG_SYNC':
-                applySync(message.payload.action, message.payload.currentTime);
-                break;
-            case 'CINELOG_STATE_REQUEST':
-                if (video) {
-                    chrome.runtime.sendMessage({
-                        type: 'CINELOG_EMIT_STATE_RESPONSE',
-                        state: { currentTime: video.currentTime, paused: video.paused }
-                    });
-                }
-                break;
-            case 'CINELOG_STATE_RESPONSE':
-                applySync(message.state.paused ? 'pause' : 'play', message.state.currentTime);
-                const t = formatTime(message.state.currentTime);
-                showBadge(`⏱ Synced to ${t}`);
-                appendChatMessage({ message: `Room synced to ${t}`, isSystem: true });
-                break;
-            case 'CINELOG_CHAT':
-                appendChatMessage(message.payload);
-                break;
-            case 'CINELOG_MEMBER_JOIN':
-                showBadge(`${message.payload.user?.username || 'Friend'} joined`);
-                break;
-            case 'CINELOG_MEMBER_LEFT':
-                showBadge(`${message.payload.user?.username || 'Friend'} left`);
-                break;
-            case 'CINELOG_DISSOLVED':
-                showBadge('Host ended session', 5000);
-                deactivate();
-                break;
+        if (message.type === 'CINELOG_ROOM_JOINED') {
+            init();
+        } else if (message.type === 'CINELOG_ROOM_LEFT') {
+            deactivate();
         }
     });
 
-    // ── UI ───────────────────────────────────────────────────────────────────
+    // ── UI Overlay ───────────────────────────────────────────────────────────
 
     function injectOverlay() {
         if (document.getElementById('cinelog-chat-overlay')) return;
@@ -161,8 +237,14 @@
         overlay.id = 'cinelog-chat-overlay';
         overlay.innerHTML = `
             <div id="cl-chat-header">
-                <span>🎬 CineLog</span>
-                <div style="display:flex;gap:6px;align-items:center">
+                <div style="display:flex;flex-direction:column">
+                    <span style="font-size:14px;font-weight:700">🎬 CineLog</span>
+                    <div id="cl-status-row">
+                        <span id="cl-status-dot"></span>
+                        <span id="cl-status-text">Connecting...</span>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
                     <span id="cl-room-code-badge">${roomCode}</span>
                     <button id="cl-chat-toggle">—</button>
                 </div>
@@ -183,17 +265,34 @@
         };
         document.getElementById('cl-chat-send').onclick = sendChat;
         document.getElementById('cl-chat-input').onkeydown = (e) => { if (e.key === 'Enter') sendChat(); };
+        
+        // Initial UI state
+        if (socket?.connected) updateStatusUI('connected');
+    }
+
+    function updateStatusUI(status, errorMsg) {
+        const dot = document.getElementById('cl-status-dot');
+        const text = document.getElementById('cl-status-text');
+        if (!dot || !text) return;
+
+        if (status === 'connected') {
+            dot.style.background = '#10b981';
+            text.textContent = currentUser?.username ? `Connected as ${currentUser.username}` : 'Connected';
+        } else if (status === 'error') {
+            dot.style.background = '#ef4444';
+            text.textContent = errorMsg || 'Auth Error';
+        } else {
+            dot.style.background = '#f59e0b';
+            text.textContent = 'Disconnected';
+        }
     }
 
     function sendChat() {
         const input = document.getElementById('cl-chat-input');
-        if (!input?.value.trim()) return;
+        if (!input?.value.trim() || !socket?.connected) return;
         const text = input.value.trim();
         input.value = '';
-        chrome.runtime.sendMessage({ 
-            type: 'CINELOG_EMIT_CHAT', 
-            payload: { message: text } 
-        });
+        socket.emit('room:chat', { roomCode, message: text });
     }
 
     function appendChatMessage({ username, message, userId, isSystem }) {
@@ -204,7 +303,7 @@
             div.className = 'cl-msg-system';
             div.innerHTML = `<span class="cl-msg-text-system">${esc(message)}</span>`;
         } else {
-            const isOwn = userId && currentUser && (userId === (currentUser._id || currentUser.id));
+            const isOwn = userId && currentUser && (userId.toString() === (currentUser._id || currentUser.id || '').toString());
             div.className = `cl-msg${isOwn ? ' cl-msg-own' : ''}`;
             div.innerHTML = `<span class="cl-msg-user">${esc(username)}</span><span class="cl-msg-text">${esc(message)}</span>`;
         }
@@ -233,7 +332,10 @@
         s.textContent = `
             #cl-badge { position: fixed; top: 72px; left: 50%; transform: translateX(-50%); background: rgba(8,8,16,0.92); border: 1px solid rgba(129,140,248,0.25); color: #fff; padding: 9px 22px; border-radius: 100px; font-size: 13px; font-weight: 500; z-index: 2147483647; opacity: 0; transition: opacity .3s; pointer-events: none; }
             #cinelog-chat-overlay { position: fixed; bottom: 90px; right: 24px; width: 300px; background: rgba(8,8,16,0.94); border: 1px solid rgba(129,140,248,0.22); border-radius: 18px; z-index: 2147483647; color: #fff; box-shadow: 0 12px 48px rgba(0,0,0,0.6); font-family: system-ui,sans-serif; overflow: hidden; }
-            #cl-chat-header { display:flex; align-items:center; justify-content:space-between; padding: 11px 14px; background: rgba(129,140,248,0.1); border-bottom: 1px solid rgba(129,140,248,0.1); font-weight:600; font-size:14px; }
+            #cl-chat-header { display:flex; align-items:center; justify-content:space-between; padding: 11px 14px; background: rgba(129,140,248,0.1); border-bottom: 1px solid rgba(129,140,248,0.1); }
+            #cl-status-row { display:flex; align-items:center; gap:5px; margin-top:2px; }
+            #cl-status-dot { width:6px; height:6px; border-radius:50%; background:#f59e0b; }
+            #cl-status-text { font-size:10px; color:rgba(255,255,255,0.5); font-weight:500; }
             #cl-room-code-badge { font-size:10px; font-weight:800; letter-spacing:.15em; background: rgba(129,140,248,0.15); color:#818cf8; padding: 2px 7px; border-radius:6px; }
             #cl-chat-toggle { background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:18px; line-height:1; }
             #cl-chat-messages { height:210px; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:6px; }
@@ -251,23 +353,12 @@
         document.head.appendChild(s);
     }
 
-    // ── Utils ────────────────────────────────────────────────────────────────
-
     function formatTime(s) {
         return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
     }
 
     function esc(str) {
         return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    async function init() {
-        const urlRoom = new URLSearchParams(window.location.search).get('clroom');
-        chrome.runtime.sendMessage({ type: 'CINELOG_GET_STATUS' }, (status) => {
-            if (chrome.runtime.lastError || !status) return;
-            const code = urlRoom || status.roomCode;
-            if (code) activate(code, status.user);
-        });
     }
 
     init();

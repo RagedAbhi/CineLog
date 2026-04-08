@@ -1,4 +1,6 @@
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 const logger = require('../utils/logger');
 
 let io = null;
@@ -9,8 +11,27 @@ let io = null;
 exports.init = (httpServer) => {
     io = new Server(httpServer, {
         cors: {
-            origin: "*", // Adjust in production to frontend URL
+            origin: "*", 
             methods: ["GET", "POST"]
+        }
+    });
+
+    // Authentication Middleware
+    io.use(async (socket, next) => {
+        try {
+            const token = socket.handshake.auth?.token;
+            if (!token) return next(new Error('Authentication error: No token provided'));
+
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findById(decoded.id).select('-password');
+            if (!user) return next(new Error('Authentication error: User not found'));
+
+            socket.user = user;
+            logger.info(`[Socket Auth] Success: ${user.username} (${socket.id})`);
+            next();
+        } catch (err) {
+            logger.error(`[Socket Auth] ${err.message}`);
+            next(new Error('Authentication error'));
         }
     });
 
@@ -30,7 +51,16 @@ exports.init = (httpServer) => {
         socket.on('room:join_socket', (roomCode) => {
             if (roomCode) {
                 socket.join(`room:${roomCode}`);
-                logger.info(`[Socket] ${socket.id} joined watch room ${roomCode}`);
+                logger.info(`[Socket] ${socket.user.username} (${socket.id}) joined room ${roomCode}`);
+                
+                // Notify the room that a member joined (including user info)
+                socket.to(`room:${roomCode}`).emit('room:member_join', { 
+                    user: {
+                        _id: socket.user._id,
+                        username: socket.user.username,
+                        profilePicture: socket.user.profilePicture
+                    }
+                });
             }
         });
 
@@ -42,16 +72,18 @@ exports.init = (httpServer) => {
         });
 
         // Relay play/pause/seek to everyone else in the room
-        socket.on('room:sync', ({ roomCode, action, currentTime, username }) => {
+        socket.on('room:sync', ({ roomCode, action, currentTime }) => {
             if (!roomCode) return;
             
             // Broadcast the sync action to other members
             socket.to(`room:${roomCode}`).emit('room:synced', { action, currentTime, socketId: socket.id });
 
+            // Identity Hardening: Use explicit fallback if user is missing for some reason
+            const name = socket.user?.username || '[Identity Error]';
+            logger.info(`[Sync Log] Room: ${roomCode} | User: ${name} | Action: ${action}`);
+
             // Generate a technical system message for the chat
             const timeStr = new Date(currentTime * 1000).toISOString().substr(11, 8);
-            let message = '';
-            const name = username || 'Someone';
 
             if (action === 'play') message = `${name} played the video`;
             else if (action === 'pause') message = `${name} paused the video`;
@@ -82,9 +114,15 @@ exports.init = (httpServer) => {
         });
 
         // Relay chat to everyone in the room (including sender)
-        socket.on('room:chat', ({ roomCode, message, userId, username, avatar }) => {
+        socket.on('room:chat', ({ roomCode, message }) => {
             if (!roomCode) return;
-            io.to(`room:${roomCode}`).emit('room:message', { message, userId, username, avatar, timestamp: new Date() });
+            io.to(`room:${roomCode}`).emit('room:message', { 
+                message, 
+                userId: socket.user._id, 
+                username: socket.user.username, 
+                avatar: socket.user.profilePicture, 
+                timestamp: new Date() 
+            });
         });
 
         socket.on('disconnect', () => {
