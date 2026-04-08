@@ -1,20 +1,17 @@
 /**
- * CineLog Extension — Background Service Worker
- *
- * Responsibilities:
- * - Maintains the Socket.io connection to the CineLog backend.
- * - Passes sync events between the content-script (Netflix tab) and the server.
- * - Manages auth token stored in chrome.storage.local.
- * - Receives room join/leave commands from popup.
+ * CineLog Extension — Version 1.2.0 (Service Worker)
+ * Renamed to force cache refresh.
  */
 
-import { io } from 'https://cdn.socket.io/4.7.5/socket.io.esm.min.js';
+import { io } from './socket-io.esm.js';
 
 const BACKEND_URL = 'http://127.0.0.1:5000';
 
 let socket = null;
 let currentRoomCode = null;
 let authToken = null;
+
+console.log('[CineLog] Service Worker v1.2.0 Initialized');
 
 // ── Socket lifecycle ───────────────────────────────────────────────────────
 
@@ -26,23 +23,19 @@ function connectSocket(token) {
 
     socket.on('connect', () => {
         console.log('[CineLog Ext] Socket connected:', socket.id);
-        // Re-join room if one was active before reconnect
         if (currentRoomCode) {
             socket.emit('room:join_socket', currentRoomCode);
         }
     });
 
-    // Relay sync events down to the content script
     socket.on('room:synced', (data) => {
         broadcastToNetflixTab({ type: 'CINELOG_SYNC', payload: data });
     });
 
-    // FIX #4: Someone requested state — forward to this tab's content script
     socket.on('room:state_request', () => {
         broadcastToNetflixTab({ type: 'CINELOG_STATE_REQUEST' });
     });
 
-    // FIX #4: Host responded with state — forward back to the requester only
     socket.on('room:state_response', (data) => {
         broadcastToNetflixTab({ type: 'CINELOG_STATE_RESPONSE', state: data.state });
     });
@@ -76,7 +69,7 @@ function connectSocket(token) {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 async function broadcastToNetflixTab(message) {
-    const tabs = await chrome.tabs.query({ url: 'https://www.netflix.com/watch/*' });
+    const tabs = await chrome.tabs.query({ url: 'https://www.netflix.com/*' });
     for (const tab of tabs) {
         chrome.tabs.sendMessage(tab.id, message).catch(() => {});
     }
@@ -86,12 +79,10 @@ function notifyPopup(message) {
     chrome.runtime.sendMessage(message).catch(() => {});
 }
 
-// ── Messages from content-script and popup ─────────────────────────────────
+// ── Messages ─────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message.type) {
-
-        // Auth: popup logged in
         case 'CINELOG_SET_TOKEN': {
             const { token } = message;
             chrome.storage.local.set({ cinelogToken: token });
@@ -99,8 +90,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ ok: true });
             break;
         }
-
-        // Auth: popup logged out
         case 'CINELOG_LOGOUT': {
             if (socket) { socket.disconnect(); socket = null; }
             currentRoomCode = null;
@@ -109,58 +98,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ ok: true });
             break;
         }
-
-        // Room: join (called from popup after REST join)
         case 'CINELOG_JOIN_ROOM': {
             const { roomCode } = message;
             currentRoomCode = roomCode;
             chrome.storage.session.set({ roomCode });
             if (socket) socket.emit('room:join_socket', roomCode);
-            // Notify any open Netflix tabs so they initialize immediately
             broadcastToNetflixTab({ type: 'CINELOG_ROOM_JOINED', roomCode });
             sendResponse({ ok: true });
             break;
         }
-
-        // Room: leave (called from popup)
         case 'CINELOG_LEAVE_ROOM': {
             if (socket && currentRoomCode) {
                 socket.emit('room:leave_socket', currentRoomCode);
             }
-            // Notify Netflix tabs to remove overlay
             broadcastToNetflixTab({ type: 'CINELOG_ROOM_LEFT' });
             currentRoomCode = null;
             chrome.storage.session.remove('roomCode');
             sendResponse({ ok: true });
             break;
         }
-
-        // Sync: relayed from content-script → server
         case 'CINELOG_EMIT_SYNC': {
             if (socket && currentRoomCode) {
-                socket.emit('room:sync', {
-                    roomCode: currentRoomCode,
-                    action: message.action,
-                    currentTime: message.currentTime
-                });
+                socket.emit('room:sync', { roomCode: currentRoomCode, ...message });
             }
             sendResponse({ ok: true });
             break;
         }
-
-        // Chat: sent from content-script overlay → server
         case 'CINELOG_EMIT_CHAT': {
             if (socket && currentRoomCode) {
-                socket.emit('room:chat', {
-                    roomCode: currentRoomCode,
-                    ...message.payload
-                });
+                socket.emit('room:chat', { roomCode: currentRoomCode, ...message.payload });
             }
             sendResponse({ ok: true });
             break;
         }
-
-        // FIX #4: Content script requests current state from room (catch-up for late joiner)
         case 'CINELOG_REQUEST_STATE': {
             if (socket && currentRoomCode) {
                 socket.emit('room:request_state', { roomCode: currentRoomCode });
@@ -168,20 +138,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ ok: true });
             break;
         }
-
-        // FIX #4: Content script (host) replied with its current state
         case 'CINELOG_EMIT_STATE_RESPONSE': {
             if (socket && currentRoomCode) {
-                socket.emit('room:state_response', {
-                    roomCode: currentRoomCode,
-                    state: message.state
-                });
+                socket.emit('room:state_response', { roomCode: currentRoomCode, state: message.state });
             }
             sendResponse({ ok: true });
             break;
         }
-
-        // Status: popup polling current state
         case 'CINELOG_GET_STATUS': {
             sendResponse({
                 connected: socket?.connected || false,
@@ -191,16 +154,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             break;
         }
     }
-
-    return true; // keep channel open for async sendResponse
+    return true; 
 });
 
-// ── On startup: restore token and reconnect ────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────────────────
 
 chrome.storage.local.get('cinelogToken', ({ cinelogToken }) => {
-    if (cinelogToken) {
-        connectSocket(cinelogToken);
-    }
+    if (cinelogToken) connectSocket(cinelogToken);
 });
 
 chrome.storage.session.get('roomCode', ({ roomCode }) => {

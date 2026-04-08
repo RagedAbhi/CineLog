@@ -3084,3 +3084,208 @@
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:33:16"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:34:16"}
 {"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:35:16"}
+{"level":"info","message":"Connecting to MongoDB at: mongodb://abhilashkhadanga_db_user:****@ac-rzqxfhz-shard-00-00.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-01.exbkqcm.mongodb.net:27017,ac-rzqxfhz-shard-00-02.exbkqcm.mongodb.net:27017/?ssl=true&replicaSet=atlas-580zg9-shard-0&authSource=admin&appName=CinelogUser","service":"cinelog-server","timestamp":"2026-04-08 12:40:12"}
+{"level":"info","message":"Server running on port 5000","service":"cinelog-server","timestamp":"2026-04-08 12:40:12"}
+{"level":"info","message":"MongoDB connected successfully","service":"cinelog-server","timestamp":"2026-04-08 12:40:13"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-08 12:41:35"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-08 12:41:35"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-08 12:41:35"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:41:36"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-08 12:41:36"}
+{"level":"info","message":"[Socket] New connection: jkLNMIOdixSE5e6gAAAB","service":"cinelog-server","timestamp":"2026-04-08 12:41:37"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-08 12:41:37"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:41:45"}
+{"level":"info","message":"POST /api/rooms","service":"cinelog-server","timestamp":"2026-04-08 12:41:48"}
+{"level":"info","message":"[Socket] jkLNMIOdixSE5e6gAAAB joined watch room 819082","service":"cinelog-server","timestamp":"2026-04-08 12:41:49"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:41:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:42:06"}
+{"level":"info","message":"[Socket] New connection: mgrFYBG8Cbx8VRQEAAAD","service":"cinelog-server","timestamp":"2026-04-08 12:42:11"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:42:16"}
+{"level":"info","message":"POST /api/auth/login","service":"cinelog-server","timestamp":"2026-04-08 12:42:18"}
+{"level":"info","message":"POST /api/rooms/819082/join","service":"cinelog-server","timestamp":"2026-04-08 12:42:21"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room 819082","service":"cinelog-server","timestamp":"2026-04-08 12:42:23"}
+{"level":"info","message":"[Socket] mgrFYBG8Cbx8VRQEAAAD joined watch room 819082","service":"cinelog-server","timestamp":"2026-04-08 12:42:23"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:42:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:42:35"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:42:46"}
+{"level":"info","message":"GET /api/rooms/819082","service":"cinelog-server","timestamp":"2026-04-08 12:42:53"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:42:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:43:06"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:43:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:43:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:43:36"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:44:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:45:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:46:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:47:16"}
+{"level":"info","message":"[Socket] Disconnected: mgrFYBG8Cbx8VRQEAAAD","service":"cinelog-server","timestamp":"2026-04-08 12:47:50"}
+{"level":"info","message":"[Socket] New connection: vGmDqRlx5lFO8BUGAAAF","service":"cinelog-server","timestamp":"2026-04-08 12:47:51"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:48:16"}
+{"level":"info","message":"POST /api/rooms/UNCAUG/join","service":"cinelog-server","timestamp":"2026-04-08 12:48:17"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:48:25"}
+{"level":"info","message":"POST /api/rooms/819082/join","service":"cinelog-server","timestamp":"2026-04-08 12:48:34"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room 819082","service":"cinelog-server","timestamp":"2026-04-08 12:48:34"}
+{"level":"info","message":"[Socket] vGmDqRlx5lFO8BUGAAAF joined watch room 819082","service":"cinelog-server","timestamp":"2026-04-08 12:48:34"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:48:36"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:48:46"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:48:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:49:06"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:49:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:49:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:50:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:51:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:52:16"}
+{"level":"info","message":"GET /api/rooms/819082","service":"cinelog-server","timestamp":"2026-04-08 12:53:06"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:53:16"}
+{"level":"info","message":"GET /api/rooms/819082","service":"cinelog-server","timestamp":"2026-04-08 12:53:27"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:54:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:55:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:56:16"}
+{"level":"info","message":"[Socket] Disconnected: vGmDqRlx5lFO8BUGAAAF","service":"cinelog-server","timestamp":"2026-04-08 12:56:23"}
+{"level":"info","message":"[Socket] New connection: Vc9sq_zHfRPe2iziAAAH","service":"cinelog-server","timestamp":"2026-04-08 12:56:23"}
+{"level":"info","message":"[Socket] Disconnected: Vc9sq_zHfRPe2iziAAAH","service":"cinelog-server","timestamp":"2026-04-08 12:56:27"}
+{"level":"info","message":"[Socket] New connection: T1iiA2OiKKxv9U2rAAAJ","service":"cinelog-server","timestamp":"2026-04-08 12:56:28"}
+{"level":"info","message":"[Socket] Disconnected: T1iiA2OiKKxv9U2rAAAJ","service":"cinelog-server","timestamp":"2026-04-08 12:56:30"}
+{"level":"info","message":"[Socket] New connection: 14zLckN4CNAU5Q6aAAAL","service":"cinelog-server","timestamp":"2026-04-08 12:56:30"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:56:44"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:56:45"}
+{"level":"info","message":"[Socket] jkLNMIOdixSE5e6gAAAB left watch room 819082","service":"cinelog-server","timestamp":"2026-04-08 12:56:48"}
+{"level":"info","message":"POST /api/rooms/819082/leave","service":"cinelog-server","timestamp":"2026-04-08 12:56:48"}
+{"level":"info","message":"[Socket] Event 'room:dissolved' sent to room 819082","service":"cinelog-server","timestamp":"2026-04-08 12:56:48"}
+{"level":"info","message":"POST /api/rooms","service":"cinelog-server","timestamp":"2026-04-08 12:56:51"}
+{"level":"info","message":"[Socket] jkLNMIOdixSE5e6gAAAB joined watch room F78282","service":"cinelog-server","timestamp":"2026-04-08 12:56:52"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:56:56"}
+{"level":"info","message":"POST /api/rooms/F78282/join","service":"cinelog-server","timestamp":"2026-04-08 12:57:04"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room F78282","service":"cinelog-server","timestamp":"2026-04-08 12:57:05"}
+{"level":"info","message":"[Socket] 14zLckN4CNAU5Q6aAAAL joined watch room F78282","service":"cinelog-server","timestamp":"2026-04-08 12:57:05"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:57:06"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:57:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:57:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:57:36"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:57:46"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:58:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 12:59:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:00:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:01:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:01:26"}
+{"level":"info","message":"[Socket] Disconnected: 14zLckN4CNAU5Q6aAAAL","service":"cinelog-server","timestamp":"2026-04-08 13:01:28"}
+{"level":"info","message":"[Socket] New connection: owMEM14PLZmJykvmAAAN","service":"cinelog-server","timestamp":"2026-04-08 13:01:29"}
+{"level":"info","message":"[Socket] jkLNMIOdixSE5e6gAAAB left watch room F78282","service":"cinelog-server","timestamp":"2026-04-08 13:01:34"}
+{"level":"info","message":"POST /api/rooms/F78282/leave","service":"cinelog-server","timestamp":"2026-04-08 13:01:34"}
+{"level":"info","message":"[Socket] Event 'room:dissolved' sent to room F78282","service":"cinelog-server","timestamp":"2026-04-08 13:01:34"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:01:35"}
+{"level":"info","message":"[Socket] Disconnected: jkLNMIOdixSE5e6gAAAB","service":"cinelog-server","timestamp":"2026-04-08 13:01:36"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-08 13:01:37"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-08 13:01:37"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:01:37"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-08 13:01:37"}
+{"level":"info","message":"[Socket] New connection: FqTMYJSSjqZimQMOAAAP","service":"cinelog-server","timestamp":"2026-04-08 13:01:38"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-08 13:01:38"}
+{"level":"info","message":"POST /api/rooms","service":"cinelog-server","timestamp":"2026-04-08 13:01:43"}
+{"level":"info","message":"[Socket] FqTMYJSSjqZimQMOAAAP joined watch room D9491E","service":"cinelog-server","timestamp":"2026-04-08 13:01:43"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:01:47"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:01:58"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:02:08"}
+{"level":"info","message":"POST /api/rooms/D9491E/join","service":"cinelog-server","timestamp":"2026-04-08 13:02:09"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room D9491E","service":"cinelog-server","timestamp":"2026-04-08 13:02:10"}
+{"level":"info","message":"[Socket] owMEM14PLZmJykvmAAAN joined watch room D9491E","service":"cinelog-server","timestamp":"2026-04-08 13:02:10"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:02:18"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:02:28"}
+{"level":"info","message":"GET /api/rooms/D9491E","service":"cinelog-server","timestamp":"2026-04-08 13:02:28"}
+{"level":"info","message":"POST /api/rooms/D9491E/leave","service":"cinelog-server","timestamp":"2026-04-08 13:02:33"}
+{"level":"info","message":"[Socket] Event 'room:dissolved' sent to room D9491E","service":"cinelog-server","timestamp":"2026-04-08 13:02:34"}
+{"level":"info","message":"POST /api/rooms/D9491E/join","service":"cinelog-server","timestamp":"2026-04-08 13:02:36"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:02:38"}
+{"level":"info","message":"POST /api/rooms","service":"cinelog-server","timestamp":"2026-04-08 13:02:41"}
+{"level":"info","message":"[Socket] FqTMYJSSjqZimQMOAAAP joined watch room E5AD39","service":"cinelog-server","timestamp":"2026-04-08 13:02:42"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:02:48"}
+{"level":"info","message":"POST /api/rooms/E5AD39/join","service":"cinelog-server","timestamp":"2026-04-08 13:02:50"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room E5AD39","service":"cinelog-server","timestamp":"2026-04-08 13:02:50"}
+{"level":"info","message":"[Socket] owMEM14PLZmJykvmAAAN joined watch room E5AD39","service":"cinelog-server","timestamp":"2026-04-08 13:02:50"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:02:58"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:03:08"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:03:18"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:03:28"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:03:38"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:04:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:05:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:05:42"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:05:48"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:05:58"}
+{"level":"info","message":"GET /api/rooms/E5AD39","service":"cinelog-server","timestamp":"2026-04-08 13:06:06"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:06:08"}
+{"level":"info","message":"POST /api/rooms/E5AD39/leave","service":"cinelog-server","timestamp":"2026-04-08 13:06:12"}
+{"level":"info","message":"[Socket] Event 'room:dissolved' sent to room E5AD39","service":"cinelog-server","timestamp":"2026-04-08 13:06:13"}
+{"level":"info","message":"[Socket] Disconnected: owMEM14PLZmJykvmAAAN","service":"cinelog-server","timestamp":"2026-04-08 13:06:16"}
+{"level":"info","message":"[Socket] New connection: byHbgVXHE8vommBMAAAR","service":"cinelog-server","timestamp":"2026-04-08 13:06:17"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:06:18"}
+{"level":"info","message":"POST /api/rooms","service":"cinelog-server","timestamp":"2026-04-08 13:06:26"}
+{"level":"info","message":"[Socket] FqTMYJSSjqZimQMOAAAP joined watch room 2FFF24","service":"cinelog-server","timestamp":"2026-04-08 13:06:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:06:27"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:06:38"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:06:48"}
+{"level":"info","message":"POST /api/rooms/2FFF24/join","service":"cinelog-server","timestamp":"2026-04-08 13:06:55"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room 2FFF24","service":"cinelog-server","timestamp":"2026-04-08 13:06:56"}
+{"level":"info","message":"[Socket] byHbgVXHE8vommBMAAAR joined watch room 2FFF24","service":"cinelog-server","timestamp":"2026-04-08 13:06:56"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:06:58"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:07:08"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:07:18"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:07:28"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:08:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:09:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:10:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:11:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:12:16"}
+{"level":"info","message":"[Socket] Disconnected: byHbgVXHE8vommBMAAAR","service":"cinelog-server","timestamp":"2026-04-08 13:13:03"}
+{"level":"info","message":"[Socket] New connection: 7881KzuY9V0ogYbNAAAT","service":"cinelog-server","timestamp":"2026-04-08 13:13:04"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:13:09"}
+{"level":"info","message":"[Socket] Disconnected: FqTMYJSSjqZimQMOAAAP","service":"cinelog-server","timestamp":"2026-04-08 13:13:11"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-08 13:13:12"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-08 13:13:12"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-08 13:13:12"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:13:12"}
+{"level":"info","message":"[Socket] New connection: DuSeACD5JMNv5ogyAAAV","service":"cinelog-server","timestamp":"2026-04-08 13:13:12"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-08 13:13:13"}
+{"level":"info","message":"POST /api/rooms","service":"cinelog-server","timestamp":"2026-04-08 13:13:16"}
+{"level":"info","message":"[Socket] DuSeACD5JMNv5ogyAAAV joined watch room C9A107","service":"cinelog-server","timestamp":"2026-04-08 13:13:17"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:13:23"}
+{"level":"info","message":"POST /api/rooms/C9A107/join","service":"cinelog-server","timestamp":"2026-04-08 13:13:25"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room C9A107","service":"cinelog-server","timestamp":"2026-04-08 13:13:26"}
+{"level":"info","message":"[Socket] 7881KzuY9V0ogYbNAAAT joined watch room C9A107","service":"cinelog-server","timestamp":"2026-04-08 13:13:26"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:13:33"}
+{"level":"info","message":"GET /api/rooms/C9A107","service":"cinelog-server","timestamp":"2026-04-08 13:13:42"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:13:43"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:13:53"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:14:03"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:14:13"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:14:23"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:14:33"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:14:43"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:15:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:16:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:17:16"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:17:53"}
+{"level":"info","message":"[Socket] Disconnected: 7881KzuY9V0ogYbNAAAT","service":"cinelog-server","timestamp":"2026-04-08 13:17:58"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:18:03"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:18:13"}
+{"level":"info","message":"[Socket] DuSeACD5JMNv5ogyAAAV left watch room C9A107","service":"cinelog-server","timestamp":"2026-04-08 13:18:19"}
+{"level":"info","message":"POST /api/rooms/C9A107/leave","service":"cinelog-server","timestamp":"2026-04-08 13:18:19"}
+{"level":"info","message":"[Socket] Event 'room:dissolved' sent to room C9A107","service":"cinelog-server","timestamp":"2026-04-08 13:18:19"}
+{"level":"info","message":"[Socket] Disconnected: DuSeACD5JMNv5ogyAAAV","service":"cinelog-server","timestamp":"2026-04-08 13:18:21"}
+{"level":"info","message":"GET /api/media","service":"cinelog-server","timestamp":"2026-04-08 13:18:21"}
+{"level":"info","message":"GET /api/users/me","service":"cinelog-server","timestamp":"2026-04-08 13:18:21"}
+{"level":"info","message":"GET /api/recommendations","service":"cinelog-server","timestamp":"2026-04-08 13:18:21"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:18:21"}
+{"level":"info","message":"[Socket] New connection: A8-J5-1v83FZ4ePKAAAX","service":"cinelog-server","timestamp":"2026-04-08 13:18:22"}
+{"level":"info","message":"[Socket] User 69b32885faf5a5c7630aa003 joined their personal room.","service":"cinelog-server","timestamp":"2026-04-08 13:18:22"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:18:31"}
+{"level":"info","message":"POST /api/auth/login","service":"cinelog-server","timestamp":"2026-04-08 13:18:40"}
+{"level":"info","message":"[Socket] New connection: rKLbYnYuVJPyCLtDAAAZ","service":"cinelog-server","timestamp":"2026-04-08 13:18:40"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:18:41"}
+{"level":"info","message":"POST /api/rooms","service":"cinelog-server","timestamp":"2026-04-08 13:18:44"}
+{"level":"info","message":"[Socket] A8-J5-1v83FZ4ePKAAAX joined watch room CDEABA","service":"cinelog-server","timestamp":"2026-04-08 13:18:46"}
+{"level":"info","message":"POST /api/rooms/CDEABA/join","service":"cinelog-server","timestamp":"2026-04-08 13:18:51"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:18:52"}
+{"level":"info","message":"[Socket] Event 'room:member_join' sent to room CDEABA","service":"cinelog-server","timestamp":"2026-04-08 13:18:52"}
+{"level":"info","message":"[Socket] rKLbYnYuVJPyCLtDAAAZ joined watch room CDEABA","service":"cinelog-server","timestamp":"2026-04-08 13:18:52"}
+{"level":"info","message":"GET /api/messages/recent","service":"cinelog-server","timestamp":"2026-04-08 13:19:02"}

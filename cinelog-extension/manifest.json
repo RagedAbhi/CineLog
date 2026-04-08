@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CineLog — Watch Together",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Watch Netflix in perfect sync with your friends via CineLog.",
   "permissions": [
     "storage",
@@ -13,13 +13,13 @@
     "http://127.0.0.1:5000/*"
   ],
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "service-worker.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["https://www.netflix.com/watch/*"],
-      "js": ["content-script.js"],
+      "matches": ["https://www.netflix.com/*"],
+      "js": ["netflix-sync.js"],
       "run_at": "document_idle"
     }
   ],
