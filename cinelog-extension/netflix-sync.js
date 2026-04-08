@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    const BACKEND_URL      = 'http://127.0.0.1:5000';
+    const BACKEND_URL      = 'https://cuerates.onrender.com';
     const SYNC_DEBOUNCE_MS = 300;
     const SEEK_TOLERANCE_S = 2;
     const ECHO_WINDOW_MS   = 1200;
