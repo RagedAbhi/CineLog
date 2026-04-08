@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    const BACKEND_URL      = 'https://mighty-ghosts-shave.loca.lt';
+    const BACKEND_URL      = 'https://c3e0e43af2330c.lhr.life';
     const SYNC_DEBOUNCE_MS = 300;
     const SEEK_TOLERANCE_S = 2;
     const ECHO_WINDOW_MS   = 1200;
