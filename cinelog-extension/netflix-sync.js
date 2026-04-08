@@ -135,10 +135,13 @@
 
         socket.on('room:state_response', ({ state }) => {
             if (!state) return;
-            applySync(state.paused ? 'pause' : 'play', state.currentTime);
-            const t = formatTime(state.currentTime);
-            showBadge(`⏱ Synced to ${t}`);
-            appendChatMessage({ message: `Room synced to ${t}`, isSystem: true });
+            // Delay initial state application by 2s to ensure player stability for joiners
+            setTimeout(() => {
+                applySync(state.paused ? 'pause' : 'play', state.currentTime);
+                const t = formatTime(state.currentTime);
+                showBadge(`⏱ Synced to ${t}`);
+                appendChatMessage({ message: `Room synced to ${t}`, isSystem: true });
+            }, 2000);
         });
 
         socket.on('room:message', (data) => {
