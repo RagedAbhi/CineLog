@@ -25,6 +25,7 @@ import PersonPage from './pages/PersonPage';
 import { useDispatch } from 'react-redux';
 import { hideRecommendModal, showToast, hideConfirmModal } from './store/actions';
 import { fetchCurrentUser, fetchRecommendations, fetchRecentChats } from './store/thunks';
+import config from './config';
 
 import './styles/global.css';
 

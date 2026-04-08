@@ -1,8 +1,9 @@
 @echo off
-title CineLog Servers
-echo Starting CineLog App...
+title CineLog App
+echo Starting CineLog Frontend (Connecting to Production Backend)...
 cd /d "%~dp0"
-start cmd /k "npm run dev"
-echo Waiting for servers to initialize...
+set NODE_OPTIONS=--max-old-space-size=8192
+start cmd /k "npm start"
+echo Waiting for frontend to initialize...
 timeout /t 5 /nobreak > nul
 start http://localhost:3000
