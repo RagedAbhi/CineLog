@@ -42,17 +42,24 @@ exports.createMedia = async (req, res) => {
         const { imdbID, title, year, mediaType, status } = req.body;
         const currentStatus = status || 'watched'; // Fallback
         
+        // Use normalized title for more aggressive matching
+        const normalizedInputTitle = (title || '').toLowerCase().trim().replace(/[^\w\s]/gi, '');
+
+        let existing = null;
         if (imdbID) {
             existing = await Media.findOne({ userId: req.user.id, imdbID });
         } 
         
         if (!existing && title) {
-            // Enhanced check: Try finding by title (case-insensitive) and mediaType
-            // This is more aggressive than requiring an exact year match
-            existing = await Media.findOne({ 
+            // Find ALL potential matches by title first (expensive but safe)
+            const potentialMatches = await Media.find({ 
                 userId: req.user.id, 
-                title: { $regex: new RegExp(`^${title.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }, 
                 mediaType 
+            });
+
+            existing = potentialMatches.find(m => {
+                const normalizedExistingTitle = m.title.toLowerCase().trim().replace(/[^\w\s]/gi, '');
+                return normalizedExistingTitle === normalizedInputTitle;
             });
         }
 

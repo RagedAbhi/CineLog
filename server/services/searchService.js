@@ -207,13 +207,14 @@ exports.getPersonDetails = async (personId) => {
  * Internal Processor for Personalization and Social Boost
  */
 async function processResults(results, userId) {
-    // Fetch User Behavior and Friends for context
-    const [behavior, friends] = await Promise.all([
+    // Fetch User Behavior, Friends, and User's own Library for reconciliation
+    const [behavior, friends, userLibrary] = await Promise.all([
         UserBehavior.findOne({ userId }),
         Friendship.find({ 
             $or: [{ requester: userId }, { recipient: userId }],
             status: 'accepted'
-        })
+        }),
+        Media.find({ userId }).select('imdbID title mediaType status')
     ]);
 
     const friendIds = friends.map(f => 
@@ -221,19 +222,30 @@ async function processResults(results, userId) {
     );
 
     // Map and Score results
-    const mapped = results.map(item => {
-        if (item.media_type === 'person') {
-            return {
-                id: item.id,
-                name: item.name,
-                image: item.profile_path ? `https://image.tmdb.org/t/p/w200${item.profile_path}` : null,
-                mediaType: 'person',
-                knownFor: item.known_for?.map(m => m.title || m.name).join(', '),
-                popularity: item.popularity
-            };
+        let mappedItem = item.media_type === 'person' ? {
+            id: item.id,
+            name: item.name,
+            image: item.profile_path ? `https://image.tmdb.org/t/p/w200${item.profile_path}` : null,
+            mediaType: 'person',
+            knownFor: item.known_for?.map(m => m.title || m.name).join(', '),
+            popularity: item.popularity
+        } : mapMediaItem(item);
+
+        // Reconciliation: Check if this item is ALREADY in the user's library
+        if (mappedItem.mediaType !== 'person') {
+            const normalizedTitle = mappedItem.title.toLowerCase().trim();
+            const existingInLibrary = userLibrary.find(libItem => 
+                (libItem.imdbID && libItem.imdbID === mappedItem.id.toString()) ||
+                (libItem.title.toLowerCase().trim() === normalizedTitle && libItem.mediaType === mappedItem.mediaType)
+            );
+
+            if (existingInLibrary) {
+                mappedItem.libraryStatus = existingInLibrary.status;
+                mappedItem.libraryId = existingInLibrary._id;
+            }
         }
 
-        return mapMediaItem(item);
+        return mappedItem;
     });
 
     // Score media items

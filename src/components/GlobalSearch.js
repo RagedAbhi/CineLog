@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, Bookmark, Send, TrendingUp, Star, Clock, X, PlayCircle } from 'lucide-react';
+import { Eye, Bookmark, Send, TrendingUp, Star, Clock, X, PlayCircle, CheckCircle } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { getMovieDetailsExternal } from '../services/movieService';
 import { fetchStreamingAvailability, fetchTrailerID, getTrendingTMDB } from '../services/tmdbService';
@@ -146,13 +146,15 @@ const GlobalSearch = () => {
             }, { headers: { Authorization: `Bearer ${token}` } });
         } catch (e) {}
 
-        if (item.mediaType === 'person') {
-            navigate(`/person/${item.id}`);
+        if (item.libraryStatus && item.libraryId) {
+            navigate(`/movies/${item.libraryId}`);
+            setIsOpen(false);
             return;
         }
 
         const idToUse = item.imdbID || item.id;
         navigate(`/movies/${idToUse}?external=true&type=${item.mediaType}`);
+        setIsOpen(false);
     };
 
     const renderMediaCard = (item) => (
@@ -196,8 +198,29 @@ const GlobalSearch = () => {
                 <div className="search-item-actions">
                     <div className="action-icons-group">
                         <button className="action-icon-btn" onClick={(e) => handlePlayTrailer(e, item)} title="Play Trailer"><PlayCircle size={16} /></button>
-                        <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'watched')} title="Mark as Watched"><Eye size={16} /></button>
-                        <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'watchlist')} title="Add to Watchlist"><Bookmark size={16} /></button>
+                        
+                        {item.libraryStatus ? (
+                            <div className="library-status-badge" style={{ 
+                                background: 'var(--accent)', 
+                                color: 'black', 
+                                padding: '2px 10px', 
+                                borderRadius: '100px', 
+                                fontSize: '10px', 
+                                fontWeight: 'bold', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '4px' 
+                            }}>
+                                <CheckCircle size={10} />
+                                {item.libraryStatus.toUpperCase()}
+                            </div>
+                        ) : (
+                            <>
+                                <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'watched')} title="Mark as Watched"><Eye size={16} /></button>
+                                <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'watchlist')} title="Add to Watchlist"><Bookmark size={16} /></button>
+                            </>
+                        )}
+                        
                         <button className="action-icon-btn" onClick={(e) => handleQuickAction(e, item, 'recommend')} title="Recommend"><Send size={16} /></button>
                     </div>
                 </div>
