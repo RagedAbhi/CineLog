@@ -91,9 +91,18 @@ class MovieDetail extends Component {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data) {
-                this.setState({ externalMovie: { ...res.data, isExternalRec: false }, localLoading: false }, () => {
+                this.setState({ externalMovie: { ...res.data, isExternalRec: false }, localLoading: false }, async () => {
                     this.fetchStreamingInfo();
                     this.initAnimations();
+                    
+                    // Trigger lazy repair if data is missing
+                    const movie = res.data;
+                    if (!movie.plot || movie.plot.length < 10 || !movie.cast || movie.cast === 'Unknown') {
+                        try {
+                            const fresh = await getMovieDetailsExternal(movie.imdbID || movie._id, movie.mediaType);
+                            if (fresh) this.syncMetadataIfNeeded(fresh);
+                        } catch (e) { console.warn('Lazy repair fetch failed:', e); }
+                    }
                 });
                 return;
             }
@@ -141,9 +150,11 @@ class MovieDetail extends Component {
 
   syncMetadataIfNeeded = async (freshDetails) => {
     const movie = this.getMovie();
-    // If we're looking at a recommendation and the stored rec has no genre (or "Unknown"), fix it.
-    if (movie && movie.isExternalRec && movie._id && (!movie.genre || movie.genre === 'Unknown' || movie.genre === '')) {
-      if (freshDetails && freshDetails.genre && freshDetails.genre !== 'Unknown') {
+    if (!movie || !movie._id || !freshDetails) return;
+
+    // Condition 1: Recommendation needs healing
+    if (movie.isExternalRec && (!movie.genre || movie.genre === 'Unknown' || movie.genre === '')) {
+      if (freshDetails.genre && freshDetails.genre !== 'Unknown') {
         try {
           const token = localStorage.getItem('token');
           await axios.patch(`${config.API_URL}/api/recommendations/${movie._id}/metadata`, 
@@ -154,6 +165,22 @@ class MovieDetail extends Component {
           console.error('[MovieDetail] Failed to sync recommendation metadata:', err);
         }
       }
+    }
+
+    // Condition 2: Regular library item needs healing (Missing Plot or Cast)
+    const isCorrupted = !movie.isExternalRec && (!movie.plot || movie.plot.length < 10 || !movie.cast || movie.cast === 'Unknown');
+    if (isCorrupted && freshDetails.plot) {
+        console.log('[MovieDetail] Healing corrupted library item metadata...');
+        try {
+            await this.props.updateMovie(movie._id, {
+                plot: movie.plot && movie.plot.length >= 10 ? movie.plot : freshDetails.plot,
+                cast: movie.cast && movie.cast !== 'Unknown' ? movie.cast : freshDetails.cast,
+                director: movie.director && movie.director !== 'Unknown' ? movie.director : freshDetails.director,
+                genre: movie.genre && movie.genre !== 'Unknown' ? movie.genre : freshDetails.genre
+            });
+        } catch (err) {
+            console.error('[MovieDetail] Failed to auto-heal library item:', err);
+        }
     }
   }
 
