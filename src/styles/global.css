@@ -21,8 +21,14 @@
   --secondary-foreground: #f8fafc;
   --muted: #1e1b4b;
   --muted-foreground: #94a3b8;
-  --accent: #2e1065;
+  --accent: #a855f7;
+  --accent-secondary: #ff7a2f;
   --accent-foreground: #f8fafc;
+  --accent-glow: rgba(168, 85, 247, 0.4);
+  --accent-dim: rgba(168, 85, 247, 0.08);
+  --accent-soft: rgba(255, 122, 47, 0.15);
+  --accent-gradient: linear-gradient(135deg, #ff7a2f 0%, #a855f7 100%);
+  --accent-glow-orange: rgba(255, 122, 47, 0.3);
   --destructive: #7f1d1d;
   --destructive-foreground: #fef2f2;
   --border: rgba(255, 255, 255, 0.1);
@@ -49,6 +55,10 @@
   --radius-xl: 32px;
   --bg: var(--background);
   --text-primary: var(--foreground);
+  --bg-card: rgba(10, 10, 26, 0.4);
+  --bg-elevated: rgba(30, 27, 75, 0.4);
+  --glass-blur: blur(24px);
+  --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
 }
 
 @theme inline {
@@ -163,33 +173,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Image Based Background */
-.liquid-bg-wrapper {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: #000;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.image-blob-bg {
-  position: absolute;
-  width: 110vw;
-  height: 110vh;
-  background: url('../assets/bubble-bg.jpg') no-repeat center center fixed;
-  background-size: cover;
-  animation: bgDrift 20s ease-in-out infinite alternate;
-  opacity: 0.8;
-}
-
-@keyframes bgDrift {
-  0% { transform: scale(1) translate(0, 0) rotate(0deg); }
-  50% { transform: scale(1.05) translate(-1%, 2%) rotate(2deg); }
-  100% { transform: scale(1.1) translate(1%, -2%) rotate(-2deg); }
-}
 /* Custom Minimalist Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -244,7 +228,9 @@ img {
 .app-body {
   display: flex;
   flex: 1;
-  padding-top: 126px; /* Adjusted for 1.5 line spacing from search bar */
+  padding-top: 156px; /* Adjusted for taller 96px navbar + top offset + spacing */
+  position: relative;
+  z-index: 1;
 }
 
 .main-content {
@@ -294,24 +280,24 @@ img {
   top: 20px;
   left: 20px;
   right: 20px;
-  height: 70px;
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--border);
+  height: 96px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
   border-radius: 100px;
   z-index: 1000;
   display: flex;
   align-items: center;
   transition: var(--transition);
-  padding: 0 24px;
-  box-shadow: var(--shadow-premium);
+  padding: 0 28px 0 0;
+  overflow: hidden;
 }
 
 .topbar-premium.scrolled {
   top: 10px;
   background: rgba(0, 0, 0, 0.4);
-  height: 60px;
+  height: 80px;
 }
 
 .topbar-inner {
@@ -324,20 +310,22 @@ img {
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 12px;
   flex: 1;
+  min-width: 0;
 }
 
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .topbar-actions-premium {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
 .topbar-logo-premium {
@@ -355,31 +343,37 @@ img {
 }
 
 .topbar-search-container {
-    flex: 1;
-    max-width: 400px;
+    /* Auto margins on both sides centers it within whatever space
+       topbar-left has after the logo — never reaches topbar-right */
+    margin-left: auto;
+    margin-right: auto;
+    width: 240px;
+    flex-shrink: 0;
 }
 
 .topnav-premium {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   background: rgba(255, 255, 255, 0.02);
-  padding: 5px;
+  padding: 4px;
   border-radius: 100px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 }
 
 .nav-item-premium {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
-  padding: 8px 20px;
+  padding: 6px 12px;
   border-radius: 100px;
   transition: var(--bouncy);
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   position: relative;
+  white-space: nowrap;
 }
 
 .nav-item-premium:hover {
@@ -399,8 +393,10 @@ img {
 .extension-install-btn {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 8px 16px;
+    justify-content: center;
+    /* icon-only to save space */
+    gap: 0;
+    padding: 7px;
     border-radius: 100px;
     background: rgba(139, 92, 246, 0.1);
     border: 1px solid rgba(139, 92, 246, 0.3);
@@ -411,6 +407,12 @@ img {
     transition: all 0.3s ease;
     white-space: nowrap;
     cursor: pointer;
+    width: 32px;
+    height: 32px;
+}
+
+.extension-install-btn span {
+    display: none; /* hide label, show only icon */
 }
 
 .extension-install-btn:hover {
@@ -424,8 +426,8 @@ img {
 .profile-trigger {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 16px 6px 6px;
+    gap: 8px;
+    padding: 4px 10px 4px 4px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 100px;
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -516,7 +518,7 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(0, 242, 255, 0.2);
+    border: 1px solid var(--accent-dim);
 }
 
 .avatar-icon {
@@ -766,7 +768,7 @@ img {
 .media-row .movie-card:hover {
   transform: scale(1.08) translateY(-5px);
   z-index: 10;
-  box-shadow: 0 15px 45px rgba(0, 242, 255, 0.15);
+  box-shadow: 0 15px 45px var(--accent-glow);
 }
 
 .movie-card {
@@ -974,7 +976,7 @@ img {
 .search-input:focus {
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+  box-shadow: 0 0 20px var(--accent-glow);
 }
 
 .filter-select {
@@ -1897,9 +1899,9 @@ textarea.form-input {
   overflow: hidden;
   box-shadow: 
     0 50px 100px rgba(0, 0, 0, 0.9), 
-    0 0 50px rgba(0, 242, 255, 0.3), 
-    0 0 100px rgba(0, 242, 255, 0.1); 
-  border: 1px solid rgba(255, 255, 255, 0.2);
+    0 0 40px rgba(255, 100, 20, 0.25), 
+    0 0 80px rgba(160, 50, 255, 0.2); 
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transform: perspective(1000px) rotateY(-5deg);
   transition: transform 0.6s ease, box-shadow 0.6s ease;
   margin-right: 60px;
@@ -2409,7 +2411,7 @@ html.lenis {
 .global-search-input-wrapper:focus-within {
   background: var(--bg-elevated);
   border-color: var(--accent);
-  box-shadow: 0 0 15px rgba(0, 242, 255, 0.15);
+  box-shadow: 0 0 15px var(--accent-dim);
 }
 
 .search-icon {
@@ -2577,7 +2579,7 @@ html.lenis {
     background: var(--accent-dim);
     border-color: var(--accent);
     color: var(--accent);
-    box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+    box-shadow: 0 0 10px var(--accent-glow-orange);
 }
 
 .btn-execute-actions {
@@ -2593,7 +2595,7 @@ html.lenis {
     cursor: pointer;
     font-size: 14px;
     transition: all 0.3s var(--bouncy);
-    box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+    box-shadow: 0 4px 15px var(--accent-glow-orange);
 }
 
 .btn-execute-actions:hover {
@@ -2684,7 +2686,7 @@ html.lenis {
   font-weight: 700;
   letter-spacing: 1px;
   margin-bottom: 12px;
-  border: 1px solid rgba(0, 242, 255, 0.2);
+  border: 1px solid var(--accent-dim);
 }
 
 .page-header-premium h2 {
@@ -2721,7 +2723,7 @@ html.lenis {
 .stat-card-premium.active {
   background: var(--bg-elevated);
   border-color: var(--accent);
-  box-shadow: 0 0 30px rgba(0, 242, 255, 0.15);
+  box-shadow: 0 0 30px var(--accent-glow);
 }
 
 .stat-card-premium.accent .stat-value {

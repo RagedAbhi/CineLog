@@ -313,15 +313,7 @@ class Dashboard extends Component {
           <meta property="og:description" content="Your personal cinema vault and social movie journal." />
           <meta property="og:type" content="website" />
         </Helmet>
-        {/* Full-Page Background (Fixed) */}
-        <div className="hero-bg">
-          <div
-            className="hero-bg-blur"
-            style={{ 
-                backgroundImage: featured?.poster ? `url("${featured.poster}")` : 'none',
-            }}
-          />
-        </div>
+        {/* Hero Background has been removed to allow global cinematic canvas to shine through */}
 
         <div className="dashboard-actions-float">
           <button

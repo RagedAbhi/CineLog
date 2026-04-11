@@ -4,7 +4,8 @@ import { useSelector } from 'react-redux';
 import { HelmetProvider } from 'react-helmet-async';
 import useSocket from './hooks/useSocket';
 import Lenis from 'lenis';
-import blobBg from './assets/blob.jpeg';
+import DualEnergyBackground from './components/DualEnergyBackground';
+import { getCueratesIconDataURL } from './utils/cuerates-logo';
 
 import Topbar from './components/Topbar';
 import Toast from './components/Toast';
@@ -55,6 +56,23 @@ const App = () => {
   const isHomePage = location.pathname === '/';
   const isDetailPage = location.pathname.startsWith('/movies/');
   const shouldHideBlobs = isHomePage || isDetailPage;
+
+  // ── Dynamic canvas favicon ─────────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const dataURL = getCueratesIconDataURL();
+      let link = document.querySelector('link[rel~="icon"]');
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.type = 'image/png';
+      link.href = dataURL;
+    } catch (e) {
+      console.warn('[CueratesLogo] Favicon injection failed:', e);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -154,10 +172,8 @@ const App = () => {
         />
       )}
 
-      {/* Image Based Background */}
-      <div className="liquid-bg-wrapper">
-        <div className="image-blob-bg" style={{ backgroundImage: `url(${blobBg})` }}></div>
-      </div>
+      {/* Cinematic Dual Energy Background */}
+      <DualEnergyBackground />
 
 
       <Topbar

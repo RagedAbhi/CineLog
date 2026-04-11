@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const mediaSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    title: { type: String, required: true },
+    title: { type: String, required: true, trim: true },
     mediaType: { type: String, enum: ['movie', 'series'], required: true },
     genre: { type: String, required: true },
     year: { type: Number },
@@ -21,5 +21,9 @@ const mediaSchema = new mongoose.Schema({
 }, { timestamps: true });
  
 mediaSchema.index({ userId: 1, imdbID: 1 }, { unique: true, sparse: true });
+mediaSchema.index({ userId: 1, title: 1, mediaType: 1 }, { 
+    unique: true, 
+    collation: { locale: 'en', strength: 2 } 
+});
 
 module.exports = mongoose.model('Media', mediaSchema);

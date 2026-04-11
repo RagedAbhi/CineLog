@@ -43,11 +43,7 @@ const AuthPage = () => {
 
     return (
         <>
-        <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: '#030213', color: 'white' }}>
-            {/* Image Based Background for Login */}
-            <div className="liquid-bg-wrapper">
-                <div className="image-blob-bg"></div>
-            </div>
+        <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', color: 'white' }}>
 
             <div className="auth-card glass-panel-premium" style={{ width: '100%', maxWidth: '440px' }}>
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
