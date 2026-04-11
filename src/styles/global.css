@@ -291,7 +291,7 @@ img {
   align-items: center;
   transition: var(--transition);
   padding: 0 28px 0 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .topbar-premium.scrolled {
@@ -2440,7 +2440,7 @@ html.lenis {
   right: 0;
   max-height: 400px;
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 2100;
   background: rgba(10, 25, 47, 0.95);
   border: 1px solid var(--border);
   border-radius: 16px;
