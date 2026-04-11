@@ -222,6 +222,7 @@ async function processResults(results, userId) {
     );
 
     // Map and Score results
+    const mapped = results.map(item => {
         let mappedItem = item.media_type === 'person' ? {
             id: item.id,
             name: item.name,
