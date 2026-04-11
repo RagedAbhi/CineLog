@@ -566,7 +566,16 @@ class MovieDetail extends Component {
                     </button>
                   </div>
                   <h1 className="detail-title-premium">{movie.title}</h1>
-                  {movie.director && <p className="detail-director-premium">Directed by <span>{movie.director}</span></p>}
+                  {movie.director && (
+                    <p className="detail-director-premium">
+                      Directed by <span 
+                        style={{ cursor: 'pointer', color: 'var(--accent)', textDecoration: 'underline' }}
+                        onClick={() => navigate(`/?search=${encodeURIComponent(movie.director)}`)}
+                      >
+                        {movie.director}
+                      </span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="detail-glass-card reveal">

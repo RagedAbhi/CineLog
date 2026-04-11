@@ -64,6 +64,18 @@ const GlobalSearch = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Listen for search parameter in URL (triggered by clicking cast/director on Detail page)
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const searchTerm = params.get('search');
+        if (searchTerm) {
+            setQuery(decodeURIComponent(searchTerm));
+            setIsOpen(true);
+            // Clear the search param from URL to avoid re-triggering on future renders
+            navigate(location.pathname, { replace: true });
+        }
+    }, [location.search, location.pathname, navigate]);
+
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (query.trim().length > 2) {
