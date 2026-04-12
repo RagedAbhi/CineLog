@@ -23,9 +23,6 @@ import AuthPage from './pages/AuthPage';
 import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
 import Messenger from './pages/Messenger.js';
-import PersonPage from './pages/PersonPage';
-import { useDispatch } from 'react-redux';
-import { hideRecommendModal, showToast, hideConfirmModal } from './store/actions';
 import { fetchCurrentUser, fetchRecommendations, fetchRecentChats } from './store/thunks';
 import config from './config';
 
