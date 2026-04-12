@@ -67,8 +67,8 @@ const PersonPage = () => {
             const matchesType = mediaTypeFilter === 'All' 
                 ? true 
                 : mediaTypeFilter === 'Movies' 
-                    ? item.media_type === 'movie' 
-                    : item.media_type === 'tv';
+                    ? item.mediaType === 'movie' 
+                    : item.mediaType === 'series';
             return matchesQuery && matchesType;
         });
     }, [person, activeTab, filterQuery, mediaTypeFilter]);
@@ -194,15 +194,26 @@ const PersonPage = () => {
                     </div>
 
                     <div className="filter-search-bar glass-panel-sm">
-                        <select 
-                            value={mediaTypeFilter} 
-                            onChange={(e) => setMediaTypeFilter(e.target.value)}
-                            className="media-type-dropdown"
-                        >
-                            <option value="All">All Types</option>
-                            <option value="Movies">Movies</option>
-                            <option value="Shows">TV Shows</option>
-                        </select>
+                        <div className="segmented-control">
+                            <button 
+                                className={`segment-btn ${mediaTypeFilter === 'All' ? 'active' : ''}`}
+                                onClick={() => setMediaTypeFilter('All')}
+                            >
+                                All
+                            </button>
+                            <button 
+                                className={`segment-btn ${mediaTypeFilter === 'Movies' ? 'active' : ''}`}
+                                onClick={() => setMediaTypeFilter('Movies')}
+                            >
+                                Movies
+                            </button>
+                            <button 
+                                className={`segment-btn ${mediaTypeFilter === 'Shows' ? 'active' : ''}`}
+                                onClick={() => setMediaTypeFilter('Shows')}
+                            >
+                                TV Shows
+                            </button>
+                        </div>
                         <div className="vertical-divider"></div>
                         <Search size={16} />
                         <input 
@@ -422,17 +433,30 @@ const PersonPage = () => {
                     outline: none;
                     width: 100%;
                 }
-                .media-type-dropdown {
-                    background: transparent;
-                    color: rgba(255,255,255,0.8);
-                    border: none;
-                    outline: none;
-                    font-weight: 600;
-                    cursor: pointer;
-                    font-size: 14px;
+                .segmented-control {
+                    display: flex;
+                    align-items: center;
+                    background: rgba(0,0,0,0.3);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 100px;
+                    padding: 4px;
                 }
-                .media-type-dropdown option {
-                    background: #111;
+                .segment-btn {
+                    background: transparent;
+                    border: none;
+                    color: rgba(255,255,255,0.7);
+                    padding: 6px 16px;
+                    border-radius: 100px;
+                    font-size: 13px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+                .segment-btn.active {
+                    background: white;
+                    color: black;
+                }
+                .segment-btn:hover:not(.active) {
                     color: white;
                 }
                 .vertical-divider {
