@@ -200,7 +200,7 @@ const FriendsPage = () => {
                                             <h4 className="stat-value" style={{ fontSize: '24px', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>{friend.name}</h4>
                                             <p className="stat-label" style={{ marginBottom: '20px' }}>@{friend.username}</p>
                                         </Link>
-                                        <Link to={`/chat/${friend._id}`} className="btn btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                                        <Link to={`/chat/${friend._id}`} className="btn btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', color: '#000' }}>
                                             💬 Message
                                         </Link>
                                     </div>
