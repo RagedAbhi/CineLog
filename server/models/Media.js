@@ -12,6 +12,7 @@ const mediaSchema = new mongoose.Schema({
     poster: { type: String },
     plot: { type: String },
     status: { type: String, enum: ['watchlist', 'watched', 'unknown'], default: 'unknown' },
+    language: { type: String, default: '' }, // ISO 639-1: 'en', 'hi', 'ja', etc.
     rating: { type: Number, min: 1, max: 10 },
     review: { type: String },
     watchedOn: { type: String },

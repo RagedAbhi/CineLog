@@ -128,7 +128,8 @@ export const getMovieDetailsExternal = async (id, mediaType = '') => {
             poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '',
             plot: item.overview,
             cast: item.credits?.cast?.slice(0, 5).map(c => c.name).join(', ') || '',
-            imdbID: id, // Keep original ID (could be tt... or numeric TMDB)
+            imdbID: id,
+            language: item.original_language || '',
             mediaType: tmdbType === 'tv' ? 'series' : 'movie'
         };
     }

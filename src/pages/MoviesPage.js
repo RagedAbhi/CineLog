@@ -13,7 +13,7 @@ const GENRES = ['all', 'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'D
 class MoviesPage extends Component {
     constructor(props) {
         super(props);
-        this.state = { showAddModal: false, statusFilter: 'all', dismissedIds: new Set() };
+        this.state = { showAddModal: false, statusFilter: 'all', dismissedIds: new Set(), languageFilter: 'all', migrating: false };
     }
 
     componentDidMount() {
@@ -125,6 +125,11 @@ class MoviesPage extends Component {
             list = list.filter(m => m.genre && m.genre.toLowerCase().includes(q));
         }
 
+        // --- Language filter ---
+        if (this.state.languageFilter !== 'all') {
+            list = list.filter(m => m.language === this.state.languageFilter);
+        }
+
         // --- UI Deduplication ---
         const seen = new Set();
         list = list.filter(m => {
@@ -145,10 +150,33 @@ class MoviesPage extends Component {
         return list;
     }
 
+    runMigration = async () => {
+        this.setState({ migrating: true });
+        try {
+            const token = localStorage.getItem('token');
+            const res = await import('axios').then(({ default: ax }) =>
+                ax.post(`${require('../config').default.API_URL}/api/media/migrate-language`, {}, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            );
+            this.props.showToast(`Languages synced: ${res.data.updated} updated`, 'success');
+            this.props.fetchMovies();
+        } catch {
+            this.props.showToast('Language sync failed', 'error');
+        } finally {
+            this.setState({ migrating: false });
+        }
+    }
+
     render() {
         const { loading, filters } = this.props;
-        const { showAddModal, toast, statusFilter } = this.state;
+        const { showAddModal, statusFilter, languageFilter, migrating } = this.state;
         const filtered = this.getFiltered();
+
+        // Compute available languages from the movies in library
+        const allMovies = this.props.movies.filter(m => m.mediaType === 'movie' || !m.mediaType);
+        const LANGUAGE_LABELS = { en: 'English', hi: 'Hindi', ja: 'Japanese', ko: 'Korean', fr: 'French', es: 'Spanish', de: 'German', zh: 'Chinese', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam', it: 'Italian', pt: 'Portuguese', ru: 'Russian', ar: 'Arabic' };
+        const availableLangs = [...new Set(allMovies.map(m => m.language).filter(Boolean))].sort();
 
         return (
             <div className="container-fluid">
@@ -218,6 +246,25 @@ class MoviesPage extends Component {
                         <button className="btn-clear" onClick={this.props.clearFilters}>Clear filters</button>
                     )}
                 </div>
+
+                {availableLangs.length > 0 && (
+                    <div className="filters-bar" style={{ paddingTop: 0, marginTop: '-8px', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Language</span>
+                        <div className="filter-toggle-group">
+                            <button className={`filter-toggle-btn ${languageFilter === 'all' ? 'active' : ''}`} onClick={() => this.setState({ languageFilter: 'all' })}>All</button>
+                            {availableLangs.map(lang => (
+                                <button key={lang} className={`filter-toggle-btn ${languageFilter === lang ? 'active' : ''}`} onClick={() => this.setState({ languageFilter: lang })}>
+                                    {LANGUAGE_LABELS[lang] || lang.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+                        {allMovies.some(m => !m.language) && (
+                            <button className="btn-clear" onClick={this.runMigration} disabled={migrating} style={{ marginLeft: 'auto' }}>
+                                {migrating ? 'Syncing...' : '⟳ Sync Languages'}
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {loading && this.props.movies.length === 0 ? (
                     <div className="loading-spinner"><div className="spinner" /><span>Loading movies...</span></div>
