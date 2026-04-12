@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStreamingAvailability, fetchTrailerID } from '../services/tmdbService';
-import { getCounts } from '../services/engagementService';
+import { getCounts, toggleLike } from '../services/engagementService';
 import gsap from 'gsap';
 import { useDispatch, useSelector } from 'react-redux';
 import { Plus, Check, Send, Trash2, Play, Heart, MessageCircle, BookmarkPlus } from 'lucide-react';
@@ -173,6 +173,56 @@ class MovieCard extends Component {
     }
   };
 
+  handleLikeClick = async (e) => {
+    e.stopPropagation();
+    const { movie, dispatch } = this.props;
+    if (!movie.imdbID) return;
+
+    const counts = this.state.engagementCounts || { likeCount: 0, commentCount: 0, addedToListCount: 0 };
+    // Fallback logic for userHasLiked if it wasn't returned by GET counts
+    const currentlyLiked = counts.userHasLiked === true || (counts.userHasLiked === undefined && counts.likeCount > 0);
+    
+    // Optimistic toggle
+    this.setState({
+      engagementCounts: {
+        ...counts,
+        likeCount: currentlyLiked ? Math.max(0, counts.likeCount - 1) : counts.likeCount + 1,
+        userHasLiked: !currentlyLiked
+      }
+    });
+
+    try {
+      const result = await toggleLike(movie.imdbID);
+      this.setState({
+        engagementCounts: {
+          ...this.state.engagementCounts,
+          likeCount: result.likeCount,
+          userHasLiked: result.liked
+        }
+      });
+    } catch (err) {
+      this.setState({ engagementCounts: counts });
+      if (err.response?.status !== 401) {
+          dispatch(showToast('Failed to update like', 'error'));
+      }
+    }
+  };
+
+  handleCommentClick = (e) => {
+    e.stopPropagation();
+    const { movie, navigate } = this.props;
+    const idToUse = (movie.isRecommendation || movie.isExternal)
+      ? (movie.imdbID || movie._id)
+      : (movie._id || movie.imdbID);
+      
+    if (idToUse) {
+      const url = (movie.isExternal || !movie._id || movie.isRecommendation)
+        ? `/movies/${idToUse}?external=true&type=${movie.mediaType || 'movie'}` 
+        : `/movies/${idToUse}`;
+      navigate(url);
+    }
+  };
+
   render() {
     const { movie, navigate, userMovies } = this.props;
     const { streamingProviders, engagementCounts } = this.state;
@@ -286,13 +336,26 @@ class MovieCard extends Component {
                 </div>
               </div>
             )}
-            {!this.props.isDashboard && engagementCounts && (
+            
+            {engagementCounts && (
               <div className="card-engagement-bar" onClick={e => e.stopPropagation()}>
-                <span className="card-eng-stat" title="Likes">
-                  <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} fillOpacity={0.8} />
+                <span 
+                  className="card-eng-stat" 
+                  title="Likes" 
+                  onClick={this.handleLikeClick} 
+                  style={{ cursor: 'pointer', color: engagementCounts.userHasLiked || engagementCounts.likeCount > 0 ? 'var(--accent)' : 'rgba(255, 255, 255, 0.75)', transition: 'color 0.2s' }}
+                >
+                  <Heart size={12} fill={(engagementCounts.userHasLiked || (engagementCounts.userHasLiked === undefined && engagementCounts.likeCount > 0)) ? 'currentColor' : 'none'} fillOpacity={0.8} />
                   {engagementCounts.likeCount}
                 </span>
-                <span className="card-eng-stat" title="Comments">
+                <span 
+                  className="card-eng-stat" 
+                  title="Comments" 
+                  onClick={this.handleCommentClick} 
+                  style={{ cursor: 'pointer', transition: 'color 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)'}
+                >
                   <MessageCircle size={12} />
                   {engagementCounts.commentCount}
                 </span>
@@ -304,23 +367,6 @@ class MovieCard extends Component {
             )}
           </div>
         </div>
-
-        {this.props.isDashboard && engagementCounts && (
-          <div className="card-engagement-extension" onClick={e => e.stopPropagation()}>
-            <span className="card-eng-stat" title="Likes">
-              <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />
-              {engagementCounts.likeCount}
-            </span>
-            <span className="card-eng-stat" title="Comments">
-              <MessageCircle size={12} />
-              {engagementCounts.commentCount}
-            </span>
-            <span className="card-eng-stat" title="Added to list">
-              <BookmarkPlus size={12} />
-              {engagementCounts.addedToListCount}
-            </span>
-          </div>
-        )}
       </div>
     );
   }
