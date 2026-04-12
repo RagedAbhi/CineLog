@@ -109,9 +109,6 @@ class DiscoverPage extends Component {
                         <div className="spinner" style={{ width: '50px', height: '50px', border: '3px solid rgba(255,165,0,0.1)', borderTopColor: '#f39c12', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
                         <h3 style={{ marginTop: '20px', color: '#fff', letterSpacing: '0.5px' }}>Analyzing your tastes...</h3>
                         <p style={{ color: '#888', fontSize: '0.9rem', marginTop: '8px' }}>Generating your perfect personalized grid.</p>
-                        <style>{`
-                            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                        `}</style>
                     </div>
                 )}
 
@@ -132,7 +129,7 @@ class DiscoverPage extends Component {
                 )}
 
                 {hasLibrary && !loading && !error && recommendations.length > 0 && (
-                    <div className="movie-grid" ref={this.gridRef}>
+                    <div className="movie-grid discover-grid" ref={this.gridRef}>
                         {recommendations.map(movie => (
                             <MovieCard 
                                 key={movie.id} 
@@ -142,6 +139,13 @@ class DiscoverPage extends Component {
                         ))}
                     </div>
                 )}
+                <style>{`
+                    .discover-grid {
+                        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+                        gap: 16px !important;
+                    }
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                `}</style>
             </div>
         );
     }

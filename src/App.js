@@ -21,7 +21,6 @@ import TVShowsPage from './pages/TVShowsPage';
 import Watchlist from './pages/Watchlist';
 import Watched from './pages/Watched';
 import MovieDetail from './pages/MovieDetail';
-import Analytics from './pages/Analytics';
 import AuthPage from './pages/AuthPage';
 import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
@@ -196,7 +195,6 @@ const App = () => {
               <Route path="/movies/:id" element={<MovieDetail />} />
               <Route path="/tvshows" element={<TVShowsPage />} />
               <Route path="/friends" element={<FriendsPage />} />
-              <Route path="/analytics" element={<Analytics />} />
               <Route path="/watched" element={<Watched />} />
               <Route path="/watchlist" element={<Watchlist />} />
               <Route path="/person/:id" element={<PersonPage />} />
