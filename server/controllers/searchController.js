@@ -119,13 +119,16 @@ exports.getProviders = async (req, res) => {
 };
 
 /**
- * Get Watch Providers by IMDB ID — WatchMode primary, TMDB fallback
- * GET /api/search/providers/:imdbID
+ * Get Watch Providers by IMDB ID (or TMDB ID) — WatchMode primary, TMDB fallback
+ * GET /api/search/providers/imdb/:imdbID?title=&type=&year=
  */
 exports.getProvidersById = async (req, res) => {
     try {
         const { imdbID } = req.params;
-        const providers = await searchService.getProvidersByImdbId(imdbID);
+        const { title, type, year } = req.query;
+        // 'search' is a sentinel used when there is no ID at all — title-only lookup
+        const resolvedId = imdbID === 'search' ? null : imdbID;
+        const providers = await searchService.getProvidersByImdbId(resolvedId, title, type, year);
         res.status(200).json(providers);
     } catch (error) {
         console.error('Provider by IMDB ID fetch error:', error);

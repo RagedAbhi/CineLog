@@ -9,13 +9,22 @@ const BASE_URL = 'https://api.themoviedb.org/3';
  * Calls the backend /api/search/providers/imdb/:imdbID which uses WatchMode
  * (with TMDB fallback). Items without an imdbID return null — no OTT shown.
  */
-export const fetchStreamingAvailability = async (_title, _type, _year, imdbID = null) => {
-    if (!imdbID) return null;
+export const fetchStreamingAvailability = async (title, type, year, imdbID = null) => {
+    // Items with no imdbID skip OTT lookup entirely
+    if (!imdbID && !title) return null;
 
     try {
         const token = localStorage.getItem('token');
-        const res = await axios.get(`${config.API_URL}/api/search/providers/imdb/${imdbID}`, {
-            headers: { Authorization: `Bearer ${token}` }
+        const params = {};
+        if (title) params.title = title;
+        if (type) params.type = type;
+        if (year) params.year = year;
+
+        // imdbID may be a proper IMDB ID (tt...) or a TMDB numeric ID — backend handles both
+        const idSegment = imdbID || 'search';
+        const res = await axios.get(`${config.API_URL}/api/search/providers/imdb/${idSegment}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            params
         });
         return Array.isArray(res.data) && res.data.length > 0 ? res.data : null;
     } catch (error) {

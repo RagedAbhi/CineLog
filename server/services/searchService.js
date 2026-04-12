@@ -90,49 +90,53 @@ const getProviderLogoMap = async () => {
 };
 
 /**
- * Fetch streaming providers for a specific IMDB ID.
- * Primary: WatchMode (direct content links). Fallback: TMDB (search links).
+ * Fetch streaming providers for a movie/show.
+ * imdbID can be a proper IMDB ID (tt...) or a TMDB numeric ID — both handled.
+ * title/year used as TMDB title-search fallback when ID lookup fails.
+ * Primary: WatchMode (direct links). Fallback: TMDB.
  * Results are cached in MongoDB for 48 hours.
  */
-exports.getProvidersByImdbId = async (imdbID) => {
-    const cacheKey = `providers_${imdbID}`;
+exports.getProvidersByImdbId = async (imdbID, title, type, year) => {
+    // Use a cache key that captures whichever identifier is available
+    const cacheKey = `providers_${imdbID || `title_${title}_${year}`}`;
     const cached = await SearchCache.findOne({ query: cacheKey, expiresAt: { $gt: new Date() } });
     if (cached) return cached.results;
 
     let providers = [];
 
-    // --- Primary: WatchMode ---
-    if (WATCHMODE_API_KEY) {
+    // --- Primary: WatchMode (only works with proper IMDB IDs: tt...) ---
+    const isProperImdbId = imdbID && /^tt\d+$/.test(imdbID);
+
+    if (WATCHMODE_API_KEY && isProperImdbId) {
         try {
-            // Step 1: resolve WatchMode title ID from IMDB ID
             const searchRes = await axios.get(`${WATCHMODE_BASE}/search/`, {
                 params: { apiKey: WATCHMODE_API_KEY, search_field: 'imdb_id', search_value: imdbID }
             });
             const titleResult = searchRes.data.title_results?.[0];
 
             if (titleResult) {
-                // Step 2: fetch sources for India
-                const sourcesRes = await axios.get(`${WATCHMODE_BASE}/title/${titleResult.id}/sources/`, {
-                    params: { apiKey: WATCHMODE_API_KEY, regions: 'IN' }
-                });
+                const [sourcesRes, logoMap] = await Promise.all([
+                    axios.get(`${WATCHMODE_BASE}/title/${titleResult.id}/sources/`, {
+                        params: { apiKey: WATCHMODE_API_KEY, regions: 'IN' }
+                    }),
+                    getProviderLogoMap()
+                ]);
 
-                const logoMap = await getProviderLogoMap();
                 const seen = new Set();
-
                 (sourcesRes.data || []).forEach(s => {
                     const mappedName = WATCHMODE_NAME_MAP[s.name];
                     if (!mappedName || seen.has(mappedName) || !s.web_url) return;
 
-                    // Find logo: try exact name match, then mapped name match
-                    const logo = logoMap[s.name] || logoMap[mappedName]
+                    // Logo: try exact, mapped name, partial match, or omit — never block the provider
+                    const logo = logoMap[s.name]
+                        || logoMap[mappedName]
                         || Object.entries(logoMap).find(([k]) =>
                             k.toLowerCase().includes(mappedName.toLowerCase())
-                        )?.[1];
+                        )?.[1]
+                        || null;
 
-                    if (logo) {
-                        providers.push({ name: mappedName, logo, link: s.web_url });
-                        seen.add(mappedName);
-                    }
+                    providers.push({ name: mappedName, logo, link: s.web_url });
+                    seen.add(mappedName);
                 });
             }
         } catch (e) {
@@ -142,46 +146,76 @@ exports.getProvidersByImdbId = async (imdbID) => {
 
     // --- Fallback: TMDB ---
     if (providers.length === 0) {
-        providers = await fetchTMDBProviders(imdbID);
+        providers = await fetchTMDBProviders(imdbID, title, type, year);
     }
 
-    // Cache for 48 hours
-    await SearchCache.findOneAndUpdate(
-        { query: cacheKey },
-        {
-            query: cacheKey,
-            results: providers,
-            expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000)
-        },
-        { upsert: true }
-    );
+    // Cache for 48 hours (only cache non-empty results to allow retry on failure)
+    if (providers.length > 0) {
+        await SearchCache.findOneAndUpdate(
+            { query: cacheKey },
+            {
+                query: cacheKey,
+                results: providers,
+                expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000)
+            },
+            { upsert: true }
+        );
+    }
 
     return providers;
 };
 
 /**
- * TMDB provider fallback — used when WatchMode has no data.
+ * TMDB provider fallback — handles proper IMDB IDs (tt...), TMDB numeric IDs,
+ * and title+year search fallback for items with no valid ID.
  */
-const fetchTMDBProviders = async (imdbID) => {
+const fetchTMDBProviders = async (imdbID, title, type, year) => {
     if (!TMDB_API_KEY) return [];
     try {
-        // Resolve TMDB ID from IMDB ID
-        const findRes = await axios.get(`${BASE_URL}/find/${imdbID}`, {
-            httpsAgent,
-            params: { api_key: TMDB_API_KEY, external_source: 'imdb_id' }
-        });
-        const tmdbItem = findRes.data.movie_results?.[0] || findRes.data.tv_results?.[0];
-        if (!tmdbItem) return [];
+        let tmdbId = null;
+        let tmdbType = type === 'series' ? 'tv' : 'movie';
 
-        const tmdbType = findRes.data.tv_results?.length > 0 ? 'tv' : 'movie';
-        const providersRes = await axios.get(`${BASE_URL}/${tmdbType}/${tmdbItem.id}/watch/providers`, {
+        if (imdbID && /^tt\d+$/.test(imdbID)) {
+            // Proper IMDB ID → use /find endpoint
+            const findRes = await axios.get(`${BASE_URL}/find/${imdbID}`, {
+                httpsAgent,
+                params: { api_key: TMDB_API_KEY, external_source: 'imdb_id' }
+            });
+            const tmdbItem = findRes.data.movie_results?.[0] || findRes.data.tv_results?.[0];
+            if (tmdbItem) {
+                tmdbId = tmdbItem.id;
+                tmdbType = findRes.data.tv_results?.length > 0 ? 'tv' : 'movie';
+            }
+        } else if (imdbID && /^\d+$/.test(imdbID)) {
+            // Numeric ID → treat as TMDB ID directly
+            tmdbId = imdbID;
+        }
+
+        // Title+year fallback when ID lookup failed or no ID provided
+        if (!tmdbId && title) {
+            const cleanYear = year ? String(year).match(/\d{4}/)?.[0] : null;
+            const searchParams = { api_key: TMDB_API_KEY, query: title, include_adult: false };
+            if (cleanYear) {
+                if (tmdbType === 'movie') searchParams.year = cleanYear;
+                else searchParams.first_air_date_year = cleanYear;
+            }
+            const searchRes = await axios.get(`${BASE_URL}/search/${tmdbType}`, {
+                httpsAgent, params: searchParams
+            });
+            const result = searchRes.data.results?.[0];
+            if (result) tmdbId = result.id;
+        }
+
+        if (!tmdbId) return [];
+
+        const providersRes = await axios.get(`${BASE_URL}/${tmdbType}/${tmdbId}/watch/providers`, {
             httpsAgent, params: { api_key: TMDB_API_KEY }
         });
 
         const india = providersRes.data.results?.IN;
         if (!india) return [];
 
-        const titleEncoded = encodeURIComponent(tmdbItem.title || tmdbItem.name || '');
+        const titleEncoded = encodeURIComponent(title || '');
         const searchUrls = {
             'Netflix': `https://www.netflix.com/search?q=${titleEncoded}`,
             'Amazon Prime': `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${titleEncoded}`,
