@@ -18,6 +18,7 @@ const GlobalSearch = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all');
+    const [isTeleporting, setIsTeleporting] = useState(false);
     
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -107,29 +108,51 @@ const GlobalSearch = () => {
             const filterType = params.get('type') || 'all';
             
             const silentSearch = async () => {
-                setLoading(true);
+                setIsTeleporting(true);
                 try {
                     const token = localStorage.getItem('token');
                     const response = await axios.get(`${config.API_URL}/api/search?q=${encodeURIComponent(searchTerm)}&type=${filterType}`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     
-                    const firstMatch = response.data.people?.[0] || 
-                                     response.data.all?.find(p => p.mediaType === 'person') ||
-                                     response.data.all?.[0];
+                    const allPeople = response.data.people || 
+                                    response.data.all?.filter(p => p.mediaType === 'person') || [];
+
+                    // HEURISTIC: Find the best match
+                    // 1. Prioritize those with posters/profile pictures
+                    // 2. Tie-break with popularity
+                    const sortedPeople = [...allPeople].sort((a, b) => {
+                        const aHasPic = !!(a.poster || a.profile_path);
+                        const bHasPic = !!(b.poster || b.profile_path);
+                        if (aHasPic && !bHasPic) return -1;
+                        if (!aHasPic && bHasPic) return 1;
+                        return (b.popularity || 0) - (a.popularity || 0);
+                    });
+
+                    const firstMatch = sortedPeople[0] || response.data.all?.[0];
 
                     if (firstMatch) {
                         // Immediate navigation to the person details
                         if (firstMatch.mediaType === 'person') {
-                            navigate(`/person/${firstMatch.id}`);
+                            // Delay slightly to allow the cinematic overlay to be seen
+                            setTimeout(() => {
+                                navigate(`/person/${firstMatch.id}`);
+                                setIsTeleporting(false);
+                            }, 800);
                         } else {
                             handleSelect(firstMatch);
+                            setIsTeleporting(false);
                         }
+                    } else {
+                        // Fallback: open search if nothing found
+                        setIsTeleporting(false);
+                        setQuery(searchTerm);
+                        setIsOpen(true);
                     }
                 } catch (err) {
                     console.error('Silent Search Error:', err);
+                    setIsTeleporting(false);
                 } finally {
-                    setLoading(false);
                     redirectInProgress.current = null;
                 }
             };
@@ -444,6 +467,15 @@ const GlobalSearch = () => {
                     {renderGroupedResults()}
                 </div>
             )}
+
+            {/* Cinematic Teleport Overlay */}
+            <div className={`teleport-overlay ${isTeleporting ? 'active' : ''}`}>
+                <div className="teleport-content">
+                    <div className="teleport-spinner"></div>
+                    <div className="teleport-text">Teleporting</div>
+                    <div className="teleport-subtext">Accessing Cinema Archives...</div>
+                </div>
+            </div>
         </div>
     );
 };
