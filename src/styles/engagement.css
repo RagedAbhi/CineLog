@@ -8,7 +8,7 @@
   bottom: 0;
   left: 20px;
   right: 20px;
-  background: rgba(10, 25, 47, 0.85);
+  background: rgba(10, 25, 47, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -19,7 +19,7 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  z-index: -1; /* Behind the card */
+  z-index: 0; /* Ensures it stays visible above the row while sliding from behind the card */
   transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.3s ease;
   transform: translateY(0);
   opacity: 0;

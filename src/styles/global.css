@@ -735,7 +735,7 @@ img {
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  padding: 10px 10px 60px; /* Increased bottom padding for engagement pop-out */
+  padding: 10px 10px 80px; /* Further increased bottom padding to ensure pop-out visibility */
   scroll-behavior: smooth;
   scrollbar-width: none;
   /* Firefox */
@@ -772,6 +772,7 @@ img {
   overflow: hidden;
   height: 100%;
   position: relative;
+  z-index: 2; /* Sits above the extension */
 }
 
 /* Carousel Navigation Arrows */
