@@ -1,152 +1,26 @@
 import axios from 'axios';
+import config from '../config';
 
 const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const BASE_URL = 'https://api.themoviedb.org/3';
 
 /**
- * Searches for a movie or TV show on TMDB and fetches its watch providers (OTT).
- * @param {string} title 
- * @param {string} type - 'movie' or 'series'
- * @param {number|string} year 
+ * Fetches streaming availability for a movie/show.
+ * Calls the backend /api/search/providers/imdb/:imdbID which uses WatchMode
+ * (with TMDB fallback). Items without an imdbID return null — no OTT shown.
  */
-export const fetchStreamingAvailability = async (title, type, year, imdbID = null) => {
-    if (!TMDB_API_KEY || TMDB_API_KEY === 'your_tmdb_api_key_here') {
-        return { error: 'NO_API_KEY' };
-    }
+export const fetchStreamingAvailability = async (_title, _type, _year, imdbID = null) => {
+    if (!imdbID) return null;
 
     try {
-        let tmdbId = null;
-        const tmdbType = type === 'series' ? 'tv' : 'movie';
-
-        // 1. If imdbID is provided, use it for direct lookup (most accurate)
-        if (imdbID) {
-            const findResponse = await axios.get(`${BASE_URL}/find/${imdbID}`, {
-                params: {
-                    api_key: TMDB_API_KEY,
-                    external_source: 'imdb_id'
-                }
-            });
-            const findResult = (type === 'series' ? findResponse.data.tv_results : findResponse.data.movie_results)?.[0];
-            if (findResult) tmdbId = findResult.id;
-        }
-
-        // 2. Fallback to search if no imdbID or find failed
-        if (!tmdbId) {
-            const cleanYear = year ? String(year).match(/\d{4}/)?.[0] : null;
-            const searchParams = {
-                api_key: TMDB_API_KEY,
-                query: title
-            };
-            
-            if (cleanYear) {
-                if (tmdbType === 'movie') {
-                    searchParams.year = cleanYear;
-                } else {
-                    searchParams.first_air_date_year = cleanYear;
-                }
-            }
-
-            const searchResponse = await axios.get(`${BASE_URL}/search/${tmdbType}`, {
-                params: searchParams
-            });
-            const searchResult = searchResponse.data.results[0];
-            if (searchResult) tmdbId = searchResult.id;
-        }
-
-        if (!tmdbId) return null;
-
-        // 2. Fetch watch providers
-        const providersResponse = await axios.get(`${BASE_URL}/${tmdbType}/${tmdbId}/watch/providers`, {
-            params: {
-                api_key: TMDB_API_KEY
-            }
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${config.API_URL}/api/search/providers/imdb/${imdbID}`, {
+            headers: { Authorization: `Bearer ${token}` }
         });
-
-        // 3. Filter for India (IN)
-        const indiaProviders = providersResponse.data.results?.IN;
-        if (!indiaProviders) return null;
-
-        // Combine flatrate (streaming), ads, rent, and buy
-        const allProviders = [
-            ...(indiaProviders.flatrate || []),
-            ...(indiaProviders.ads || []),
-            ...(indiaProviders.buy || []),
-            ...(indiaProviders.rent || [])
-        ];
-
-        if (allProviders.length > 0) {
-            console.log('TMDB Providers found for India:', allProviders.map(p => p.provider_name).join(', '));
-        }
-
-        // 4. Map to requested platforms and remove duplicates
-        const platformMap = {
-            'Netflix': 'Netflix',
-            'Amazon Prime Video': 'Amazon Prime',
-            'Amazon Prime Video with Ads': 'Amazon Prime',
-            'Prime Video': 'Amazon Prime',
-            'Amazon Video': 'Amazon Prime',
-            'Disney Plus Hotstar': 'Hotstar',
-            'Disney+ Hotstar': 'Hotstar',
-            'JioHotstar': 'Hotstar',
-            'Hotstar': 'Hotstar',
-            'Zee5': 'Zee5',
-            'ZEE5': 'Zee5',
-            'Sony Liv': 'SonyLiv',
-            'Sony LIV': 'SonyLiv',
-            'SonyLiv': 'SonyLiv',
-            'Jio': 'JioCinema',
-            'Apple TV': 'AppleTV',
-            'Apple TV Plus': 'AppleTV',
-            'Apple TV+': 'AppleTV',
-            'Apple TV App': 'AppleTV',
-            'Apple iTunes': 'AppleTV',
-            'iTunes': 'AppleTV',
-            'Rakuten Viki': 'Rakuten Viki',
-            'Viki': 'Rakuten Viki',
-            'JioCinema': 'JioCinema',
-            'Jio Cinema': 'JioCinema',
-            'Jio': 'JioCinema',
-            'YouTube': 'YouTube',
-            'YouTube Premium': 'YouTube'
-        };
-
-        const uniqueProviders = [];
-        const seenNames = new Set();
-        const encodedTitle = encodeURIComponent(title);
-
-        const platformSearchUrls = {
-            'Netflix': 'https://www.netflix.com/search?q=',
-            'Amazon Prime': 'https://www.primevideo.com/search/ref=atv_nb_sr?phrase=',
-            'Hotstar': 'https://www.hotstar.com/in/explore?search_query=',
-            'Zee5': 'https://www.zee5.com/search?q=',
-            'SonyLiv': 'https://www.sonyliv.com/search?q=',
-            'AppleTV': 'https://tv.apple.com/in/search?term=',
-            'Rakuten Viki': 'https://www.viki.com/search?q=',
-            'JioCinema': 'https://www.jiocinema.com/search/',
-            'YouTube': 'https://www.youtube.com/results?search_query='
-        };
-
-        allProviders.forEach(p => {
-            const mappedName = platformMap[p.provider_name];
-            if (mappedName && !seenNames.has(mappedName)) {
-                const searchBase = platformSearchUrls[mappedName];
-                const directLink = searchBase ? `${searchBase}${encodedTitle}` : indiaProviders.link;
-
-                uniqueProviders.push({
-                    name: mappedName,
-                    logo: `https://image.tmdb.org/t/p/original${p.logo_path}`,
-                    link: directLink
-                });
-                seenNames.add(mappedName);
-            }
-        });
-
-        return uniqueProviders;
+        return Array.isArray(res.data) && res.data.length > 0 ? res.data : null;
     } catch (error) {
-        if (error.response && error.response.status === 401) {
-            return { error: 'INVALID_API_KEY' };
-        }
-        console.error('Error fetching from TMDB:', error);
+        if (error.response?.status === 401) return { error: 'INVALID_API_KEY' };
+        console.error('Error fetching streaming providers:', error);
         return null;
     }
 };

@@ -103,18 +103,32 @@ exports.semanticSearch = async (req, res) => {
 };
 
 /**
- * Get Watch Providers for a movie/tv show
+ * Get Watch Providers for a movie/tv show (legacy — by TMDB type/id)
  * GET /api/search/providers/:type/:id
  */
 exports.getProviders = async (req, res) => {
     try {
         const { type, id } = req.params;
-        const { region } = req.query; // Optional
-
+        const { region } = req.query;
         const providers = await searchService.getWatchProviders(type, id, region || 'IN');
         res.status(200).json(providers);
     } catch (error) {
         console.error('Provider fetch error:', error);
+        res.status(500).json({ message: 'Failed to fetch watch providers' });
+    }
+};
+
+/**
+ * Get Watch Providers by IMDB ID — WatchMode primary, TMDB fallback
+ * GET /api/search/providers/:imdbID
+ */
+exports.getProvidersById = async (req, res) => {
+    try {
+        const { imdbID } = req.params;
+        const providers = await searchService.getProvidersByImdbId(imdbID);
+        res.status(200).json(providers);
+    } catch (error) {
+        console.error('Provider by IMDB ID fetch error:', error);
         res.status(500).json({ message: 'Failed to fetch watch providers' });
     }
 };

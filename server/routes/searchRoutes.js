@@ -9,6 +9,7 @@ const { protect } = require('../middleware/authMiddleware');
  */
 router.get('/', protect, searchController.proxySearch);
 router.get('/semantic', protect, searchController.semanticSearch);
+router.get('/providers/imdb/:imdbID', protect, searchController.getProvidersById);
 router.get('/providers/:type/:id', protect, searchController.getProviders);
 router.get('/person/:id', protect, searchController.getPersonFilmography);
 router.post('/track', protect, searchController.trackInteraction);
