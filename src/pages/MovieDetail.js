@@ -276,12 +276,23 @@ class MovieDetail extends Component {
   }
 
   getMovie() {
-    if (!this.props.movies || !this.props.movieId) return this.state.externalMovie;
-    const movie = this.props.movies.find(m => 
-        (m._id && m._id.toString() === this.props.movieId.toString()) ||
-        (m.imdbID && m.imdbID === this.props.movieId)
+    const { movies, movieId } = this.props;
+    const { externalMovie } = this.state;
+    
+    if (!movies || !movieId) return externalMovie;
+
+    const localMovie = movies.find(m => 
+        (m._id && m._id.toString() === movieId.toString()) ||
+        (m.imdbID && m.imdbID === movieId)
     );
-    return movie || this.state.externalMovie;
+
+    // SMARTER MERGE: If local movie exists but is "thin" (missing plot), 
+    // and we have a rich external movie object in state, prefer the rich one.
+    if (externalMovie && (!localMovie || (!localMovie.plot && externalMovie.plot))) {
+      return externalMovie;
+    }
+
+    return localMovie || externalMovie;
   }
 
   handleToggleTopPick = async () => {
@@ -379,6 +390,8 @@ class MovieDetail extends Component {
           poster: movie.poster,
           imdbID: movie.imdbID,
           mediaType: movie.mediaType || 'movie',
+          plot: movie.plot || '',
+          cast: movie.cast || '',
           status: 'watched',
           ...watchData
         };
@@ -411,6 +424,8 @@ class MovieDetail extends Component {
                 poster: movie.poster,
                 imdbID: movie.imdbID,
                 mediaType: movie.mediaType || 'movie',
+                plot: movie.plot || '',
+                cast: movie.cast || '',
                 status: 'watchlist'
             };
             try {
