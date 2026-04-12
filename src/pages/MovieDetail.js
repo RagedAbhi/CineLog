@@ -570,7 +570,7 @@ class MovieDetail extends Component {
                     <p className="detail-director-premium">
                       Directed by <span 
                         style={{ cursor: 'pointer', color: 'var(--accent)', textDecoration: 'underline' }}
-                        onClick={() => navigate(`/?search=${encodeURIComponent(movie.director)}`)}
+                        onClick={() => navigate(`/?search=${encodeURIComponent(movie.director)}&type=person&redirect=true`)}
                       >
                         {movie.director}
                       </span>
@@ -642,7 +642,7 @@ class MovieDetail extends Component {
                               <span 
                                 className="clickable-cast-member" 
                                 onClick={() => {
-                                    this.props.navigate(`/?search=${encodeURIComponent(actor)}`);
+                                    this.props.navigate(`/?search=${encodeURIComponent(actor)}&type=person&redirect=true`);
                                 }}
                                 style={{ cursor: 'pointer', color: 'var(--accent)', transition: 'all 0.2s' }}
                               >

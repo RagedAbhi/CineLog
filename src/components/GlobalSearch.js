@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, Bookmark, Send, TrendingUp, Star, Clock, X, PlayCircle, CheckCircle } from 'lucide-react';
 import { useDispatch } from 'react-redux';
@@ -22,6 +22,7 @@ const GlobalSearch = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const searchRef = useRef(null);
+    const redirectInProgress = useRef(null);
 
     const location = useLocation();
     
@@ -33,18 +34,49 @@ const GlobalSearch = () => {
         }
     }, []);
 
-    const saveRecentSearch = (term) => {
-        if (!term.trim()) return;
-        const newSearches = [term, ...recentSearches.filter(t => t.toLowerCase() !== term.toLowerCase())].slice(0, 8);
-        setRecentSearches(newSearches);
-        localStorage.setItem('cinelog_recent_searches', JSON.stringify(newSearches));
-    };
+    const saveRecentSearch = useCallback((term) => {
+        if (!term || !term.trim()) return;
+        setRecentSearches(prev => {
+            const newSearches = [term, ...prev.filter(t => t.toLowerCase() !== term.toLowerCase())].slice(0, 8);
+            localStorage.setItem('cinelog_recent_searches', JSON.stringify(newSearches));
+            return newSearches;
+        });
+    }, []);
 
     const clearRecentSearches = (e) => {
         e.stopPropagation();
         setRecentSearches([]);
         localStorage.removeItem('cinelog_recent_searches');
     };
+
+    const handleSelect = useCallback((item) => {
+        saveRecentSearch(query || item.title || item.name);
+        setIsOpen(false);
+        setQuery('');
+
+        try {
+            const token = localStorage.getItem('token');
+            axios.post(`${config.API_URL}/api/search/track`, {
+                id: item.id.toString(),
+                title: item.title || item.name,
+                mediaType: item.mediaType,
+                genreIds: item.genreIds
+            }, { headers: { Authorization: `Bearer ${token}` } });
+        } catch (e) {}
+
+        if (item.mediaType === 'person') {
+            navigate(`/person/${item.id}`);
+            return;
+        }
+
+        if (item.libraryStatus && item.libraryId) {
+            navigate(`/movies/${item.libraryId}`);
+            return;
+        }
+
+        const idToUse = item.imdbID || item.id;
+        navigate(`/movies/${idToUse}?external=true&type=${item.mediaType}`);
+    }, [navigate, query, saveRecentSearch]);
 
     useEffect(() => {
         const fetchTrending = async () => {
@@ -64,17 +96,57 @@ const GlobalSearch = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Listen for search parameter in URL (triggered by clicking cast/director on Detail page)
+    // SILENT AUTO-TELEPORT: Listen for redirect parameter in URL
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const searchTerm = params.get('search');
-        if (searchTerm) {
+        const isRedirect = params.get('redirect') === 'true';
+
+        if (isRedirect && searchTerm && redirectInProgress.current !== searchTerm) {
+            redirectInProgress.current = searchTerm;
+            const filterType = params.get('type') || 'all';
+            
+            const silentSearch = async () => {
+                setLoading(true);
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await axios.get(`${config.API_URL}/api/search?q=${encodeURIComponent(searchTerm)}&type=${filterType}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    
+                    const firstMatch = response.data.people?.[0] || 
+                                     response.data.all?.find(p => p.mediaType === 'person') ||
+                                     response.data.all?.[0];
+
+                    if (firstMatch) {
+                        // Immediate navigation to the person details
+                        if (firstMatch.mediaType === 'person') {
+                            navigate(`/person/${firstMatch.id}`);
+                        } else {
+                            handleSelect(firstMatch);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Silent Search Error:', err);
+                } finally {
+                    setLoading(false);
+                    redirectInProgress.current = null;
+                }
+            };
+            
+            silentSearch();
+            // Clear URL WITHOUT using replace yet to avoid triggering another effect too early
+            // though standard practice is fine here.
+            navigate(location.pathname, { replace: true });
+        } else if (searchTerm && !isRedirect) {
+            // Standard pre-fill logic for non-redirect searches
+            const filterType = params.get('type');
+            if (filterType) setActiveFilter(filterType);
             setQuery(decodeURIComponent(searchTerm));
             setIsOpen(true);
-            // Clear the search param from URL to avoid re-triggering on future renders
             navigate(location.pathname, { replace: true });
         }
-    }, [location.search, location.pathname, navigate]);
+    }, [location.search, location.pathname, navigate, handleSelect]);
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
@@ -141,32 +213,6 @@ const GlobalSearch = () => {
         } catch (err) {
             dispatch(showToast('Failed to load trailer', 'error'));
         }
-    };
-
-    const handleSelect = (item) => {
-        saveRecentSearch(query || item.title || item.name);
-        setIsOpen(false);
-        setQuery('');
-
-        try {
-            const token = localStorage.getItem('token');
-            axios.post(`${config.API_URL}/api/search/track`, {
-                id: item.id.toString(),
-                title: item.title || item.name,
-                mediaType: item.mediaType,
-                genreIds: item.genreIds
-            }, { headers: { Authorization: `Bearer ${token}` } });
-        } catch (e) {}
-
-        if (item.libraryStatus && item.libraryId) {
-            navigate(`/movies/${item.libraryId}`);
-            setIsOpen(false);
-            return;
-        }
-
-        const idToUse = item.imdbID || item.id;
-        navigate(`/movies/${idToUse}?external=true&type=${item.mediaType}`);
-        setIsOpen(false);
     };
 
     const renderMediaCard = (item) => (
