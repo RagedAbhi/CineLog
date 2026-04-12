@@ -806,6 +806,6 @@ const mapStateToProps = (state) => ({
   loading: state.movies.loading
 });
 
-const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie, showToast, showRecommendModal, showConfirmModal, showTrailerModal };
+const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie, showToast, showRecommendModal, showConfirmModal, showTrailerModal, setTeleporting };
 
 export default connect(mapStateToProps, mapDispatchToProps)(MovieDetailWrapper);
