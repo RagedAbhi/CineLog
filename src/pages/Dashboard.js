@@ -218,6 +218,8 @@ class Dashboard extends Component {
   }
 
   getFeaturedMovie() {
+    const list = this.getFeaturedList();
+    if (list.length === 0) return this.props.movies[0];
     return list[this.state.activeHeroIndex % list.length];
   }
   
