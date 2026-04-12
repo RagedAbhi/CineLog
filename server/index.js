@@ -20,6 +20,7 @@ const watchRoomRoutes = require('./routes/watchRoomRoutes');
 const engagementRoutes = require('./routes/engagementRoutes');
 
 const app = express();
+app.set('trust proxy', 1); // Trust the reverse proxy (Render) to properly track client IPs for rate-limiting
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
