@@ -735,7 +735,7 @@ img {
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  padding: 40px 10px 60px; /* Increased vertical padding to prevent clipping on hover lift/scale */
+  padding: 10px 4px 30px;
   scroll-behavior: smooth;
   scrollbar-width: none;
   /* Firefox */
@@ -750,6 +750,11 @@ img {
   flex: 0 0 204px;
 }
 
+.movie-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
 .movie-card {
   position: relative;
   border-radius: 18px;
@@ -757,16 +762,8 @@ img {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   height: 100%;
-  transform: scale(1);
-  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.3s ease;
   z-index: 1;
-}
-
-.movie-card:hover {
-  transform: scale(1.1) translateY(-10px);
-  z-index: 100 !important;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-glow);
-  border-color: var(--accent);
 }
 
 /* Carousel Navigation Arrows */
