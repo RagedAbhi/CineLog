@@ -132,7 +132,7 @@ class DiscoverPage extends Component {
                 )}
 
                 {hasLibrary && !loading && !error && recommendations.length > 0 && (
-                    <div className="movies-grid" ref={this.gridRef}>
+                    <div className="movie-grid" ref={this.gridRef}>
                         {recommendations.map(movie => (
                             <MovieCard 
                                 key={movie.id} 
