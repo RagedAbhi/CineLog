@@ -130,7 +130,7 @@ const GlobalSearch = () => {
                     if (firstMatch) {
                         if (firstMatch.mediaType === 'person') {
                             setTimeout(() => {
-                                navigate(`/person/${firstMatch.id}`);
+                                navigate(`/person/${firstMatch.id}`, { replace: true });
                                 dispatch(setTeleporting(false));
                             }, 800);
                         } else {
