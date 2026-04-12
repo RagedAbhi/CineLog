@@ -346,3 +346,125 @@ export const fetchTrailerID = async (movie) => {
         return null;
     }
 };
+
+/**
+ * Builds a highly personalized recommendation grid based on the user's entire library content,
+ * specifically extracting genre affinities and highly rated items, filtering out items the user already possesses.
+ */
+export const generatePersonalizedFeed = async (userLibrary) => {
+    if (!TMDB_API_KEY || !userLibrary || userLibrary.length === 0) return [];
+
+    try {
+        // 1. Analyze user library for preferred genres
+        const genreScores = {};
+        const highlyRatedItems = [];
+        
+        userLibrary.forEach(movie => {
+            if (movie.rating >= 8 || movie.isTopPick || movie.status === 'watched') {
+                highlyRatedItems.push(movie);
+            }
+            if (movie.genre && movie.genre !== 'Unknown') {
+                const weight = movie.rating || 5;
+                movie.genre.split(/[,/]/).map(g => g.trim()).forEach(g => {
+                    genreScores[g] = (genreScores[g] || 0) + weight;
+                });
+            }
+        });
+
+        // Get top 3 genres
+        const topGenres = Object.entries(genreScores)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([g]) => {
+                // Find TMDB ID from GENRE_MAP value
+                const entry = Object.entries(GENRE_MAP).find(([id, name]) => name.toLowerCase() === g.toLowerCase() || name.includes(g) || g.includes(name));
+                return entry ? entry[0] : null;
+            }).filter(Boolean);
+
+        const fetchPromises = [];
+
+        // 2. Discover via Top Genres
+        if (topGenres.length > 0) {
+            fetchPromises.push(axios.get(`${BASE_URL}/discover/movie`, {
+                params: { api_key: TMDB_API_KEY, with_genres: topGenres.join('|'), sort_by: 'popularity.desc', page: 1, vote_count_gte: 50 }
+            }).catch(() => null));
+            fetchPromises.push(axios.get(`${BASE_URL}/discover/tv`, {
+                params: { api_key: TMDB_API_KEY, with_genres: topGenres.join('|'), sort_by: 'popularity.desc', page: 1, vote_count_gte: 50 }
+            }).catch(() => null));
+        }
+
+        // 3. Discover via specific Highly Rated items (Netflix "Because you liked" approach)
+        if (highlyRatedItems.length > 0) {
+            // Pick up to 3 random favorites to diversify
+            const seeds = [...highlyRatedItems].sort(() => 0.5 - Math.random()).slice(0, 3);
+            
+            for (const seed of seeds) {
+                const tmdbId = await resolveTMDBId(seed);
+                const type = seed.mediaType === 'series' ? 'tv' : 'movie';
+                if (tmdbId) {
+                    fetchPromises.push(axios.get(`${BASE_URL}/${type}/${tmdbId}/recommendations`, {
+                        params: { api_key: TMDB_API_KEY }
+                    }).catch(() => null));
+                }
+            }
+        }
+
+        // Parallel fetch
+        const responses = await Promise.all(fetchPromises);
+        
+        // 4. Blend and De-duplicate
+        let blend = [];
+        responses.forEach(res => {
+            if (res && res.data && res.data.results) {
+                // Add mediaType if it's missing (for discover/movie vs tv)
+                const isTv = res.config.url.includes('/tv');
+                const items = res.data.results.map(item => ({
+                    ...item,
+                    media_type: item.media_type || (isTv ? 'tv' : 'movie')
+                }));
+                blend = blend.concat(items);
+            }
+        });
+
+        // 5. Build unique and map
+        const uniqueItems = new Map();
+        const existingTitles = new Set(userLibrary.map(m => m.title?.toLowerCase().trim()));
+
+        blend.forEach(item => {
+            const title = item.title || item.name;
+            const normTitle = title?.toLowerCase().trim();
+            // FILTER: Do not include if the user already has it in their library!
+            if (!normTitle || existingTitles.has(normTitle)) return;
+
+            if (!uniqueItems.has(item.id)) {
+                uniqueItems.set(item.id, {
+                    id: item.id,
+                    title: title,
+                    year: (item.release_date || item.first_air_date || '').split('-')[0],
+                    poster: item.poster_path ? `https://image.tmdb.org/t/p/w400${item.poster_path}` : '',
+                    backdrop: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : '',
+                    mediaType: item.media_type === 'tv' ? 'series' : 'movie',
+                    rating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
+                    overview: item.overview,
+                    genreIds: item.genre_ids || [],
+                    popularity: item.popularity
+                });
+            } else {
+                // Boost popularity if recommended multiple times
+                const existing = uniqueItems.get(item.id);
+                existing.popularity += 100;
+            }
+        });
+
+        // Sort by blended popularity Score
+        const finalResults = Array.from(uniqueItems.values())
+            .filter(i => i.poster) // Only visual items
+            .sort((a, b) => b.popularity - a.popularity)
+            .slice(0, 48); // Top 48 for nice grid sizing
+
+        return finalResults;
+    } catch (e) {
+        console.error('Error generating personalized feed:', e);
+        return [];
+    }
+};

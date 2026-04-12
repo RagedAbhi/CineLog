@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/thunks';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, BarChart3, Puzzle } from 'lucide-react';
+import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, BarChart3, Puzzle, Sparkles } from 'lucide-react';
 
 import GlobalSearch from './GlobalSearch';
 import CueratesLogo from './CueratesLogo';
@@ -64,6 +64,7 @@ const Topbar = () => {
         { path: '/', label: 'Home', icon: LayoutDashboard, end: true },
         { path: '/movies-list', label: 'Movies', icon: Film },
         { path: '/tvshows', label: 'Shows', icon: Tv },
+        { path: '/discover', label: 'Discover', icon: Sparkles },
         { path: '/friends', label: 'Social', icon: Users },
         { path: '/analytics', label: 'Stats', icon: BarChart3 },
     ];

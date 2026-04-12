@@ -26,6 +26,7 @@ import AuthPage from './pages/AuthPage';
 import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
 import Messenger from './pages/Messenger.js';
+import DiscoverPage from './pages/DiscoverPage';
 import { fetchCurrentUser, fetchRecommendations, fetchRecentChats } from './store/thunks';
 import config from './config';
 
@@ -191,6 +192,7 @@ const App = () => {
               <Route path="/chat/:friendId" element={<Messenger />} />
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/movies-list" element={<MoviesPage />} />
+              <Route path="/discover" element={<DiscoverPage />} />
               <Route path="/movies/:id" element={<MovieDetail />} />
               <Route path="/tvshows" element={<TVShowsPage />} />
               <Route path="/friends" element={<FriendsPage />} />
