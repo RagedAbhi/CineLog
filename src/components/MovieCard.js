@@ -286,25 +286,25 @@ class MovieCard extends Component {
                 </div>
               </div>
             )}
-
-            {engagementCounts && (
-              <div className="card-engagement-bar" onClick={e => e.stopPropagation()}>
-                <span className="card-eng-stat" title="Likes">
-                  <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />
-                  {engagementCounts.likeCount}
-                </span>
-                <span className="card-eng-stat" title="Comments">
-                  <MessageCircle size={12} />
-                  {engagementCounts.commentCount}
-                </span>
-                <span className="card-eng-stat" title="Added to list">
-                  <BookmarkPlus size={12} />
-                  {engagementCounts.addedToListCount}
-                </span>
-              </div>
-            )}
           </div>
         </div>
+
+        {engagementCounts && (
+          <div className="card-engagement-extension" onClick={e => e.stopPropagation()}>
+            <span className="card-eng-stat" title="Likes">
+              <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />
+              {engagementCounts.likeCount}
+            </span>
+            <span className="card-eng-stat" title="Comments">
+              <MessageCircle size={12} />
+              {engagementCounts.commentCount}
+            </span>
+            <span className="card-eng-stat" title="Added to list">
+              <BookmarkPlus size={12} />
+              {engagementCounts.addedToListCount}
+            </span>
+          </div>
+        )}
       </div>
     );
   }

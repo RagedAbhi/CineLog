@@ -735,7 +735,7 @@ img {
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  padding: 10px 4px 30px;
+  padding: 10px 10px 60px; /* Increased bottom padding for engagement pop-out */
   scroll-behavior: smooth;
   scrollbar-width: none;
   /* Firefox */
@@ -752,18 +752,26 @@ img {
 
 .movie-card:hover {
   border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  z-index: 10; /* Ensure hovered card and its extension organic pop above others */
 }
 
 .movie-card {
   position: relative;
   border-radius: 18px;
-  overflow: hidden;
+  /* overflow: hidden removed to allow pop-out extension below */
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   height: 100%;
   transition: all 0.3s ease;
   z-index: 1;
+}
+
+.movie-card-poster-container {
+  border-radius: 18px;
+  overflow: hidden;
+  height: 100%;
+  position: relative;
 }
 
 /* Carousel Navigation Arrows */
