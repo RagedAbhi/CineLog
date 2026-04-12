@@ -9,6 +9,9 @@ import { getCueratesIconDataURL } from './utils/cuerates-logo';
 
 import Topbar from './components/Topbar';
 import Toast from './components/Toast';
+import RecommendModal from './components/RecommendModal';
+import ConfirmModal from './components/ConfirmModal';
+import TrailerModal from './components/TrailerModal';
 import PersonPage from './pages/PersonPage';
 import { useDispatch } from 'react-redux';
 import { hideRecommendModal, showToast, hideConfirmModal } from './store/actions';
