@@ -35,9 +35,10 @@ const ConfirmModal = ({ visible, title, message, onConfirm, onClose, confirmText
                 }}
                 style={{ 
                     minWidth: '100px', 
-                    background: isDangerous ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 255, 255, 0.1)', 
-                    border: isDangerous ? '1px solid rgba(255, 59, 48, 0.3)' : '1px solid rgba(255, 255, 255, 0.3)', 
-                    color: isDangerous ? '#ff453a' : '#ffffff'
+                    background: isDangerous ? 'rgba(255, 59, 48, 0.35)' : 'rgba(255, 193, 7, 0.2)', 
+                    border: isDangerous ? '1px solid rgba(255, 59, 48, 0.5)' : '1px solid rgba(255, 193, 7, 0.4)', 
+                    color: isDangerous ? '#ff453a' : 'var(--accent)',
+                    fontWeight: 'bold'
                 }}
               >
                 {confirmText}

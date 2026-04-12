@@ -183,7 +183,7 @@ const GlobalSearch = () => {
             } else {
                 setResults({ all: [], movies: [], tvShows: [], people: [] });
             }
-        }, 150);
+        }, 400);
 
         return () => clearTimeout(delayDebounceFn);
     }, [query, activeFilter]);
@@ -408,6 +408,19 @@ const GlobalSearch = () => {
                         <div>
                             <div className="search-section-header" style={{ padding: '10px 15px', fontSize: '14px', color: 'var(--accent)' }}>TV Shows</div>
                             {results.tvShows.map(renderMediaCard)}
+                        </div>
+                    )}
+
+                    {/* Loading Overlay for results list to prevent flickering feeling */}
+                    {loading && (
+                        <div className="search-loading-overlay" style={{
+                            position: 'absolute', inset: 0, 
+                            background: 'rgba(3,2,19,0.4)', backdropFilter: 'blur(8px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 10, borderRadius: 'inherit',
+                            animation: 'fadeIn 0.2s ease'
+                        }}>
+                            <div className="spinner-medium" />
                         </div>
                     )}
                 </div>
