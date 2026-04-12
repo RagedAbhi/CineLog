@@ -4126,7 +4126,7 @@ html.lenis {
     position: fixed;
     inset: 0;
     z-index: 99999;
-    background: #030213; /* Fully opaque to hide background glitches */
+    background: #030213;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     display: flex;
@@ -4135,12 +4135,14 @@ html.lenis {
     justify-content: center;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Only transition the exit (fade out), make entrance instant */
+    transition: opacity 0.4s ease, visibility 0.4s ease;
 }
 
 .teleport-overlay.active {
     opacity: 1;
     visibility: visible;
+    transition: none !important; /* Force instant appearance on activation */
 }
 
 .teleport-content {
