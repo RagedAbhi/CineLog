@@ -264,14 +264,13 @@ class MovieCard extends Component {
 
             <button 
                 className="btn-trailer-overlay"
-                style={{ position: 'relative', zIndex: 10 }}
                 onClick={this.handlePlayTrailer}
             >
                 <Play size={14} fill="currentColor" /> WATCH TRAILER
             </button>
 
             {streamingProviders && streamingProviders.length > 0 && (
-              <div className="ott-platforms-inline" style={{ marginTop: '12px', position: 'relative', zIndex: 10 }}>
+              <div className="ott-platforms-inline" style={{ marginTop: '12px' }}>
                 <div className="ott-label" style={{ marginBottom: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: '#fff' }}>Watch on:</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {streamingProviders.map(p => (
@@ -303,25 +302,25 @@ class MovieCard extends Component {
                 </span>
               </div>
             )}
-
-            {this.props.isDashboard && engagementCounts && (
-              <div className="card-engagement-tint-bar" onClick={e => e.stopPropagation()}>
-                <span className="card-eng-stat" title="Likes">
-                  <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />
-                  {engagementCounts.likeCount}
-                </span>
-                <span className="card-eng-stat" title="Comments">
-                  <MessageCircle size={12} />
-                  {engagementCounts.commentCount}
-                </span>
-                <span className="card-eng-stat" title="Added to list">
-                  <BookmarkPlus size={12} />
-                  {engagementCounts.addedToListCount}
-                </span>
-              </div>
-            )}
           </div>
         </div>
+
+        {this.props.isDashboard && engagementCounts && (
+          <div className="card-engagement-extension" onClick={e => e.stopPropagation()}>
+            <span className="card-eng-stat" title="Likes">
+              <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />
+              {engagementCounts.likeCount}
+            </span>
+            <span className="card-eng-stat" title="Comments">
+              <MessageCircle size={12} />
+              {engagementCounts.commentCount}
+            </span>
+            <span className="card-eng-stat" title="Added to list">
+              <BookmarkPlus size={12} />
+              {engagementCounts.addedToListCount}
+            </span>
+          </div>
+        )}
       </div>
     );
   }

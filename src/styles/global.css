@@ -735,45 +735,44 @@ img {
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  padding: 10px 4px 30px; /* Reset padding now that pop-out is removed */
+  padding: 10px 10px 80px; /* Further increased bottom padding to ensure pop-out visibility */
   scroll-behavior: smooth;
   scrollbar-width: none;
+  /* Firefox */
 }
 
 .media-row::-webkit-scrollbar {
   display: none;
+  /* Chrome/Safari */
 }
 
 .media-row .movie-card {
   flex: 0 0 204px;
 }
 
+.movie-card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+  z-index: 100 !important; /* Force pop above all other elements */
+}
+
 .movie-card {
   position: relative;
   border-radius: 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  /* overflow: hidden removed to allow pop-out extension below */
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   height: 100%;
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-  overflow: hidden;
+  transition: all 0.3s ease;
   z-index: 1;
-  box-shadow: var(--shadow-premium);
-  cursor: pointer;
-}
-
-.movie-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-  z-index: 10;
 }
 
 .movie-card-poster-container {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 2/3;
+  border-radius: 18px;
   overflow: hidden;
   height: 100%;
+  position: relative;
+  z-index: 2; /* Sits above the extension */
 }
 
 /* Carousel Navigation Arrows */
@@ -829,13 +828,46 @@ img {
   transform: translateY(-50%) scale(0.9);
 }
 
+/* Adjust media-row padding to clear buttons if needed */
+.media-row {
+  padding: 10px 4px 30px;
+}
+
+.movie-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--bouncy);
+  position: relative;
+  box-shadow: var(--shadow-premium);
+}
+
+.movie-card:hover {
+  transform: translateY(-12px) scale(1.04);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--bg-elevated);
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-glow);
+}
+
+.movie-card-poster-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
 .movie-card-poster {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
   position: relative;
-  z-index: 5;
+  z-index: 5; /* Ensure image is above placeholder */
   transition: opacity 0.5s ease;
 }
 
@@ -846,7 +878,7 @@ img {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #0d1b31;
+  background: #0d1b31; /* Solid dark navy background */
   padding: 20px;
   text-align: center;
   z-index: 1;
@@ -917,6 +949,16 @@ img {
   transform: scale(1.15);
   box-shadow: 0 0 12px var(--accent-dim);
   border-color: var(--accent);
+}
+
+.movie-card-poster-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
 }
 
 .movie-card-overlay {

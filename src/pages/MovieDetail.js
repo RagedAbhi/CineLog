@@ -617,6 +617,37 @@ class MovieDetail extends Component {
     );
   }
 
+  renderTopEngagementStats() {
+    const { engagement } = this.state;
+    const movie = this.getMovie();
+    if (!movie?.imdbID) return null;
+
+    const likeCount = engagement?.likeCount ?? 0;
+    const commentCount = engagement?.commentCount ?? 0;
+    const addedToListCount = engagement?.addedToListCount ?? 0;
+    const userHasLiked = engagement?.userHasLiked ?? false;
+
+    return (
+      <div className="engagement-top-row reveal">
+        <button
+          className={`engagement-like-btn ${userHasLiked ? 'liked' : ''}`}
+          onClick={this.handleLikeToggle}
+        >
+          <Heart size={20} fill={userHasLiked ? 'currentColor' : 'none'} />
+          <span>{likeCount}</span>
+        </button>
+        <div className="engagement-stat-item">
+          <MessageCircle size={18} />
+          <span>{commentCount}</span>
+        </div>
+        <div className="engagement-stat-item" title="Added to list">
+          <CheckCircle size={20} />
+          <span>{addedToListCount} {addedToListCount === 1 ? 'added' : 'added'} to list</span>
+        </div>
+      </div>
+    );
+  }
+
   renderEngagementSection() {
     const { engagement, commentText, submittingComment } = this.state;
     const movie = this.getMovie();
@@ -630,25 +661,6 @@ class MovieDetail extends Component {
 
     return (
       <div className="engagement-section reveal">
-        {/* Stats row */}
-        <div className="engagement-stats-row">
-          <button
-            className={`engagement-like-btn ${userHasLiked ? 'liked' : ''}`}
-            onClick={this.handleLikeToggle}
-          >
-            <Heart size={18} fill={userHasLiked ? 'currentColor' : 'none'} />
-            <span>{likeCount}</span>
-          </button>
-          <div className="engagement-stat-item">
-            <MessageCircle size={16} />
-            <span>{commentCount}</span>
-          </div>
-          <div className="engagement-stat-item">
-            <CheckCircle size={16} />
-            <span>{addedToListCount} added to list</span>
-          </div>
-        </div>
-
         {/* Comment input */}
         <div className="engagement-comment-input-row">
           <input
@@ -859,6 +871,7 @@ class MovieDetail extends Component {
                       </span>
                     </p>
                   )}
+                  {this.renderTopEngagementStats()}
                 </div>
 
                 <div className="detail-glass-card reveal">

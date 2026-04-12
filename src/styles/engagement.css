@@ -3,40 +3,40 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-top: auto; /* Push to bottom of overlay */
-  padding: 12px 0 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   width: 100%;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.4s ease;
 }
 
-.movie-card:hover .card-engagement-bar {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Option 3: Minimalist Bottom Tint for Dashboard */
-.card-engagement-tint-bar {
+/* --- Movie Card hover counts bar (Pop-out Extension) --- */
+.card-engagement-extension {
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
-  padding: 20px 15px 12px;
+  left: 10px;
+  right: 10px;
+  background: rgba(10, 25, 47, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  padding: 10px 16px;
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
+  z-index: 99; /* Higher z-index to stay above row containers */
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateY(0);
   opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-  z-index: 5;
+  pointer-events: none;
 }
 
-.movie-card:hover .card-engagement-tint-bar {
+.movie-card:hover .card-engagement-extension {
+  transform: translateY(100%);
   opacity: 1;
-  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .card-eng-stat {
@@ -121,38 +121,54 @@
   flex-wrap: wrap;
 }
 
+.engagement-top-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
+
 .engagement-like-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  padding: 6px 14px;
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 600;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 100px; /* Capsule/Pill shape */
+  padding: 8px 20px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .engagement-like-btn:hover {
-  border-color: #e05c7a;
-  color: #e05c7a;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .engagement-like-btn.liked {
   color: #e05c7a;
-  border-color: #e05c7a;
+  border-color: rgba(224, 92, 122, 0.3);
   background: rgba(224, 92, 122, 0.1);
 }
 
 .engagement-stat-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-muted);
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.engagement-stat-item svg {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* --- Comment Input --- */
