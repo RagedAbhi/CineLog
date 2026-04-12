@@ -61,7 +61,13 @@ const WATCHMODE_NAME_MAP = {
     'Apple TV Plus': 'AppleTV',
     'Apple TV+': 'AppleTV',
     'YouTube Premium': 'YouTube',
-    'YouTube': 'YouTube'
+    'YouTube': 'YouTube',
+    'Rakuten Viki': 'Viki',
+    'Viki': 'Viki',
+    'HBO Max': 'HBO',
+    'Max': 'HBO',
+    'HBO': 'HBO',
+    'HBO GO': 'HBO'
 };
 
 // Static fallback map to prevent TMDB network drops (ECONNRESET) from wiping logos
@@ -82,7 +88,9 @@ const STATIC_LOGO_MAP = {
     'Amazon Video': 'https://image.tmdb.org/t/p/original/qR6FKvnPBx2O37FDg8PNM7efwF3.jpg',
     'Apple TV Store': 'https://image.tmdb.org/t/p/original/SPnB1qiCkYfirS2it3hZORwGVn.jpg',
     'Lionsgate Play': 'https://image.tmdb.org/t/p/original/wzM0YgB7MkiXhV5r6wI3qjVjV8M.jpg',
-    'MUBI': 'https://image.tmdb.org/t/p/original/v5L0hT3H8xH14M4g7lUf4k14zI.jpg'
+    'MUBI': 'https://image.tmdb.org/t/p/original/v5L0hT3H8xH14M4g7lUf4k14zI.jpg',
+    'Viki': 'https://image.tmdb.org/t/p/original/mXGhoC2Gwea1Z6cZg0aB2k6S73u.jpg',
+    'HBO': 'https://image.tmdb.org/t/p/original/6xOMzJADgIADjN5ApeL8aP3pAts.jpg'
 };
 
 const getProviderLogoMap = async () => {
@@ -240,7 +248,9 @@ const fetchTMDBProviders = async (imdbID, title, type, year) => {
             'Sony Liv': 'SonyLiv', 'Sony LIV': 'SonyLiv', 'SonyLIV': 'SonyLiv',
             'Jio Cinema': 'JioCinema', 'JioCinema': 'JioCinema',
             'Apple TV+': 'AppleTV', 'Apple TV': 'AppleTV', 'Apple TV Plus': 'AppleTV',
-            'YouTube': 'YouTube', 'YouTube Premium': 'YouTube'
+            'YouTube': 'YouTube', 'YouTube Premium': 'YouTube',
+            'Rakuten Viki': 'Viki', 'Viki': 'Viki',
+            'HBO Max': 'HBO', 'Max': 'HBO', 'HBO': 'HBO', 'HBO GO': 'HBO'
         };
 
         const seen = new Set();
