@@ -58,11 +58,17 @@ class TVShowsPage extends Component {
         const { statusFilter } = this.state;
 
         if (statusFilter === 'recommendations') {
-            const { recommendations, filters } = this.props;
+            const { recommendations, filters, user } = this.props;
             const { sortOrder = 'latest' } = this.state; // Default to latest
             if (!recommendations) return [];
             
-            let list = recommendations.filter(r => r.mediaType === 'series' && !this.state.dismissedIds.has(r._id?.toString()));
+            const currentUserId = user?._id || user?.id;
+            
+            let list = recommendations.filter(r => {
+                const senderId = r.sender?._id || r.sender;
+                const isReceived = senderId?.toString() !== currentUserId?.toString();
+                return r.mediaType === 'series' && !this.state.dismissedIds.has(r._id?.toString()) && isReceived;
+            });
             
             // --- Grouping Logic (Absolute) ---
             const grouped = {};
@@ -313,7 +319,8 @@ const mapStateToProps = (state) => ({
     movies: state.movies.items, 
     loading: state.movies.loading, 
     filters: state.filters, 
-    recommendations: state.auth.recommendations 
+    recommendations: state.auth.recommendations,
+    user: state.auth.user
 });
 const mapDispatchToProps = { fetchMovies, addMovie, deleteMovie, setFilter, setSearch, clearFilters, fetchRecommendations };
 export default connect(mapStateToProps, mapDispatchToProps)(TVShowsPage);
