@@ -306,19 +306,24 @@ class MovieCard extends Component {
         </div>
 
         {this.props.isDashboard && engagementCounts && (
-          <div className="card-engagement-extension" onClick={e => e.stopPropagation()}>
-            <span className="card-eng-stat" title="Likes">
-              <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />
-              {engagementCounts.likeCount}
-            </span>
-            <span className="card-eng-stat" title="Comments">
-              <MessageCircle size={12} />
-              {engagementCounts.commentCount}
-            </span>
-            <span className="card-eng-stat" title="Added to list">
-              <BookmarkPlus size={12} />
-              {engagementCounts.addedToListCount}
-            </span>
+          <div className="card-engagement-pills-container">
+            <div className="engagement-pill">
+              <span className="engagement-pill-stat" title="Likes">
+                <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />
+                {engagementCounts.likeCount}
+              </span>
+            </div>
+            <div className="engagement-pill">
+              <span className="engagement-pill-stat" title="Comments">
+                <MessageCircle size={12} />
+                {engagementCounts.commentCount}
+              </span>
+              <span style={{ opacity: 0.3, margin: '0 2px' }}>|</span>
+              <span className="engagement-pill-stat" title="Added to list">
+                <BookmarkPlus size={12} />
+                {engagementCounts.addedToListCount}
+              </span>
+            </div>
           </div>
         )}
       </div>

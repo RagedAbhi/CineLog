@@ -735,8 +735,7 @@ img {
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  padding: 10px 10px 130px; /* Massive bottom padding so the pop-out tab has a 'floor' to slide onto */
-  margin-bottom: -110px; /* Pull the next row back up so we don't have a giant gap */
+  padding: 10px 10px 30px; /* Restored standard padding as pills stay inside the card boundary */
   scroll-behavior: smooth;
   scrollbar-width: none;
   /* Firefox */
