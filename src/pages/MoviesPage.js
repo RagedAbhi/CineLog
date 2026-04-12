@@ -155,7 +155,7 @@ class MoviesPage extends Component {
         try {
             const token = localStorage.getItem('token');
             const res = await import('axios').then(({ default: ax }) =>
-                ax.post(`${require('../config').default.API_URL}/api/media/migrate-language`, {}, {
+                ax.post(`${require('../config').default.API_URL}/api/media/migrate-language?force=true`, {}, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
             );
