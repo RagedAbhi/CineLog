@@ -207,8 +207,6 @@ const GlobalSearch = () => {
                 watchedOn: actionType === 'watched' ? new Date().toISOString().split('T')[0] : null
             }));
             dispatch(showToast(`${movie.title} added to your ${actionType}!`, 'success'));
-            setIsOpen(false);
-            setQuery('');
         } catch (err) {
             console.error('Quick Action Error:', err);
         } finally {
