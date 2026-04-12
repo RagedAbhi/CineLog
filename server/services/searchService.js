@@ -64,29 +64,29 @@ const WATCHMODE_NAME_MAP = {
     'YouTube': 'YouTube'
 };
 
-// In-memory cache for TMDB provider logo map (refreshed weekly)
-let providerLogoCache = null;
-let providerLogoCacheTime = 0;
+// Static fallback map to prevent TMDB network drops (ECONNRESET) from wiping logos
+const STATIC_LOGO_MAP = {
+    'Netflix': 'https://image.tmdb.org/t/p/original/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg',
+    'Amazon Prime Video': 'https://image.tmdb.org/t/p/original/dQeAar5H991VYporEjUjwVJZZN3.jpg',
+    'Amazon Prime': 'https://image.tmdb.org/t/p/original/dQeAar5H991VYporEjUjwVJZZN3.jpg',
+    'Hotstar': 'https://image.tmdb.org/t/p/original/rTFA413eI6L85a81I2o86L5eI4a.jpg',
+    'JioHotstar': 'https://image.tmdb.org/t/p/original/rTFA413eI6L85a81I2o86L5eI4a.jpg',
+    'Zee5': 'https://image.tmdb.org/t/p/original/5tp1fWaH4k6W4lH2xRto79kH6nQ.jpg',
+    'SonyLiv': 'https://image.tmdb.org/t/p/original/9rM1r7NIn3S6xIunInhOaZk7qL7.jpg',
+    'JioCinema': 'https://image.tmdb.org/t/p/original/9O17qL8AAM2D12rV5oK96s6a6q9.jpg',
+    'Apple TV Plus': 'https://image.tmdb.org/t/p/original/2E0icoIXgJCWEaXbK1X1LgksHGH.jpg',
+    'AppleTV': 'https://image.tmdb.org/t/p/original/2E0icoIXgJCWEaXbK1X1LgksHGH.jpg',
+    'YouTube Premium': 'https://image.tmdb.org/t/p/original/qZ2JpUf1X1I0Z2q2XU0bOQ3FhE7.jpg',
+    'YouTube': 'https://image.tmdb.org/t/p/original/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg',
+    'Google Play Movies': 'https://image.tmdb.org/t/p/original/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg',
+    'Amazon Video': 'https://image.tmdb.org/t/p/original/qR6FKvnPBx2O37FDg8PNM7efwF3.jpg',
+    'Apple TV Store': 'https://image.tmdb.org/t/p/original/SPnB1qiCkYfirS2it3hZORwGVn.jpg',
+    'Lionsgate Play': 'https://image.tmdb.org/t/p/original/wzM0YgB7MkiXhV5r6wI3qjVjV8M.jpg',
+    'MUBI': 'https://image.tmdb.org/t/p/original/v5L0hT3H8xH14M4g7lUf4k14zI.jpg'
+};
 
 const getProviderLogoMap = async () => {
-    if (providerLogoCache && Date.now() - providerLogoCacheTime < 7 * 24 * 60 * 60 * 1000) {
-        return providerLogoCache;
-    }
-    try {
-        const res = await axios.get(`${BASE_URL}/watch/providers/list`, {
-            httpsAgent,
-            params: { api_key: TMDB_API_KEY, language: 'en-US', watch_region: 'IN' }
-        });
-        const map = {};
-        (res.data.results || []).forEach(p => {
-            map[p.provider_name] = `https://image.tmdb.org/t/p/original${p.logo_path}`;
-        });
-        providerLogoCache = map;
-        providerLogoCacheTime = Date.now();
-        return map;
-    } catch (e) {
-        return providerLogoCache || {};
-    }
+    return STATIC_LOGO_MAP;
 };
 
 /**
