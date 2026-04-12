@@ -1,6 +1,13 @@
-/* =============================================
-   ENGAGEMENT — Likes, Comments, Watched By
-   ============================================= */
+.card-engagement-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+}
 
 /* --- Movie Card hover counts bar (Pop-out Extension) --- */
 .card-engagement-extension {
@@ -305,14 +312,7 @@
   margin: 0;
 }
 
-.card-engagement-extension {
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+
 
 /* --- Watchers / engagement modal --- */
 .engagement-modal-overlay {
