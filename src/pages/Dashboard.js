@@ -34,7 +34,7 @@ class Dashboard extends Component {
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
-    this.rowsRef = [];
+    this.rowRefs = {};
   }
 
   componentDidMount() {
@@ -218,9 +218,18 @@ class Dashboard extends Component {
   }
 
   getFeaturedMovie() {
-    const list = this.getFeaturedList();
-    if (list.length === 0) return this.props.movies[0];
     return list[this.state.activeHeroIndex % list.length];
+  }
+  
+  scrollRow = (sectionId, direction) => {
+    const row = this.rowRefs[sectionId];
+    if (!row) return;
+
+    const scrollAmount = row.clientWidth * 0.8;
+    row.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+    });
   }
 
 
@@ -254,14 +263,36 @@ class Dashboard extends Component {
           <h3>{title}</h3>
           {path && !isEditingOrder && <button className="btn-clear" onClick={() => this.props.navigate(path)}>View All</button>}
         </div>
-        <div className="media-row">
-          {items && items.length > 0 ? (
-            items.map((movie, index) => (
-              <MovieCard key={movie._id || index} movie={movie} index={index} />
-            ))
-          ) : (
-             <div className="empty-row-placeholder">No items to show here.</div>
+        
+        <div className="media-row-wrapper" style={{ position: 'relative' }}>
+          {!isEditingOrder && items && items.length > 5 && (
+            <>
+              <button 
+                className="carousel-nav-btn prev" 
+                onClick={() => this.scrollRow(id, 'left')}
+                title="Scroll Left"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <button 
+                className="carousel-nav-btn next" 
+                onClick={() => this.scrollRow(id, 'right')}
+                title="Scroll Right"
+              >
+                <ChevronRight size={24} />
+              </button>
+            </>
           )}
+          
+          <div className="media-row" ref={el => this.rowRefs[id] = el}>
+            {items && items.length > 0 ? (
+              items.map((movie, index) => (
+                <MovieCard key={movie._id || index} movie={movie} index={index} />
+              ))
+            ) : (
+               <div className="empty-row-placeholder">No items to show here.</div>
+            )}
+          </div>
         </div>
       </div>
     );

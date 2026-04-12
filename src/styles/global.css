@@ -776,6 +776,67 @@ img {
   box-shadow: 0 15px 45px var(--accent-glow);
 }
 
+/* Carousel Navigation Arrows */
+.media-row-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 90%;
+  background: rgba(3, 2, 19, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.media-row-container:hover .carousel-nav-btn {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.carousel-nav-btn.prev {
+  left: -20px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.carousel-nav-btn.next {
+  right: -20px;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.carousel-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+  width: 54px;
+}
+
+.carousel-nav-btn:active {
+  transform: translateY(-50%) scale(0.95);
+  background: var(--accent);
+  color: black;
+}
+
+/* Adjust media-row padding to clear buttons if needed */
+.media-row {
+  padding: 10px 4px 30px;
+}
+
 .movie-card {
   background: var(--bg-card);
   backdrop-filter: var(--glass-blur);
