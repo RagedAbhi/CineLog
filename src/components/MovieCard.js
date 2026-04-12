@@ -51,7 +51,8 @@ class MovieCard extends Component {
         y: 0,
         duration: 0.6,
         delay: (this.props.index % 10) * 0.05,
-        ease: "power2.out"
+        ease: "power2.out",
+        clearProps: "transform,scale,opacity,y"
       }
     );
 
