@@ -751,9 +751,9 @@ img {
 }
 
 .movie-card:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-  z-index: 10; /* Ensure hovered card and its extension organic pop above others */
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+  z-index: 100 !important; /* Force pop above all other elements */
 }
 
 .movie-card {

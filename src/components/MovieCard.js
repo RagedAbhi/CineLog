@@ -13,7 +13,7 @@ function MovieCardWrapper(props) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const userMovies = useSelector(state => state.movies.items);
-  return <MovieCard {...props} navigate={navigate} dispatch={dispatch} userMovies={userMovies} />;
+  return <MovieCard {...props} navigate={navigate} dispatch={dispatch} userMovies={userMovies} isDashboard={props.isDashboard} />;
 }
 
 class MovieCard extends Component {
@@ -287,9 +287,28 @@ class MovieCard extends Component {
               </div>
             )}
           </div>
+            )}
+
+            {!this.props.isDashboard && engagementCounts && (
+              <div className="card-engagement-bar" onClick={e => e.stopPropagation()}>
+                <span className="card-eng-stat" title="Likes">
+                  <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} fillOpacity={0.8} />
+                  {engagementCounts.likeCount}
+                </span>
+                <span className="card-eng-stat" title="Comments">
+                  <MessageCircle size={12} />
+                  {engagementCounts.commentCount}
+                </span>
+                <span className="card-eng-stat" title="Added to list">
+                  <BookmarkPlus size={12} />
+                  {engagementCounts.addedToListCount}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {engagementCounts && (
+        {this.props.isDashboard && engagementCounts && (
           <div className="card-engagement-extension" onClick={e => e.stopPropagation()}>
             <span className="card-eng-stat" title="Likes">
               <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />

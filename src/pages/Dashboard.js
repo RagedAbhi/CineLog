@@ -289,7 +289,7 @@ class Dashboard extends Component {
           <div className="media-row" ref={el => this.rowRefs[id] = el}>
             {items && items.length > 0 ? (
               items.map((movie, index) => (
-                <MovieCard key={movie._id || index} movie={movie} index={index} />
+                <MovieCard key={movie._id || index} movie={movie} index={index} isDashboard={true} />
               ))
             ) : (
                <div className="empty-row-placeholder">No items to show here.</div>
