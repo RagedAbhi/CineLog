@@ -264,13 +264,14 @@ class MovieCard extends Component {
 
             <button 
                 className="btn-trailer-overlay"
+                style={{ position: 'relative', zIndex: 10 }}
                 onClick={this.handlePlayTrailer}
             >
                 <Play size={14} fill="currentColor" /> WATCH TRAILER
             </button>
 
             {streamingProviders && streamingProviders.length > 0 && (
-              <div className="ott-platforms-inline" style={{ marginTop: '12px' }}>
+              <div className="ott-platforms-inline" style={{ marginTop: '12px', position: 'relative', zIndex: 10 }}>
                 <div className="ott-label" style={{ marginBottom: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: '#fff' }}>Watch on:</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {streamingProviders.map(p => (
