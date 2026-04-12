@@ -8,7 +8,8 @@ import {
   AUTH_REQUEST, AUTH_SUCCESS, AUTH_FAILURE, LOGOUT,
   FETCH_RECS_REQUEST, FETCH_RECS_SUCCESS, FETCH_RECS_FAILURE,
   FETCH_CHATS_SUCCESS, MARK_CHAT_READ,
-  SHOW_TRAILER_MODAL, HIDE_TRAILER_MODAL
+  SHOW_TRAILER_MODAL, HIDE_TRAILER_MODAL,
+  SET_TELEPORTING
 } from './actions';
 
 // ============================================================
@@ -162,7 +163,8 @@ const initialUIState = {
   toast: { message: null, type: null, visible: false },
   recommend: { movie: null, visible: false },
   confirm: { visible: false, title: '', message: '', onConfirm: null },
-  trailer: { visible: false, youtubeId: null }
+  trailer: { visible: false, youtubeId: null },
+  isTeleporting: false
 };
 
 const uiReducer = (state = initialUIState, action) => {
@@ -183,6 +185,8 @@ const uiReducer = (state = initialUIState, action) => {
       return { ...state, trailer: { visible: true, youtubeId: action.payload } };
     case HIDE_TRAILER_MODAL:
       return { ...state, trailer: { visible: false, youtubeId: null } };
+    case SET_TELEPORTING:
+      return { ...state, isTeleporting: action.payload };
     default:
       return state;
   }

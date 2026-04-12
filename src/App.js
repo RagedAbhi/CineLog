@@ -206,7 +206,7 @@ const App = () => {
       <TrailerModal />
 
       {/* Cinematic Teleport Overlay (Global) */}
-      <div className={`teleport-overlay ${location.search.includes('redirect=true') ? 'active' : ''}`}>
+      <div className={`teleport-overlay ${isTeleporting ? 'active' : ''}`}>
           <div className="teleport-content">
               <div className="teleport-spinner"></div>
               <div className="teleport-text">Teleporting</div>

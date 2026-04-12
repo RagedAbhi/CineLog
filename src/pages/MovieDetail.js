@@ -9,7 +9,7 @@ import AddMovieModal from '../components/AddMovieModal';
 import WatchTogetherModal from '../components/WatchTogetherModal';
 import { fetchStreamingAvailability, fetchTrailerID } from '../services/tmdbService';
 import { getMovieDetailsExternal } from '../services/movieService';
-import { showToast, showRecommendModal, showConfirmModal, showTrailerModal } from '../store/actions';
+import { showToast, showRecommendModal, showConfirmModal, showTrailerModal, setTeleporting } from '../store/actions';
 import axios from 'axios';
 import gsap from 'gsap';
 import config from '../config';
@@ -585,7 +585,10 @@ class MovieDetail extends Component {
                     <p className="detail-director-premium">
                       Directed by <span 
                         style={{ cursor: 'pointer', color: 'var(--accent)', textDecoration: 'underline' }}
-                        onClick={() => navigate(`/?search=${encodeURIComponent(movie.director)}&type=person&redirect=true`)}
+                        onClick={() => {
+                            this.props.setTeleporting(true);
+                            navigate(`/search?search=${encodeURIComponent(movie.director)}&type=person&redirect=true`);
+                        }}
                       >
                         {movie.director}
                       </span>
@@ -657,7 +660,8 @@ class MovieDetail extends Component {
                               <span 
                                 className="clickable-cast-member" 
                                 onClick={() => {
-                                    this.props.navigate(`/?search=${encodeURIComponent(actor)}&type=person&redirect=true`);
+                                    this.props.setTeleporting(true);
+                                    this.props.navigate(`/search?search=${encodeURIComponent(actor)}&type=person&redirect=true`);
                                 }}
                                 style={{ cursor: 'pointer', color: 'var(--accent)', transition: 'all 0.2s' }}
                               >

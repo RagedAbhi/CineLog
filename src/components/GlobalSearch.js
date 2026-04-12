@@ -4,7 +4,7 @@ import { Eye, Bookmark, Send, TrendingUp, Star, Clock, X, PlayCircle, CheckCircl
 import { useDispatch } from 'react-redux';
 import { getMovieDetailsExternal } from '../services/movieService';
 import { fetchStreamingAvailability, fetchTrailerID, getTrendingTMDB } from '../services/tmdbService';
-import { showToast, showRecommendModal, showTrailerModal } from '../store/actions';
+import { showToast, showRecommendModal, showTrailerModal, setTeleporting } from '../store/actions';
 import { addMovie } from '../store/thunks';
 import axios from 'axios';
 import config from '../config';
@@ -18,7 +18,6 @@ const GlobalSearch = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all');
-    const [isTeleporting, setIsTeleporting] = useState(false);
     
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -108,7 +107,7 @@ const GlobalSearch = () => {
             const filterType = params.get('type') || 'all';
             
             const silentSearch = async () => {
-                setIsTeleporting(true);
+                dispatch(setTeleporting(true));
                 try {
                     const token = localStorage.getItem('token');
                     const response = await axios.get(`${config.API_URL}/api/search?q=${encodeURIComponent(searchTerm)}&type=${filterType}`, {
@@ -118,9 +117,6 @@ const GlobalSearch = () => {
                     const allPeople = response.data.people || 
                                     response.data.all?.filter(p => p.mediaType === 'person') || [];
 
-                    // HEURISTIC: Find the best match
-                    // 1. Prioritize those with posters/profile pictures
-                    // 2. Tie-break with popularity
                     const sortedPeople = [...allPeople].sort((a, b) => {
                         const aHasPic = !!(a.poster || a.profile_path);
                         const bHasPic = !!(b.poster || b.profile_path);
@@ -132,26 +128,23 @@ const GlobalSearch = () => {
                     const firstMatch = sortedPeople[0] || response.data.all?.[0];
 
                     if (firstMatch) {
-                        // Immediate navigation to the person details
                         if (firstMatch.mediaType === 'person') {
-                            // Delay slightly to allow the cinematic overlay to be seen
                             setTimeout(() => {
                                 navigate(`/person/${firstMatch.id}`);
-                                setIsTeleporting(false);
+                                dispatch(setTeleporting(false));
                             }, 800);
                         } else {
                             handleSelect(firstMatch);
-                            setIsTeleporting(false);
+                            dispatch(setTeleporting(false));
                         }
                     } else {
-                        // Fallback: open search if nothing found
-                        setIsTeleporting(false);
+                        dispatch(setTeleporting(false));
                         setQuery(searchTerm);
                         setIsOpen(true);
                     }
                 } catch (err) {
                     console.error('Silent Search Error:', err);
-                    setIsTeleporting(false);
+                    dispatch(setTeleporting(false));
                 } finally {
                     redirectInProgress.current = null;
                 }

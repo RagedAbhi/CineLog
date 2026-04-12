@@ -40,6 +40,7 @@ export const SHOW_CONFIRM_MODAL = 'SHOW_CONFIRM_MODAL';
 export const HIDE_CONFIRM_MODAL = 'HIDE_CONFIRM_MODAL';
 export const SHOW_TRAILER_MODAL = 'SHOW_TRAILER_MODAL';
 export const HIDE_TRAILER_MODAL = 'HIDE_TRAILER_MODAL';
+export const SET_TELEPORTING = 'SET_TELEPORTING';
 
 // ============================================================
 // ACTION CREATORS
@@ -108,3 +109,8 @@ export const hideTrailerModal = () => ({
 });
 
 export const hideToast = () => ({ type: HIDE_TOAST });
+
+export const setTeleporting = (status) => ({
+  type: SET_TELEPORTING,
+  payload: status
+});
