@@ -15,6 +15,7 @@ const PersonPage = () => {
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('actedIn'); // 'actedIn' | 'directed'
     const [filterQuery, setFilterQuery] = useState('');
+    const [mediaTypeFilter, setMediaTypeFilter] = useState('All');
     const [selectedGenre, setSelectedGenre] = useState('All');
     const [isBioExpanded, setIsBioExpanded] = useState(false);
     
@@ -63,10 +64,14 @@ const PersonPage = () => {
         
         return baseItems.filter(item => {
             const matchesQuery = item.title.toLowerCase().includes(filterQuery.toLowerCase());
-            // Genre filtering would require a mapping or TMDB genre IDs check
-            return matchesQuery;
+            const matchesType = mediaTypeFilter === 'All' 
+                ? true 
+                : mediaTypeFilter === 'Movies' 
+                    ? item.media_type === 'movie' 
+                    : item.media_type === 'tv';
+            return matchesQuery && matchesType;
         });
-    }, [person, activeTab, filterQuery]);
+    }, [person, activeTab, filterQuery, mediaTypeFilter]);
 
     if (loading) return (
         <div className="loading-spinner">
@@ -189,6 +194,16 @@ const PersonPage = () => {
                     </div>
 
                     <div className="filter-search-bar glass-panel-sm">
+                        <select 
+                            value={mediaTypeFilter} 
+                            onChange={(e) => setMediaTypeFilter(e.target.value)}
+                            className="media-type-dropdown"
+                        >
+                            <option value="All">All Types</option>
+                            <option value="Movies">Movies</option>
+                            <option value="Shows">TV Shows</option>
+                        </select>
+                        <div className="vertical-divider"></div>
                         <Search size={16} />
                         <input 
                             type="text" 
@@ -406,6 +421,24 @@ const PersonPage = () => {
                     color: white;
                     outline: none;
                     width: 100%;
+                }
+                .media-type-dropdown {
+                    background: transparent;
+                    color: rgba(255,255,255,0.8);
+                    border: none;
+                    outline: none;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 14px;
+                }
+                .media-type-dropdown option {
+                    background: #111;
+                    color: white;
+                }
+                .vertical-divider {
+                    width: 1px;
+                    height: 20px;
+                    background: rgba(255,255,255,0.2);
                 }
                 @media (max-width: 900px) {
                     .person-header-content {
