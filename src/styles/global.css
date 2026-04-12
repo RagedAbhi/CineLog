@@ -4126,7 +4126,7 @@ html.lenis {
     position: fixed;
     inset: 0;
     z-index: 99999;
-    background: rgba(3, 2, 19, 0.7);
+    background: #030213; /* Fully opaque to hide background glitches */
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     display: flex;
