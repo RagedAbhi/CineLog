@@ -4,8 +4,8 @@ import { fetchStreamingAvailability, fetchTrailerID } from '../services/tmdbServ
 import { getCounts, toggleLike } from '../services/engagementService';
 import gsap from 'gsap';
 import { useDispatch, useSelector } from 'react-redux';
-import { Plus, Check, Send, Trash2, Play, Heart, MessageCircle, BookmarkPlus } from 'lucide-react';
-import { addMovie, deleteMovie, markAsWatched } from '../store/thunks';
+import { Plus, Check, Send, Trash2, Play, Heart, MessageCircle, BookmarkPlus, Star } from 'lucide-react';
+import { addMovie, deleteMovie, markAsWatched, fetchMovies } from '../store/thunks';
 import { showRecommendModal, showToast, showConfirmModal, showTrailerModal } from '../store/actions';
 
 // Wrapper to provide navigate and redux to class component
@@ -143,6 +143,27 @@ class MovieCard extends Component {
     }
   };
 
+  handleToggleTopPick = async (e) => {
+    e.stopPropagation();
+    const { movie, dispatch, userMovies } = this.props;
+    const userCopy = userMovies.find(m => (m.imdbID === movie.imdbID && movie.imdbID) || m._id === movie._id);
+    if (!userCopy?._id) return; // can only top-pick library items
+
+    try {
+      const token = localStorage.getItem('token');
+      const axios = (await import('axios')).default;
+      await axios.patch(
+        `${(await import('../config')).default.API_URL}/api/users/profile/top-picks`,
+        { mediaId: userCopy._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      dispatch(showToast(userCopy.isTopPick ? 'Removed from Top Picks' : 'Added to Top Picks! ⭐', 'success'));
+      dispatch(fetchMovies()); // sync state
+    } catch {
+      dispatch(showToast('Failed to update Top Pick', 'error'));
+    }
+  };
+
   handleRecommend = (e) => {
     e.stopPropagation();
     const { movie, dispatch } = this.props;
@@ -230,6 +251,8 @@ class MovieCard extends Component {
     const userCopy = userMovies.find(m => (m.imdbID === movie.imdbID && movie.imdbID) || m._id === movie._id);
     const inWatchlist = userCopy?.status === 'watchlist';
     const isWatched = userCopy?.status === 'watched';
+    const isTopPick = userCopy?.isTopPick || false;
+    const isInLibrary = !!userCopy?._id;
 
     return (
       <div
@@ -268,6 +291,18 @@ class MovieCard extends Component {
           >
             {isWatched ? <Trash2 size={18} /> : <Check size={18} />}
           </button>
+
+          {isInLibrary && (
+            <button 
+              className={`card-action-btn top-pick ${isTopPick ? 'active' : ''}`} 
+              onClick={this.handleToggleTopPick}
+              title={isTopPick ? "Remove from Top Picks" : "Add to Top Picks"}
+              style={{ color: isTopPick ? '#f5c518' : undefined }}
+            >
+              <Star size={18} fill={isTopPick ? '#f5c518' : 'none'} stroke={isTopPick ? '#f5c518' : 'currentColor'} />
+            </button>
+          )}
+
           <button 
             className="card-action-btn" 
             onClick={this.handleRecommend}
