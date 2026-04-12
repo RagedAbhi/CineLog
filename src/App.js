@@ -9,9 +9,9 @@ import { getCueratesIconDataURL } from './utils/cuerates-logo';
 
 import Topbar from './components/Topbar';
 import Toast from './components/Toast';
-import RecommendModal from './components/RecommendModal';
-import ConfirmModal from './components/ConfirmModal';
-import TrailerModal from './components/TrailerModal';
+import PersonPage from './pages/PersonPage';
+import { useDispatch } from 'react-redux';
+import { hideRecommendModal, showToast, hideConfirmModal } from './store/actions';
 import Dashboard from './pages/Dashboard';
 import MoviesPage from './pages/MoviesPage';
 import TVShowsPage from './pages/TVShowsPage';
@@ -185,6 +185,7 @@ const App = () => {
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/search" element={<div className="teleport-route-placeholder" />} />
               <Route path="/auth" element={<Navigate to="/" replace />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/chat/:friendId" element={<Messenger />} />
@@ -203,6 +204,15 @@ const App = () => {
       </div>
 
       <TrailerModal />
+
+      {/* Cinematic Teleport Overlay (Global) */}
+      <div className={`teleport-overlay ${location.search.includes('redirect=true') ? 'active' : ''}`}>
+          <div className="teleport-content">
+              <div className="teleport-spinner"></div>
+              <div className="teleport-text">Teleporting</div>
+              <div className="teleport-subtext">Accessing Cinema Archives...</div>
+          </div>
+      </div>
     </div>
   );
 };

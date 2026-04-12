@@ -467,15 +467,6 @@ const GlobalSearch = () => {
                     {renderGroupedResults()}
                 </div>
             )}
-
-            {/* Cinematic Teleport Overlay */}
-            <div className={`teleport-overlay ${isTeleporting ? 'active' : ''}`}>
-                <div className="teleport-content">
-                    <div className="teleport-spinner"></div>
-                    <div className="teleport-text">Teleporting</div>
-                    <div className="teleport-subtext">Accessing Cinema Archives...</div>
-                </div>
-            </div>
         </div>
     );
 };
