@@ -49,7 +49,7 @@ const App = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { isAuthenticated } = useSelector(state => state.auth);
-  const { recommend, confirm } = useSelector(state => state.ui);
+  const { recommend, confirm, isTeleporting } = useSelector(state => state.ui);
 
   useSocket(); // --- Real-Time Social Sync ---
 
