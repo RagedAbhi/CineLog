@@ -106,8 +106,13 @@
   }
 
   /* Global Typography Force Rule to bypass legacy black-text rules */
-  h1, h2, h3, h4, h5, h6, p, span, label, li, a, input, select, textarea {
+  h1, h2, h3, h4, h5, h6, p, span, label, li, input, select, textarea {
     color: var(--foreground) !important;
+  }
+  
+  /* Handle links separately to allow button overrides */
+  a {
+    color: var(--foreground);
   }
 
   html {
@@ -1060,7 +1065,7 @@ img {
   overflow: hidden;
 }
 
-.btn-primary {
+.btn-primary, .btn-primary * {
   background: #fff;
   color: #000 !important;
   box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
@@ -1071,7 +1076,7 @@ img {
   box-shadow: 0 20px 40px rgba(255, 255, 255, 0.3);
 }
 
-.btn-accent {
+.btn-accent, .btn-accent * {
   background: var(--accent);
   color: #000 !important;
   box-shadow: 0 10px 30px var(--accent-glow);
