@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStreamingAvailability, fetchTrailerID } from '../services/tmdbService';
+import { getCounts } from '../services/engagementService';
 import gsap from 'gsap';
 import { useDispatch, useSelector } from 'react-redux';
-import { Plus, Check, Send, Trash2, Play } from 'lucide-react';
+import { Plus, Check, Send, Trash2, Play, Heart, MessageCircle, BookmarkPlus } from 'lucide-react';
 import { addMovie, deleteMovie, markAsWatched } from '../store/thunks';
 import { showRecommendModal, showToast, showConfirmModal, showTrailerModal } from '../store/actions';
 
@@ -19,10 +20,24 @@ class MovieCard extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      streamingProviders: []
+      streamingProviders: [],
+      engagementCounts: null,
+      engagementFetched: false
     };
     this.cardRef = React.createRef();
   }
+
+  handleMouseEnter = async () => {
+    const { movie } = this.props;
+    if (this.state.engagementFetched || !movie.imdbID) return;
+    this.setState({ engagementFetched: true });
+    try {
+      const counts = await getCounts(movie.imdbID);
+      this.setState({ engagementCounts: counts });
+    } catch (e) {
+      // silently fail — counts are non-critical
+    }
+  };
 
   async componentDidMount() {
     const { movie } = this.props;
@@ -160,7 +175,7 @@ class MovieCard extends Component {
 
   render() {
     const { movie, navigate, userMovies } = this.props;
-    const { streamingProviders } = this.state;
+    const { streamingProviders, engagementCounts } = this.state;
 
     const userCopy = userMovies.find(m => (m.imdbID === movie.imdbID && movie.imdbID) || m._id === movie._id);
     const inWatchlist = userCopy?.status === 'watchlist';
@@ -170,6 +185,7 @@ class MovieCard extends Component {
       <div
         className="movie-card bio-luminescent"
         ref={this.cardRef}
+        onMouseEnter={this.handleMouseEnter}
         onClick={() => {
             // For recommendations & external items, prefer imdbID.
             // rec._id is a Recommendation MongoDB ObjectId — NOT a valid TMDB/IMDB movie ID.
@@ -268,6 +284,23 @@ class MovieCard extends Component {
                     />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {engagementCounts && (
+              <div className="card-engagement-bar" onClick={e => e.stopPropagation()}>
+                <span className="card-eng-stat" title="Likes">
+                  <Heart size={12} fill={engagementCounts.likeCount > 0 ? 'currentColor' : 'none'} />
+                  {engagementCounts.likeCount}
+                </span>
+                <span className="card-eng-stat" title="Comments">
+                  <MessageCircle size={12} />
+                  {engagementCounts.commentCount}
+                </span>
+                <span className="card-eng-stat" title="Added to list">
+                  <BookmarkPlus size={12} />
+                  {engagementCounts.addedToListCount}
+                </span>
               </div>
             )}
           </div>

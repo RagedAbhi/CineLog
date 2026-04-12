@@ -13,6 +13,8 @@ import { showToast, showRecommendModal, showConfirmModal, showTrailerModal, setT
 import axios from 'axios';
 import gsap from 'gsap';
 import config from '../config';
+import * as engagementService from '../services/engagementService';
+import '../styles/engagement.css';
 
 function MovieDetailWrapper(props) {
   const navigate = useNavigate();
@@ -36,7 +38,12 @@ class MovieDetail extends Component {
       externalMovie: null,
       localLoading: false,
       showWatchTogether: false,
-      watchTogetherNetflixUrl: null
+      watchTogetherNetflixUrl: null,
+      engagement: null,
+      watchedByFriends: [],
+      showWatchersModal: false,
+      commentText: '',
+      submittingComment: false
     };
   }
 
@@ -57,6 +64,7 @@ class MovieDetail extends Component {
     if (movie && (!this.props.isExternal || movie.status)) {
       this.fetchStreamingInfo();
       this.initAnimations();
+      this.fetchEngagementData(movie.imdbID);
     } else if (this.props.isExternal) {
         this.fetchExternalMovie();
     } else {
@@ -64,17 +72,111 @@ class MovieDetail extends Component {
     }
   }
 
+  fetchEngagementData = async (imdbID) => {
+    if (!imdbID) return;
+    try {
+      const [engagement, watchedData] = await Promise.all([
+        engagementService.getEngagement(imdbID),
+        engagementService.getWatchedByFriends(imdbID)
+      ]);
+      this.setState({ engagement, watchedByFriends: watchedData.friends || [] });
+    } catch (e) {
+      // non-critical
+    }
+  }
+
+  handleLikeToggle = async () => {
+    const movie = this.getMovie();
+    if (!movie?.imdbID) return;
+    try {
+      const result = await engagementService.toggleLike(movie.imdbID);
+      this.setState(prev => ({
+        engagement: prev.engagement
+          ? { ...prev.engagement, likeCount: result.likeCount, userHasLiked: result.liked }
+          : { likeCount: result.likeCount, commentCount: 0, addedToListCount: 0, userHasLiked: result.liked, comments: [] }
+      }));
+    } catch (e) {
+      this.props.showToast('Failed to update like', 'error');
+    }
+  }
+
+  handleAddComment = async () => {
+    const movie = this.getMovie();
+    const { commentText } = this.state;
+    if (!commentText.trim() || !movie?.imdbID) return;
+    this.setState({ submittingComment: true });
+    try {
+      const newComment = await engagementService.addComment(movie.imdbID, commentText.trim());
+      this.setState(prev => ({
+        commentText: '',
+        submittingComment: false,
+        engagement: prev.engagement
+          ? {
+              ...prev.engagement,
+              commentCount: (prev.engagement.commentCount || 0) + 1,
+              comments: [newComment, ...(prev.engagement.comments || [])]
+            }
+          : null
+      }));
+    } catch (e) {
+      this.setState({ submittingComment: false });
+      this.props.showToast('Failed to post comment', 'error');
+    }
+  }
+
+  handleDeleteComment = async (commentId) => {
+    const movie = this.getMovie();
+    if (!movie?.imdbID) return;
+    try {
+      await engagementService.deleteComment(movie.imdbID, commentId);
+      this.setState(prev => ({
+        engagement: prev.engagement
+          ? {
+              ...prev.engagement,
+              commentCount: Math.max(0, (prev.engagement.commentCount || 1) - 1),
+              comments: prev.engagement.comments.filter(c => c._id !== commentId)
+            }
+          : null
+      }));
+    } catch (e) {
+      this.props.showToast('Failed to delete comment', 'error');
+    }
+  }
+
+  handleToggleCommentHeart = async (commentId) => {
+    const movie = this.getMovie();
+    if (!movie?.imdbID) return;
+    try {
+      const result = await engagementService.toggleCommentHeart(movie.imdbID, commentId);
+      this.setState(prev => ({
+        engagement: prev.engagement
+          ? {
+              ...prev.engagement,
+              comments: prev.engagement.comments.map(c =>
+                c._id === commentId
+                  ? { ...c, heartCount: result.heartCount, userHasHearted: result.hearted }
+                  : c
+              )
+            }
+          : null
+      }));
+    } catch (e) {
+      // silently fail
+    }
+  }
+
   fetchExternalMovie = async () => {
     this.setState({ localLoading: true });
     try {
         const details = await getMovieDetailsExternal(this.props.movieId, this.props.mediaType);
-        this.setState({ 
-            externalMovie: { ...details, isExternalRec: true, imdbID: this.props.movieId }, 
-            localLoading: false 
+        this.setState({
+            externalMovie: { ...details, isExternalRec: true, imdbID: this.props.movieId },
+            localLoading: false
         }, () => {
             this.fetchStreamingInfo();
             this.initAnimations();
             this.syncMetadataIfNeeded(details);
+            this.fetchEngagementData(this.props.movieId);
         });
     } catch (err) {
         console.error('External fetch failed, falling back to recommendation record:', err);
@@ -94,6 +196,7 @@ class MovieDetail extends Component {
                 this.setState({ externalMovie: { ...res.data, isExternalRec: false }, localLoading: false }, async () => {
                     this.fetchStreamingInfo();
                     this.initAnimations();
+                    this.fetchEngagementData(res.data.imdbID);
                     
                     // Trigger lazy repair if data is missing
                     const movie = res.data;
@@ -454,6 +557,168 @@ class MovieDetail extends Component {
     });
   }
 
+  renderWatchedByFriends() {
+    const { watchedByFriends, showWatchersModal } = this.state;
+    if (!watchedByFriends || watchedByFriends.length === 0) return null;
+
+    const visible = watchedByFriends.slice(0, 3);
+    const extra = watchedByFriends.length - 3;
+
+    return (
+      <div className="watched-by-friends-section reveal">
+        <div className="stat-label" style={{ marginBottom: '12px' }}>Watched by</div>
+        <div className="watched-by-row">
+          {visible.map(f => (
+            <div key={f._id} className="watcher-avatar" title={f.name || f.username}>
+              {f.profilePicture
+                ? <img src={f.profilePicture} alt={f.name} />
+                : <span>{(f.name || f.username || '?').charAt(0).toUpperCase()}</span>
+              }
+            </div>
+          ))}
+          {extra > 0 && (
+            <button className="watcher-more-btn" onClick={() => this.setState({ showWatchersModal: true })}>
+              +{extra}
+            </button>
+          )}
+          <span className="watched-by-names">
+            {visible.map(f => f.name || f.username).join(', ')}
+            {extra > 0 ? ` and ${extra} more` : ''}
+          </span>
+        </div>
+
+        {showWatchersModal && (
+          <div className="engagement-modal-overlay" onClick={() => this.setState({ showWatchersModal: false })}>
+            <div className="engagement-modal" onClick={e => e.stopPropagation()}>
+              <div className="engagement-modal-header">
+                <span>Friends who watched this</span>
+                <button onClick={() => this.setState({ showWatchersModal: false })}>✕</button>
+              </div>
+              <div className="watchers-full-list">
+                {watchedByFriends.map(f => (
+                  <div key={f._id} className="watcher-list-item">
+                    <div className="watcher-avatar">
+                      {f.profilePicture
+                        ? <img src={f.profilePicture} alt={f.name} />
+                        : <span>{(f.name || f.username || '?').charAt(0).toUpperCase()}</span>
+                      }
+                    </div>
+                    <div>
+                      <div className="watcher-name">{f.name}</div>
+                      <div className="watcher-handle">@{f.username}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  renderEngagementSection() {
+    const { engagement, commentText, submittingComment } = this.state;
+    const movie = this.getMovie();
+    if (!movie?.imdbID) return null;
+
+    const likeCount = engagement?.likeCount ?? 0;
+    const commentCount = engagement?.commentCount ?? 0;
+    const addedToListCount = engagement?.addedToListCount ?? 0;
+    const userHasLiked = engagement?.userHasLiked ?? false;
+    const comments = engagement?.comments ?? [];
+
+    return (
+      <div className="engagement-section reveal">
+        {/* Stats row */}
+        <div className="engagement-stats-row">
+          <button
+            className={`engagement-like-btn ${userHasLiked ? 'liked' : ''}`}
+            onClick={this.handleLikeToggle}
+          >
+            <Heart size={18} fill={userHasLiked ? 'currentColor' : 'none'} />
+            <span>{likeCount}</span>
+          </button>
+          <div className="engagement-stat-item">
+            <MessageCircle size={16} />
+            <span>{commentCount}</span>
+          </div>
+          <div className="engagement-stat-item">
+            <CheckCircle size={16} />
+            <span>{addedToListCount} added to list</span>
+          </div>
+        </div>
+
+        {/* Comment input */}
+        <div className="engagement-comment-input-row">
+          <input
+            className="engagement-comment-input"
+            type="text"
+            placeholder="Add a comment..."
+            value={commentText}
+            maxLength={500}
+            onChange={e => this.setState({ commentText: e.target.value })}
+            onKeyDown={e => e.key === 'Enter' && !submittingComment && this.handleAddComment()}
+          />
+          <button
+            className="engagement-comment-submit"
+            onClick={this.handleAddComment}
+            disabled={submittingComment || !commentText.trim()}
+          >
+            {submittingComment ? '...' : 'Post'}
+          </button>
+        </div>
+
+        {/* Comments list */}
+        {comments.length > 0 && (
+          <div className="engagement-comments-list">
+            {comments.map(comment => (
+              <div key={comment._id} className="engagement-comment-item">
+                <div className="comment-avatar">
+                  {comment.profilePicture
+                    ? <img src={comment.profilePicture} alt={comment.name} />
+                    : <span>{(comment.name || comment.username || '?').charAt(0).toUpperCase()}</span>
+                  }
+                </div>
+                <div className="comment-body">
+                  <div className="comment-header">
+                    <span className="comment-author">{comment.name || comment.username}</span>
+                    <span className="comment-time">
+                      {new Date(comment.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="comment-text">{comment.text}</p>
+                </div>
+                <div className="comment-actions">
+                  <button
+                    className={`comment-heart-btn ${comment.userHasHearted ? 'hearted' : ''}`}
+                    onClick={() => this.handleToggleCommentHeart(comment._id)}
+                    title="Like comment"
+                  >
+                    <Heart size={13} fill={comment.userHasHearted ? 'currentColor' : 'none'} />
+                    {comment.heartCount > 0 && <span>{comment.heartCount}</span>}
+                  </button>
+                  {comment.userId?.toString() === this.props.currentUserId && (
+                    <button
+                      className="comment-delete-btn"
+                      onClick={() => this.handleDeleteComment(comment._id)}
+                      title="Delete comment"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {comments.length === 0 && engagement && (
+          <p className="engagement-empty">Be the first to comment.</p>
+        )}
+      </div>
+    );
+  }
+
   renderStars(rating) {
     const filled = Math.round(rating / 2);
     return Array.from({ length: 5 }, (_, i) => (
@@ -679,6 +944,11 @@ class MovieDetail extends Component {
                 <div className="reveal" style={{ marginTop: '24px' }}>
                   {this.renderOTTSection()}
                 </div>
+
+                <div className="detail-glass-card reveal" style={{ marginTop: '24px' }}>
+                  {this.renderWatchedByFriends()}
+                  {this.renderEngagementSection()}
+                </div>
               </div>
             </div>
           ) : (
@@ -803,7 +1073,8 @@ class MovieDetail extends Component {
 
 const mapStateToProps = (state) => ({
   movies: state.movies.items,
-  loading: state.movies.loading
+  loading: state.movies.loading,
+  currentUserId: state.auth.user?._id || state.auth.user?.id
 });
 
 const mapDispatchToProps = { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie, showToast, showRecommendModal, showConfirmModal, showTrailerModal, setTeleporting };

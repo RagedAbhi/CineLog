@@ -264,3 +264,22 @@ exports.heartbeat = async (req, res) => {
         res.status(500).json({ message: 'Heartbeat error', error: error.message });
     }
 };
+
+
+// PATCH /api/users/privacy
+exports.updatePrivacy = async (req, res) => {
+    try {
+        const { isPrivate } = req.body;
+        if (typeof isPrivate !== 'boolean') {
+            return res.status(400).json({ message: 'isPrivate must be a boolean' });
+        }
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { isPrivate },
+            { new: true, select: 'isPrivate' }
+        );
+        res.json({ isPrivate: user.isPrivate });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating privacy', error: error.message });
+    }
+};

@@ -12,7 +12,8 @@ const userSchema = new mongoose.Schema({
     topPicks: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Media'
-    }]
+    }],
+    isPrivate: { type: Boolean, default: false }
 }, { timestamps: true });
 
 // Hash password before saving

@@ -37,6 +37,7 @@ const upload = multer({
 });
 
 router.post('/upload-avatar', upload.single('avatar'), userController.uploadAvatar);
+router.patch('/privacy', userController.updatePrivacy);
 router.get('/:id', userController.getUserProfile);
 
 module.exports = router;

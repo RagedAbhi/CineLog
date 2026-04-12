@@ -10,7 +10,9 @@ import gsap from 'gsap';
 import MovieCard from '../components/MovieCard';
 import CineSelect from '../components/CineSelect';
 import { motion } from 'framer-motion';
+import { updatePrivacy } from '../services/engagementService';
 import '../styles/global.css';
+import '../styles/engagement.css';
 
 const GENRES = ['all', 'Action', 'Adventure', 'Animation', 'Biography', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Sci-Fi', 'Science Fiction', 'Thriller', 'War', 'Western'];
 
@@ -37,8 +39,9 @@ const Profile = () => {
 
     const [topGenreFilter, setTopGenreFilter] = useState('all');
     const [topMediaTypeFilter, setTopMediaTypeFilter] = useState('all');
-    const [activeTab, setActiveTab] = useState('expertise'); // ['expertise', 'top_picks', 'received', 'sent']
+    const [activeTab, setActiveTab] = useState('expertise'); // ['expertise', 'top_picks', 'received', 'sent', 'settings']
     const [isBioExpanded, setIsBioExpanded] = useState(false);
+    const [privacyLoading, setPrivacyLoading] = useState(false);
     
     const fileInputRef = useRef(null);
 
@@ -385,6 +388,49 @@ const Profile = () => {
         }
     };
 
+    const handlePrivacyToggle = async () => {
+        setPrivacyLoading(true);
+        try {
+            const newValue = !profile.isPrivate;
+            await updatePrivacy(newValue);
+            setProfile(prev => ({ ...prev, isPrivate: newValue }));
+            dispatch(showToast(newValue ? 'Account set to Private' : 'Account set to Public', 'success'));
+        } catch (err) {
+            dispatch(showToast('Failed to update privacy setting', 'error'));
+        } finally {
+            setPrivacyLoading(false);
+        }
+    };
+
+    const renderSettings = () => (
+        <div className="settings-tab-container profile-anim">
+            <div className="picks-header" style={{ marginBottom: '32px' }}>
+                <h2 className="picks-title">Settings</h2>
+                <div className="picks-line"></div>
+            </div>
+
+            <div className="settings-section glass-panel" style={{ padding: '28px 32px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', maxWidth: '520px' }}>
+                <div className="settings-row">
+                    <div className="settings-row-info">
+                        <div className="settings-row-title">Private Account</div>
+                        <div className="settings-row-desc">
+                            When on, only your friends can see your likes and comments on movies and shows.
+                            Your profile and stats remain visible to everyone.
+                        </div>
+                    </div>
+                    <button
+                        className={`privacy-toggle ${profile.isPrivate ? 'on' : 'off'}`}
+                        onClick={handlePrivacyToggle}
+                        disabled={privacyLoading}
+                        aria-label="Toggle private account"
+                    >
+                        <span className="privacy-toggle-thumb" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     const dismissRecommendation = async (recId, e) => {
         if (e) e.stopPropagation();
         const token = localStorage.getItem('token');
@@ -637,7 +683,8 @@ const Profile = () => {
                     { id: 'expertise', label: 'Cinema Expertise', icon: '🎬' },
                     { id: 'top_picks', label: 'Top Picks', icon: '⭐' },
                     { id: 'received', label: 'Received', icon: '📥' },
-                    { id: 'sent', label: 'Sent', icon: '📤' }
+                    { id: 'sent', label: 'Sent', icon: '📤' },
+                    ...(isOwnProfile ? [{ id: 'settings', label: 'Settings', icon: '⚙️' }] : [])
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -788,6 +835,8 @@ const Profile = () => {
                         {renderSentRecs()}
                     </div>
                 )}
+
+                {activeTab === 'settings' && isOwnProfile && renderSettings()}
             </div>
         </div>
     );
