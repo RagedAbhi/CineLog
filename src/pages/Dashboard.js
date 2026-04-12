@@ -274,14 +274,14 @@ class Dashboard extends Component {
                 onClick={() => this.scrollRow(id, 'left')}
                 title="Scroll Left"
               >
-                <ChevronLeft size={24} />
+                <ChevronLeft size={18} />
               </button>
               <button 
                 className="carousel-nav-btn next" 
                 onClick={() => this.scrollRow(id, 'right')}
                 title="Scroll Right"
               >
-                <ChevronRight size={24} />
+                <ChevronRight size={18} />
               </button>
             </>
           )}
