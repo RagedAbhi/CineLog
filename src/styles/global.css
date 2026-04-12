@@ -735,7 +735,8 @@ img {
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  padding: 10px 10px 80px; /* Further increased bottom padding to ensure pop-out visibility */
+  padding: 10px 10px 130px; /* Massive bottom padding so the pop-out tab has a 'floor' to slide onto */
+  margin-bottom: -110px; /* Pull the next row back up so we don't have a giant gap */
   scroll-behavior: smooth;
   scrollbar-width: none;
   /* Firefox */
