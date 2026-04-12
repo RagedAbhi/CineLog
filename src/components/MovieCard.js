@@ -286,9 +286,6 @@ class MovieCard extends Component {
                 </div>
               </div>
             )}
-          </div>
-            )}
-
             {!this.props.isDashboard && engagementCounts && (
               <div className="card-engagement-bar" onClick={e => e.stopPropagation()}>
                 <span className="card-eng-stat" title="Likes">
