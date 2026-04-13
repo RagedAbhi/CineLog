@@ -8,6 +8,7 @@ const { protect } = require('../middleware/authMiddleware');
  * All routes are protected by authMiddleware to provide personalized results
  */
 router.get('/', protect, searchController.proxySearch);
+router.get('/discover', protect, searchController.getDiscoverFeed);
 router.get('/semantic', protect, searchController.semanticSearch);
 router.get('/providers/imdb/:imdbID', protect, searchController.getProvidersById);
 router.get('/providers/:type/:id', protect, searchController.getProviders);

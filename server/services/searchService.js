@@ -609,6 +609,131 @@ async function processResults(results, userId) {
 }
 
 /**
+ * [NEW] Generates a personalized discovery feed for the user.
+ * 1. Analyzes library via buildTasteProfile.
+ * 2. Fetches candidates via TMDB Discover (genres) and Recommendations (high-rated seeds).
+ * 3. Filters out already owned/watched items.
+ * 4. Ranks via processResults for social and personalized weighting.
+ */
+exports.getDiscoveryFeed = async (userId) => {
+    const cacheKey = `discover_${userId}`;
+    const cached = await SearchCache.findOne({ query: cacheKey, expiresAt: { $gt: new Date() } });
+    if (cached) return cached.results;
+
+    try {
+        const [tasteProfile, userLibrary] = await Promise.all([
+            buildTasteProfile(userId),
+            Media.find({ userId }).select('imdbID title mediaType rating isTopPick status').lean()
+        ]);
+
+        const { genreScores, maxScore } = tasteProfile;
+        const libraryTitles = new Set(userLibrary.map(m => m.title?.toLowerCase().trim()));
+
+        // Select up to 5 diverse high-rated seeds for the recommendations API
+        const seeds = userLibrary
+            .filter(m => m.rating >= 8 || m.isTopPick || m.status === 'watched')
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 5);
+
+        // Map top genres back to TMDB IDs
+        const topGenres = Object.entries(genreScores)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([g]) => {
+                const entry = Object.entries(GENRE_MAP).find(([_, name]) =>
+                    name.toLowerCase() === g.toLowerCase() || name.includes(g)
+                );
+                return entry ? entry[0] : null;
+            }).filter(Boolean);
+
+        const fetchPromises = [];
+
+        // Seed 1: Genre Discovery (Movies & TV)
+        if (topGenres.length > 0) {
+            const genresStr = topGenres.join('|');
+            fetchPromises.push(axios.get(`${BASE_URL}/discover/movie`, {
+                httpsAgent,
+                params: { api_key: TMDB_API_KEY, with_genres: genresStr, sort_by: 'popularity.desc', page: 1, vote_count_gte: 50 }
+            }));
+            fetchPromises.push(axios.get(`${BASE_URL}/discover/tv`, {
+                httpsAgent,
+                params: { api_key: TMDB_API_KEY, with_genres: genresStr, sort_by: 'popularity.desc', page: 1, vote_count_gte: 50 }
+            }));
+        }
+
+        // Seed 2: Item Recommendations
+        for (const seed of seeds) {
+            let tmdbId = null;
+            let tmdbType = seed.mediaType === 'series' ? 'tv' : 'movie';
+
+            // Resolve ID: If numeric, it's already TMDB. If tt..., resolve via /find.
+            if (seed.imdbID && /^\d+$/.test(seed.imdbID)) {
+                tmdbId = seed.imdbID;
+            } else if (seed.imdbID && /^tt\d+$/.test(seed.imdbID)) {
+                try {
+                    const findRes = await axios.get(`${BASE_URL}/find/${seed.imdbID}`, {
+                        httpsAgent, params: { api_key: TMDB_API_KEY, external_source: 'imdb_id' }
+                    });
+                    const tmdbItem = findRes.data.movie_results?.[0] || findRes.data.tv_results?.[0];
+                    if (tmdbItem) tmdbId = tmdbItem.id;
+                } catch (e) {}
+            }
+
+            if (tmdbId) {
+                fetchPromises.push(axios.get(`${BASE_URL}/${tmdbType}/${tmdbId}/recommendations`, {
+                    httpsAgent, params: { api_key: TMDB_API_KEY }
+                }).catch(() => null));
+            }
+        }
+
+        const responses = await Promise.all(fetchPromises);
+        let blend = [];
+
+        responses.forEach(res => {
+            if (res && res.data && res.data.results) {
+                const isTv = res.config.url.includes('/tv/') || res.config.url.includes('/tv?');
+                blend = blend.concat(res.data.results.map(item => ({
+                    ...item,
+                    media_type: item.media_type || (isTv ? 'tv' : 'movie')
+                })));
+            }
+        });
+
+        // Deduplicate and map
+        const uniqueItems = new Map();
+        blend.forEach(item => {
+            const title = item.title || item.name;
+            if (!title || libraryTitles.has(title.toLowerCase().trim())) return;
+            if (!item.poster_path) return; // Only visual items
+
+            if (!uniqueItems.has(item.id)) {
+                uniqueItems.set(item.id, item);
+            } else {
+                uniqueItems.get(item.id).popularity += 100; // Boost common recs
+            }
+        });
+
+        // Final candidate re-ranking (social signals + taste scores)
+        const candidates = Array.from(uniqueItems.values());
+        const processed = await processResults(candidates, userId);
+
+        const results = processed.slice(0, 60); // Cap at 60 high-quality recs
+
+        // Cache for 1 hour — recommendations change as library evolves
+        await SearchCache.findOneAndUpdate(
+            { query: cacheKey },
+            { query: cacheKey, results, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+            { upsert: true }
+        );
+
+        return results;
+    } catch (error) {
+        console.error('[SearchService] Discovery Feed failed:', error.message);
+        return [];
+    }
+};
+
+/**
  * Fetch Person Filmography
  */
 exports.getPersonDetails = async (personId) => {

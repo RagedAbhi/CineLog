@@ -135,3 +135,17 @@ exports.getProvidersById = async (req, res) => {
         res.status(500).json({ message: 'Failed to fetch watch providers' });
     }
 };
+/**
+ * Get Personalized Discovery Feed
+ * GET /api/search/discover
+ */
+exports.getDiscoverFeed = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const results = await searchService.getDiscoveryFeed(userId);
+        res.status(200).json(results);
+    } catch (error) {
+        console.error('Discover Feed Error:', error);
+        res.status(500).json({ message: 'Failed to generate discovery feed', error: error.message });
+    }
+};

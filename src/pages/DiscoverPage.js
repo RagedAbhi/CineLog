@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { generatePersonalizedFeed } from '../services/tmdbService';
 import MovieCard from '../components/MovieCard';
+import axios from 'axios';
+import config from '../config';
 import { fetchMovies } from '../store/thunks';
 import { showToast } from '../store/actions';
 import gsap from 'gsap';
@@ -47,7 +48,11 @@ class DiscoverPage extends Component {
         if (!silent) this.setState({ loading: true, error: null });
         
         try {
-            const recs = await generatePersonalizedFeed(this.props.movies);
+            const token = localStorage.getItem('token');
+            const res = await axios.get(`${config.API_URL}/api/search/discover`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const recs = res.data;
             this.setState({ 
                 recommendations: recs, 
                 loading: false,

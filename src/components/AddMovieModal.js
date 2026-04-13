@@ -40,32 +40,7 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType, chatMode, 
     const navigate = useNavigate();
     const userMovies = useSelector(state => state.movies.items);
 
-    // Calculate user genre/cast/director/type preferences for personalization
-    const userPreferences = useMemo(() => {
-        const prefs = { genres: {}, actors: {}, directors: {}, types: { movie: 0, series: 0 } };
-        userMovies.forEach(m => {
-            (m.genre?.split(', ') || []).forEach(g => {
-                prefs.genres[g] = (prefs.genres[g] || 0) + 1;
-            });
-            (m.cast?.split(', ') || []).forEach(a => {
-                prefs.actors[a] = (prefs.actors[a] || 0) + 1;
-            });
-            if (m.director) {
-                prefs.directors[m.director] = (prefs.directors[m.director] || 0) + 1;
-            }
-            if (m.mediaType === 'series') prefs.types.series++;
-            else prefs.types.movie++;
-        });
-        return prefs;
-    }, [userMovies]);
-
-    const typeWeights = useMemo(() => {
-        const total = userMovies.length || 1;
-        return {
-            movie: (userPreferences.types.movie / total) * 50,
-            series: (userPreferences.types.series / total) * 50
-        };
-    }, [userPreferences, userMovies.length]);
+    // Personalization is now handled entirely on the backend for consistency
 
     useEffect(() => {
         document.body.classList.add('modal-open');
@@ -95,65 +70,22 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType, chatMode, 
         setFetchedMovie(null);
         setManualMode(false);
         try {
-            const data = await searchMultiTMDB(query.trim());
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${config.API_URL}/api/search?q=${encodeURIComponent(query.trim())}&type=${mediaType}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             
-            // Personalize results using same logic as GlobalSearch
-            const personalized = data.map(item => {
-                let score = item.popularity || 0;
-                let reasons = [];
+            // Backend returns { all: [], movies: [], tvShows: [], people: [] }
+            // All results from backend are already sorted by personalizationScore
+            const data = response.data.all || [];
+            
+            const results = data.map(item => ({
+                ...item,
+                imdbID: item.imdbID || String(item.id),
+                recommendationReason: item.socialMetadata?.text || (item.personalizationScore > 10 ? 'Matches your taste' : '')
+            }));
 
-                // 1. Media Type Preference
-                const typeBoost = typeWeights[item.mediaType] || 0;
-                if (typeBoost > 25) reasons.push(`Top ${item.mediaType === 'series' ? 'Series' : 'Movie'} Pick`);
-
-                // 2. Genre match
-                let genreBoost = 0;
-                let topGenre = '';
-                item.genreIds.forEach(gid => {
-                    const gName = GENRE_MAP[gid];
-                    const count = userPreferences.genres[gName] || 0;
-                    if (count > genreBoost) {
-                        genreBoost = count;
-                        topGenre = gName;
-                    }
-                });
-                if (topGenre && genreBoost > 2) reasons.push(`Matches your love for ${topGenre}`);
-
-                // 3. Overview match for favorite actors/directors
-                let personBoost = 0;
-                let matchedPerson = '';
-                const textToSearch = `${item.title} ${item.overview} ${item.subtitle || ''}`.toLowerCase();
-                Object.keys(userPreferences.actors).forEach(actor => {
-                    if (textToSearch.includes(actor.toLowerCase())) {
-                        const boost = userPreferences.actors[actor] * 15;
-                        if (boost > personBoost) {
-                            personBoost = boost;
-                            matchedPerson = actor;
-                        }
-                    }
-                });
-                Object.keys(userPreferences.directors).forEach(dir => {
-                    if (textToSearch.includes(dir.toLowerCase())) {
-                        const boost = userPreferences.directors[dir] * 20;
-                        if (boost > personBoost) {
-                            personBoost = boost;
-                            matchedPerson = dir;
-                        }
-                    }
-                });
-                if (matchedPerson) reasons.push(`Featured: ${matchedPerson}`);
-
-                const totalMatchScore = (genreBoost * 20) + personBoost + typeBoost;
-                return { 
-                    ...item, 
-                    imdbID: item.id,
-                    matchScore: totalMatchScore, 
-                    totalScore: score + totalMatchScore,
-                    recommendationReason: reasons[0] || ''
-                };
-            }).sort((a, b) => b.totalScore - a.totalScore);
-
-            setSearchResults(personalized);
+            setSearchResults(results);
             setSelectedIndex(-1);
         } catch (err) {
             setSearchError(err.message || 'Not found');
