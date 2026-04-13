@@ -95,9 +95,9 @@
 
     // ── Video Event Handlers ─────────────────────────────────────────────────
 
-    function onPlay()   { if (isHost && !isSuppressed()) emitSync('play',  playerGetTime()); }
-    function onPause()  { if (isHost && !isSuppressed()) emitSync('pause', playerGetTime()); }
-    function onSeeked() { if (isHost && !isSuppressed()) emitSync('seek',  playerGetTime()); }
+    function onPlay()   { if (!isSuppressed()) emitSync('play',  playerGetTime()); }
+    function onPause()  { if (!isSuppressed()) emitSync('pause', playerGetTime()); }
+    function onSeeked() { if (!isSuppressed()) emitSync('seek',  playerGetTime()); }
 
     function onWaiting() {
         if (!socket?.connected || !roomCode || isBuffering) return;
@@ -592,6 +592,7 @@
         if (socket?.connected) updateStatusUI('connected');
         renderMembers();
         updateHostBadge();
+        makeDraggable(panel, document.getElementById('cl-header'));
     }
 
     function togglePanel() {
@@ -606,6 +607,49 @@
             panel.classList.add('cl-hidden');
             pill.classList.remove('cl-hidden');
             document.getElementById('cl-pill-count').textContent = members.length;
+        }
+    }
+
+    function makeDraggable(el, handle) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        handle.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            
+            // Calculate new position
+            let newTop = el.offsetTop - pos2;
+            let newLeft = el.offsetLeft - pos1;
+
+            // Simple viewport clamping
+            const rect = el.getBoundingClientRect();
+            if (newTop < 0) newTop = 0;
+            if (newLeft < 0) newLeft = 0;
+            if (newTop + rect.height > window.innerHeight) newTop = window.innerHeight - rect.height;
+            if (newLeft + rect.width > window.innerWidth) newLeft = window.innerWidth - rect.width;
+
+            el.style.top = newTop + "px";
+            el.style.left = newLeft + "px";
+            el.style.bottom = "auto";
+            el.style.right = "auto";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
         }
     }
 
@@ -757,6 +801,8 @@
                 box-shadow:0 16px 56px rgba(0,0,0,0.7); font-family:system-ui,sans-serif;
                 overflow:hidden; backdrop-filter:blur(14px);
                 display:flex; flex-direction:column;
+                resize: both; min-width: 260px; min-height: 200px;
+                max-width: 90vw; max-height: 90vh;
             }
             #cinelog-panel.cl-hidden { display:none; }
 
@@ -778,7 +824,9 @@
                 display:flex; align-items:center; justify-content:space-between;
                 padding:11px 14px; background:rgba(129,140,248,0.09);
                 border-bottom:1px solid rgba(129,140,248,0.1); flex-shrink:0;
+                cursor: grab;
             }
+            #cl-header:active { cursor: grabbing; }
             #cl-header-left  { display:flex; align-items:center; gap:8px; }
             .cl-logo         { font-size:18px; line-height:1; }
             .cl-title        { font-size:14px; font-weight:700; line-height:1.2; }

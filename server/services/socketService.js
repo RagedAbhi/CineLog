@@ -155,9 +155,6 @@ exports.init = (httpServer) => {
             const room = rooms.get(roomCode);
             if (!room) return;
 
-            // Only relay syncs from the host — enforce on server
-            if (socket.id !== room.hostSocketId) return;
-
             room.seq++;
             room.lastState = { currentTime, paused: action === 'pause', seq: room.seq };
 
