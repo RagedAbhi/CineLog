@@ -84,40 +84,40 @@ class DiscoverPage extends Component {
                 <div className="page-header" ref={this.headerRef} style={{ marginBottom: '30px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                         <div>
-                            <h2>For You</h2>
+                            <h2>Trending Now</h2>
                             <p className="page-subtitle" style={{ color: '#999', fontSize: '0.95rem' }}>
-                                A curated selection tailored directly to your library.
+                                The most popular global movies and shows this week.
                             </p>
                         </div>
                         <button 
                             className="primary-btn" 
                             onClick={() => this.generateFeed(false)} 
                             disabled={loading}
-                            style={{ padding: '8px 16px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            style={{ 
+                                padding: '8px 16px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px',
+                                background: 'rgba(255,255,255,0.05)',
+                                color: '#fff',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}
                         >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={loading ? 'spin' : ''}><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
                             Refresh
                         </button>
                     </div>
                 </div>
 
-                {!hasLibrary && !loading && (
-                    <div className="empty-state">
-                        <div className="empty-icon">🌱</div>
-                        <h3>Your library is empty</h3>
-                        <p>We need your favorite movies and shows to understand your taste. Add some titles to your collection first!</p>
-                    </div>
-                )}
-
-                {hasLibrary && loading && (
+                {loading && (
                     <div className="loading-state" style={{ height: '50vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                         <div className="spinner" style={{ width: '50px', height: '50px', border: '3px solid rgba(255,165,0,0.1)', borderTopColor: '#f39c12', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                        <h3 style={{ marginTop: '20px', color: '#fff', letterSpacing: '0.5px' }}>Analyzing your tastes...</h3>
-                        <p style={{ color: '#888', fontSize: '0.9rem', marginTop: '8px' }}>Generating your perfect personalized grid.</p>
+                        <h3 style={{ marginTop: '20px', color: '#fff', letterSpacing: '0.5px' }}>Scanning the Globe...</h3>
+                        <p style={{ color: '#888', fontSize: '0.9rem', marginTop: '8px' }}>Fetching the hottest movies and TV shows.</p>
                     </div>
                 )}
 
-                {hasLibrary && !loading && error && (
+                {!loading && error && (
                     <div className="empty-state">
                         <div className="empty-icon">⚠️</div>
                         <h3>Algorithm Offline</h3>
@@ -125,15 +125,15 @@ class DiscoverPage extends Component {
                     </div>
                 )}
 
-                {hasLibrary && !loading && !error && recommendations.length === 0 && (
+                {!loading && !error && recommendations.length === 0 && (
                     <div className="empty-state">
                         <div className="empty-icon">🎉</div>
                         <h3>You've watched everything!</h3>
-                        <p>Our engine couldn't find anything you haven't already seen or added globally.</p>
+                        <p>Our engine couldn't find any trending items you haven't already seen or added.</p>
                     </div>
                 )}
 
-                {hasLibrary && !loading && !error && recommendations.length > 0 && (
+                {!loading && !error && recommendations.length > 0 && (
                     <div className="movie-grid discover-grid" ref={this.gridRef}>
                         {recommendations.map(movie => (
                             <MovieCard 
@@ -141,8 +141,6 @@ class DiscoverPage extends Component {
                                 movie={{
                                     ...movie,
                                     isExternal: true,
-                                    // MovieCard click handler uses imdbID || _id for external items.
-                                    // Discover items only have a TMDB numeric `id`, so we alias it here.
                                     imdbID: movie.imdbID || String(movie.id)
                                 }} 
                             />

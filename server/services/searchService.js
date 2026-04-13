@@ -616,119 +616,59 @@ async function processResults(results, userId) {
  * 4. Ranks via processResults for social and personalized weighting.
  */
 exports.getDiscoveryFeed = async (userId) => {
-    const cacheKey = `discover_${userId}`;
+    const cacheKey = `discover_trending_${userId}`;
     const cached = await SearchCache.findOne({ query: cacheKey, expiresAt: { $gt: new Date() } });
     if (cached) return cached.results;
 
     try {
-        const [tasteProfile, userLibrary] = await Promise.all([
-            buildTasteProfile(userId),
-            Media.find({ userId }).select('imdbID title mediaType rating isTopPick status').lean()
-        ]);
-
-        const { genreScores, maxScore } = tasteProfile;
+        const userLibrary = await Media.find({ userId }).select('title').lean();
         const libraryTitles = new Set(userLibrary.map(m => m.title?.toLowerCase().trim()));
 
-        // Select up to 5 diverse high-rated seeds for the recommendations API
-        const seeds = userLibrary
-            .filter(m => m.rating >= 8 || m.isTopPick || m.status === 'watched')
-            .sort(() => 0.5 - Math.random())
-            .slice(0, 5);
+        // Fetch Trending Movies and TV for the week
+        const [moviesRes, tvRes] = await Promise.all([
+            axios.get(`${BASE_URL}/trending/movie/week`, { httpsAgent, params: { api_key: TMDB_API_KEY } }),
+            axios.get(`${BASE_URL}/trending/tv/week`, { httpsAgent, params: { api_key: TMDB_API_KEY } })
+        ]);
 
-        // Map top genres back to TMDB IDs
-        const topGenres = Object.entries(genreScores)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 3)
-            .map(([g]) => {
-                const entry = Object.entries(GENRE_MAP).find(([_, name]) =>
-                    name.toLowerCase() === g.toLowerCase() || name.includes(g)
-                );
-                return entry ? entry[0] : null;
-            }).filter(Boolean);
+        const trendingMovies = moviesRes.data.results || [];
+        const trendingTv = tvRes.data.results || [];
 
-        const fetchPromises = [];
-
-        // Seed 1: Genre Discovery (Movies & TV)
-        if (topGenres.length > 0) {
-            const genresStr = topGenres.join('|');
-            fetchPromises.push(axios.get(`${BASE_URL}/discover/movie`, {
-                httpsAgent,
-                params: { api_key: TMDB_API_KEY, with_genres: genresStr, sort_by: 'popularity.desc', page: 1, vote_count_gte: 50 }
-            }));
-            fetchPromises.push(axios.get(`${BASE_URL}/discover/tv`, {
-                httpsAgent,
-                params: { api_key: TMDB_API_KEY, with_genres: genresStr, sort_by: 'popularity.desc', page: 1, vote_count_gte: 50 }
-            }));
-        }
-
-        // Seed 2: Item Recommendations
-        for (const seed of seeds) {
-            let tmdbId = null;
-            let tmdbType = seed.mediaType === 'series' ? 'tv' : 'movie';
-
-            // Resolve ID: If numeric, it's already TMDB. If tt..., resolve via /find.
-            if (seed.imdbID && /^\d+$/.test(seed.imdbID)) {
-                tmdbId = seed.imdbID;
-            } else if (seed.imdbID && /^tt\d+$/.test(seed.imdbID)) {
-                try {
-                    const findRes = await axios.get(`${BASE_URL}/find/${seed.imdbID}`, {
-                        httpsAgent, params: { api_key: TMDB_API_KEY, external_source: 'imdb_id' }
-                    });
-                    const tmdbItem = findRes.data.movie_results?.[0] || findRes.data.tv_results?.[0];
-                    if (tmdbItem) tmdbId = tmdbItem.id;
-                } catch (e) {}
-            }
-
-            if (tmdbId) {
-                fetchPromises.push(axios.get(`${BASE_URL}/${tmdbType}/${tmdbId}/recommendations`, {
-                    httpsAgent, params: { api_key: TMDB_API_KEY }
-                }).catch(() => null));
-            }
-        }
-
-        const responses = await Promise.all(fetchPromises);
+        // Interleave Movie and TV results for 50/50 variety
         let blend = [];
+        const maxLen = Math.max(trendingMovies.length, trendingTv.length);
+        for (let i = 0; i < maxLen; i++) {
+            if (trendingMovies[i]) blend.push({ ...trendingMovies[i], media_type: 'movie' });
+            if (trendingTv[i]) blend.push({ ...trendingTv[i], media_type: 'tv' });
+        }
 
-        responses.forEach(res => {
-            if (res && res.data && res.data.results) {
-                const isTv = res.config.url.includes('/tv/') || res.config.url.includes('/tv?');
-                blend = blend.concat(res.data.results.map(item => ({
-                    ...item,
-                    media_type: item.media_type || (isTv ? 'tv' : 'movie')
-                })));
-            }
-        });
-
-        // Deduplicate and map
+        // Deduplicate and filter out library items
         const uniqueItems = new Map();
         blend.forEach(item => {
             const title = item.title || item.name;
             if (!title || libraryTitles.has(title.toLowerCase().trim())) return;
-            if (!item.poster_path) return; // Only visual items
+            if (!item.poster_path) return;
 
             if (!uniqueItems.has(item.id)) {
                 uniqueItems.set(item.id, item);
-            } else {
-                uniqueItems.get(item.id).popularity += 100; // Boost common recs
             }
         });
 
-        // Final candidate re-ranking (social signals + taste scores)
+        // Re-rank slightly based on social signals (friends who watched)
         const candidates = Array.from(uniqueItems.values());
         const processed = await processResults(candidates, userId);
 
-        const results = processed.slice(0, 60); // Cap at 60 high-quality recs
+        const results = processed.slice(0, 60);
 
-        // Cache for 1 hour — recommendations change as library evolves
+        // Cache for 12 hours (trending content is more stable than personalized recs)
         await SearchCache.findOneAndUpdate(
             { query: cacheKey },
-            { query: cacheKey, results, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+            { query: cacheKey, results, expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000) },
             { upsert: true }
         );
 
         return results;
     } catch (error) {
-        console.error('[SearchService] Discovery Feed failed:', error.message);
+        console.error('[SearchService] Trending Feed failed:', error.message);
         return [];
     }
 };
@@ -817,3 +757,105 @@ function mapMediaItem(item) {
         popularity: item.popularity
     };
 }
+
+/**
+ * [NEW] Fetch full details for a media item from TMDB
+ */
+const getTMDBDetails = async (id, type) => {
+    try {
+        const tmdbType = (type === 'series' || type === 'tv') ? 'tv' : 'movie';
+        const response = await axios.get(`${BASE_URL}/${tmdbType}/${id}`, {
+            httpsAgent,
+            params: { api_key: TMDB_API_KEY, append_to_response: 'credits' }
+        });
+        const item = response.data;
+        return {
+            plot: item.overview,
+            genre: item.genres?.map(g => g.name).join(', '),
+            director: item.credits?.crew?.find(c => c.job === 'Director' || c.job === 'Executive Producer')?.name || '',
+            cast: item.credits?.cast?.slice(0, 5).map(c => c.name).join(', '),
+            poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+            year: (item.release_date || item.first_air_date || '').split('-')[0],
+            language: item.original_language
+        };
+    } catch (e) {
+        return null;
+    }
+};
+
+/**
+ * [NEW] Fetch missing details from OMDB API (Fallback)
+ */
+const getOMDBDetails = async (imdbID) => {
+    try {
+        const OMDB_KEY = process.env.OMDB_API_KEY || process.env.REACT_APP_OMDB_API_KEY;
+        if (!OMDB_KEY) return null;
+
+        const response = await axios.get(`https://www.omdbapi.com/?i=${imdbID}&plot=full&apikey=${OMDB_KEY}`);
+        if (response.data.Response === 'False') return null;
+
+        return {
+            plot: response.data.Plot !== 'N/A' ? response.data.Plot : null,
+            genre: response.data.Genre !== 'N/A' ? response.data.Genre : null,
+            director: response.data.Director !== 'N/A' ? response.data.Director : null,
+            cast: response.data.Actors !== 'N/A' ? response.data.Actors : null,
+            year: response.data.Year?.match(/\d{4}/)?.[0]
+        };
+    } catch (e) {
+        return null;
+    }
+};
+
+/**
+ * [NEW] Enrichment helper for the healing script.
+ * Tries TMDB first, then OMDB, then merges findings.
+ */
+exports.enrichMediaMetadata = async (media) => {
+    let enrichment = null;
+
+    // 1. Try TMDB via imdbID resolution
+    if (media.imdbID) {
+        let tmdbId = null;
+        if (/^\d+$/.test(media.imdbID)) {
+             tmdbId = media.imdbID;
+        } else if (/^tt\d+$/.test(media.imdbID)) {
+            try {
+                const findRes = await axios.get(`${BASE_URL}/find/${media.imdbID}`, {
+                    httpsAgent,
+                    params: { api_key: TMDB_API_KEY, external_source: 'imdb_id' }
+                });
+                const result = media.mediaType === 'series' ? findRes.data.tv_results?.[0] : findRes.data.movie_results?.[0];
+                if (result) tmdbId = result.id;
+            } catch (e) {}
+        }
+
+        if (tmdbId) {
+            enrichment = await getTMDBDetails(tmdbId, media.mediaType);
+        }
+    }
+
+    // 2. Fallback to OMDB
+    if (!enrichment && media.imdbID && /^tt\d+$/.test(media.imdbID)) {
+        enrichment = await getOMDBDetails(media.imdbID);
+    }
+
+    // 3. Last resort: Search by title on OMDB if plot is still missing
+    if ((!enrichment || !enrichment.plot) && media.title) {
+        try {
+            const OMDB_KEY = process.env.OMDB_API_KEY || process.env.REACT_APP_OMDB_API_KEY;
+            const searchRes = await axios.get(`https://www.omdbapi.com/?t=${encodeURIComponent(media.title)}&y=${media.year || ''}&apikey=${OMDB_KEY}`);
+            if (searchRes.data.Response !== 'False') {
+                const omdb = searchRes.data;
+                enrichment = {
+                    ...enrichment,
+                    plot: omdb.Plot !== 'N/A' ? omdb.Plot : (enrichment?.plot || null),
+                    genre: omdb.Genre !== 'N/A' ? omdb.Genre : (enrichment?.genre || null),
+                    director: omdb.Director !== 'N/A' ? omdb.Director : (enrichment?.director || null),
+                    cast: omdb.Actors !== 'N/A' ? omdb.Actors : (enrichment?.cast || null)
+                };
+            }
+        } catch (e) {}
+    }
+
+    return enrichment;
+};
