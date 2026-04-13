@@ -305,6 +305,14 @@ const resolveTMDBId = async (movie) => {
     if (movie.title) {
         try {
             const cleanYear = movie.year ? String(movie.year).match(/\d{4}/)?.[0] : null;
+            const searchParams = { api_key: TMDB_API_KEY, query: movie.title };
+            const searchResponse = await axios.get(`${BASE_URL}/search/${movie.mediaType === 'series' ? 'tv' : 'movie'}`, { params: searchParams });
+            const result = searchResponse.data.results[0];
+            if (result) return result.id;
+        } catch (e) {}
+    }
+
+    return null;
 };
 
 /**
@@ -455,4 +463,3 @@ export const generatePersonalizedFeed = async (userLibrary) => {
         console.error('Error generating personalized feed:', e);
         return [];
     }
-};
