@@ -6,7 +6,6 @@ const http = require('http');
 const socketService = require('./services/socketService');
 const path = require('path');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const logger = require('./utils/logger');
 
 const authRoutes = require('./routes/authRoutes');
@@ -34,17 +33,6 @@ app.use(helmet({
 app.use(cors());
 app.use(express.json());
 
-// Global Rate Limiting — skip in development, generous in production
-const isDev = process.env.NODE_ENV !== 'production';
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: isDev ? 10000 : 500, // Very high limit in dev, generous in production
-    skip: () => isDev, // Completely skip in development
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { message: 'Too many requests, please try again in 15 minutes.' }
-});
-app.use('/api/', limiter);
 
 app.use((req, res, next) => {
     logger.info(`${req.method} ${req.url}`);
