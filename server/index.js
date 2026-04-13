@@ -65,16 +65,16 @@ app.use('/api/rooms', watchRoomRoutes);
 app.use('/api/engagement', engagementRoutes);
 
 // Database Connection
-const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cinelog';
+const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cuerates';
 logger.info(`Connecting to MongoDB at: ${mongoURI.replace(/:([^:@]+)@/, ':****@')}`);
 
 mongoose.connect(mongoURI)
     .then(() => logger.info('MongoDB connected successfully'))
     .catch(err => {
         logger.error('MongoDB connection error:', err);
-        if (mongoURI !== 'mongodb://127.0.0.1:27017/cinelog') {
+        if (mongoURI !== 'mongodb://127.0.0.1:27017/cuerates') {
             logger.info('Retrying with local MongoDB fallback...');
-            mongoose.connect('mongodb://127.0.0.1:27017/cinelog')
+            mongoose.connect('mongodb://127.0.0.1:27017/cuerates')
                 .then(() => logger.info('Connected to local MongoDB fallback'))
                 .catch(localErr => logger.error('Local fallback failed:', localErr));
         }
@@ -82,7 +82,7 @@ mongoose.connect(mongoURI)
 
 // Basic Route
 app.get('/', (req, res) => {
-    res.send('CineLog API is running...');
+    res.send('Cuerates API is running...');
 });
 
 // Start Server

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Bookmark, Send, Check, Search, X, Loader2, Star } from 'lucide-react';
@@ -6,7 +6,6 @@ import { showToast } from '../store/actions';
 import { addMovie, fetchMovies } from '../store/thunks';
 import CineSelect from './CineSelect';
 import { getMovieDetailsExternal as getMovieDetails } from '../services/movieService';
-import { searchMultiTMDB, GENRE_MAP } from '../services/tmdbService';
 
 const GENRES = ['Action', 'Comedy', 'Drama', 'Sci-Fi', 'Thriller', 'Horror', 'Romance', 'Animation', 'Documentary', 'Fantasy', 'Crime', 'Mystery', 'Adventure', 'Biography', 'History'];
 
@@ -38,7 +37,6 @@ const AddMovieModal = ({ onClose, onSubmit, initialData, defaultType, chatMode, 
     const [actionLoading, setActionLoading] = useState(false);
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const userMovies = useSelector(state => state.movies.items);
 
     // Personalization is now handled entirely on the backend for consistency
 

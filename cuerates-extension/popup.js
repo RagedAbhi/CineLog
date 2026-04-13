@@ -1,5 +1,5 @@
 /**
- * CineLog Extension — Popup Script
+ * Cuerates Extension — Popup Script
  * Handles login, room join/leave, and live member display.
  */
 
@@ -33,7 +33,7 @@ let currentRoom = null;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 async function boot() {
-    const status = await bgMessage({ type: 'CINELOG_GET_STATUS' });
+    const status = await bgMessage({ type: 'CUERATES_GET_STATUS' });
     token = status.token;
 
     if (!token) {
@@ -80,8 +80,8 @@ loginBtn.addEventListener('click', async () => {
 
         token = data.token;
         // Save user info for content-script
-        chrome.storage.local.set({ cinelogUser: data.user });
-        await bgMessage({ type: 'CINELOG_SET_TOKEN', token });
+        chrome.storage.local.set({ cueratesUser: data.user });
+        await bgMessage({ type: 'CUERATES_SET_TOKEN', token });
 
         show(viewMain);
         updateDot(true);
@@ -97,7 +97,7 @@ loginBtn.addEventListener('click', async () => {
 
 // ── Logout ─────────────────────────────────────────────────────────────────
 logoutBtn.addEventListener('click', async () => {
-    await bgMessage({ type: 'CINELOG_LOGOUT' });
+    await bgMessage({ type: 'CUERATES_LOGOUT' });
     token = null;
     currentRoom = null;
     show(viewLogin);
@@ -139,7 +139,7 @@ joinBtn.addEventListener('click', async () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Room not found');
 
-        await bgMessage({ type: 'CINELOG_JOIN_ROOM', roomCode: code });
+        await bgMessage({ type: 'CUERATES_JOIN_ROOM', roomCode: code });
         await loadRoom(code, data);
     } catch (err) {
         joinError.textContent = err.message;
@@ -160,7 +160,7 @@ leaveBtn.addEventListener('click', async () => {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        await bgMessage({ type: 'CINELOG_LEAVE_ROOM' });
+        await bgMessage({ type: 'CUERATES_LEAVE_ROOM' });
     } catch (_) {}
 
     currentRoom = null;

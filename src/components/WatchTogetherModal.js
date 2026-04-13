@@ -251,7 +251,7 @@ const WatchTogetherModal = ({ movie, netflixUrl, onClose }) => {
                         </button>
 
                         <p className="wt-ext-note">
-                            Make sure the <strong>CineLog Extension</strong> is installed — it will auto-sync playback for everyone in this room.
+                            Make sure the <strong>Cuerates Extension</strong> is installed — it will auto-sync playback for everyone in this room.
                         </p>
 
                         {/* Chat */}

@@ -5,15 +5,71 @@ const logger = require('../utils/logger');
 
 let io = null;
 
+// ── In-Memory Room State ──────────────────────────────────────────────────────
+// roomCode → { hostSocketId, members: Map<socketId, {user, isBuffering}>, lastState, seq }
+const rooms = new Map();
+
+function getOrCreateRoom(roomCode) {
+    if (!rooms.has(roomCode)) {
+        rooms.set(roomCode, {
+            hostSocketId: null,
+            members: new Map(),
+            lastState: null, // { currentTime, paused, seq }
+            seq: 0
+        });
+    }
+    return rooms.get(roomCode);
+}
+
+function getRoomMemberList(room) {
+    return Array.from(room.members.entries()).map(([sid, m]) => ({
+        socketId: sid,
+        username: m.user.username,
+        avatar: m.user.profilePicture,
+        isHost: sid === room.hostSocketId,
+        isBuffering: m.isBuffering
+    }));
+}
+
+function handleLeaveRoom(socket, roomCode) {
+    const room = rooms.get(roomCode);
+    if (!room || !room.members.has(socket.id)) return;
+
+    room.members.delete(socket.id);
+    socket.leave(`room:${roomCode}`);
+
+    const wasHost = socket.id === room.hostSocketId;
+
+    if (room.members.size === 0) {
+        rooms.delete(roomCode);
+        logger.info(`[Socket] Room ${roomCode} dissolved (empty)`);
+        return;
+    }
+
+    // Transfer host if host left
+    if (wasHost) {
+        const newHostSocketId = room.members.keys().next().value;
+        room.hostSocketId = newHostSocketId;
+        io.to(`room:${roomCode}`).emit('room:host_change', {
+            newHostSocketId,
+            members: getRoomMemberList(room)
+        });
+        logger.info(`[Socket] Host transferred in room ${roomCode} → ${newHostSocketId}`);
+    }
+
+    io.to(`room:${roomCode}`).emit('room:member_left', {
+        socketId: socket.id,
+        username: socket.user?.username || 'Unknown',
+        members: getRoomMemberList(room)
+    });
+}
+
 /**
  * Initializes the Socket.io server.
  */
 exports.init = (httpServer) => {
     io = new Server(httpServer, {
-        cors: {
-            origin: "*", 
-            methods: ["GET", "POST"]
-        }
+        cors: { origin: '*', methods: ['GET', 'POST'] }
     });
 
     // Authentication Middleware
@@ -21,12 +77,11 @@ exports.init = (httpServer) => {
         try {
             const token = socket.handshake.auth?.token;
             if (!token) return next(new Error('Authentication error: No token provided'));
-
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const user = await User.findById(decoded.id).select('-password');
             if (!user) return next(new Error('Authentication error: User not found'));
-
             socket.user = user;
+            socket._watchRooms = new Set(); // track which watch rooms this socket is in
             logger.info(`[Socket Auth] Success: ${user.username} (${socket.id})`);
             next();
         } catch (err) {
@@ -38,95 +93,197 @@ exports.init = (httpServer) => {
     io.on('connection', (socket) => {
         logger.info(`[Socket] New connection: ${socket.id}`);
 
-        // Join personal room based on userId (sent via handshake or auth)
+        // Personal room (for direct notifications)
         socket.on('join', (userId) => {
             if (userId) {
                 socket.join(userId.toString());
-                logger.info(`[Socket] User ${userId} joined their personal room.`);
+                logger.info(`[Socket] User ${userId} joined personal room`);
             }
         });
 
-        // ── Watch Together ──────────────────────────────────────────────
+        // ── Latency Measurement ──────────────────────────────────────────────
+        socket.on('room:ping', ({ clientTime }) => {
+            socket.emit('room:pong', { clientTime, serverTime: Date.now() });
+        });
+
+        // ── Watch Together ───────────────────────────────────────────────────
 
         socket.on('room:join_socket', (roomCode) => {
-            if (roomCode) {
-                socket.join(`room:${roomCode}`);
-                logger.info(`[Socket] ${socket.user.username} (${socket.id}) joined room ${roomCode}`);
-                
-                // Notify the room that a member joined (including user info)
-                socket.to(`room:${roomCode}`).emit('room:member_join', { 
-                    user: {
-                        _id: socket.user._id,
-                        username: socket.user.username,
-                        profilePicture: socket.user.profilePicture
-                    }
-                });
-            }
+            if (!roomCode) return;
+            const room = getOrCreateRoom(roomCode);
+
+            // Add member
+            room.members.set(socket.id, { user: socket.user, isBuffering: false });
+            socket._watchRooms.add(roomCode);
+
+            // First member becomes host
+            const isHost = room.hostSocketId === null;
+            if (isHost) room.hostSocketId = socket.id;
+
+            socket.join(`room:${roomCode}`);
+            logger.info(`[Socket] ${socket.user.username} joined room ${roomCode} (isHost: ${isHost})`);
+
+            // Confirm join with room state
+            socket.emit('room:joined', {
+                isHost,
+                hostSocketId: room.hostSocketId,
+                members: getRoomMemberList(room),
+                lastState: room.lastState
+            });
+
+            // Notify existing members
+            socket.to(`room:${roomCode}`).emit('room:member_join', {
+                user: {
+                    socketId: socket.id,
+                    username: socket.user.username,
+                    avatar: socket.user.profilePicture
+                },
+                members: getRoomMemberList(room)
+            });
         });
 
         socket.on('room:leave_socket', (roomCode) => {
             if (roomCode) {
-                socket.leave(`room:${roomCode}`);
-                logger.info(`[Socket] ${socket.id} left watch room ${roomCode}`);
+                socket._watchRooms.delete(roomCode);
+                handleLeaveRoom(socket, roomCode);
             }
         });
 
-        // Relay play/pause/seek to everyone else in the room
+        // ── Playback Sync (host-only) ────────────────────────────────────────
         socket.on('room:sync', ({ roomCode, action, currentTime }) => {
             if (!roomCode) return;
-            
-            // Broadcast the sync action to other members
-            socket.to(`room:${roomCode}`).emit('room:synced', { action, currentTime, socketId: socket.id });
+            const room = rooms.get(roomCode);
+            if (!room) return;
 
-            // Identity Hardening: Use explicit fallback if user is missing for some reason
-            const name = socket.user?.username || '[Identity Error]';
-            logger.info(`[Sync Log] Room: ${roomCode} | User: ${name} | Action: ${action}`);
+            // Only relay syncs from the host — enforce on server
+            if (socket.id !== room.hostSocketId) return;
 
-            // Generate a technical system message for the chat
-            const timeStr = new Date(currentTime * 1000).toISOString().substr(11, 8);
+            room.seq++;
+            room.lastState = { currentTime, paused: action === 'pause', seq: room.seq };
 
-            let message = null;
-            if (action === 'play') message = `${name} played the video`;
-            else if (action === 'pause') message = `${name} paused the video`;
-            else if (action === 'seek') message = `${name} seeked to ${timeStr}`;
+            socket.to(`room:${roomCode}`).emit('room:synced', {
+                action,
+                currentTime,
+                seq: room.seq
+            });
 
-            if (message) {
-                io.to(`room:${roomCode}`).emit('room:message', { 
-                    message, 
-                    isSystem: true, 
-                    timestamp: new Date() 
+            logger.info(`[Sync] Room: ${roomCode} | ${socket.user.username} | ${action} @ ${currentTime.toFixed(1)}s | seq:${room.seq}`);
+        });
+
+        // ── Heartbeat (host → guests for drift correction) ───────────────────
+        socket.on('room:heartbeat', ({ roomCode, currentTime, paused }) => {
+            if (!roomCode) return;
+            const room = rooms.get(roomCode);
+            if (!room || socket.id !== room.hostSocketId) return;
+
+            // Update stored state
+            room.lastState = { currentTime, paused, seq: room.seq };
+
+            // Relay to guests only
+            socket.to(`room:${roomCode}`).emit('room:heartbeat', {
+                currentTime,
+                paused,
+                sentAt: Date.now()
+            });
+        });
+
+        // ── Buffering Sync ───────────────────────────────────────────────────
+        socket.on('room:buffer_start', ({ roomCode }) => {
+            if (!roomCode) return;
+            const room = rooms.get(roomCode);
+            if (!room) return;
+            const member = room.members.get(socket.id);
+            if (!member || member.isBuffering) return;
+
+            member.isBuffering = true;
+            logger.info(`[Buffer] ${socket.user.username} buffering in room ${roomCode}`);
+
+            io.to(`room:${roomCode}`).emit('room:members_update', {
+                members: getRoomMemberList(room)
+            });
+
+            // If a guest is buffering, pause the whole room
+            if (socket.id !== room.hostSocketId) {
+                io.to(`room:${roomCode}`).emit('room:pause_for_buffer', {
+                    username: socket.user.username
                 });
             }
         });
 
-        // FIX #4: Late joiner requests current playback state from host
-        // Sends the request to everyone ELSE in the room (the host will respond)
+        socket.on('room:buffer_end', ({ roomCode }) => {
+            if (!roomCode) return;
+            const room = rooms.get(roomCode);
+            if (!room) return;
+            const member = room.members.get(socket.id);
+            if (!member || !member.isBuffering) return;
+
+            member.isBuffering = false;
+            logger.info(`[Buffer] ${socket.user.username} finished buffering in room ${roomCode}`);
+
+            const anyoneBuffering = Array.from(room.members.values()).some(m => m.isBuffering);
+
+            io.to(`room:${roomCode}`).emit('room:members_update', {
+                members: getRoomMemberList(room)
+            });
+
+            if (!anyoneBuffering) {
+                io.to(`room:${roomCode}`).emit('room:resume_after_buffer');
+            }
+        });
+
+        // ── State Request (late-join fallback) ───────────────────────────────
         socket.on('room:request_state', ({ roomCode }) => {
             if (!roomCode) return;
-            socket.to(`room:${roomCode}`).emit('room:state_request', { requesterSocketId: socket.id });
+            const room = rooms.get(roomCode);
+            if (!room) return;
+
+            if (room.lastState) {
+                // Server has stored state — respond directly
+                socket.emit('room:state_response', { state: room.lastState });
+            } else {
+                // Ask others in the room (host will respond)
+                socket.to(`room:${roomCode}`).emit('room:state_request', {
+                    requesterSocketId: socket.id
+                });
+            }
         });
 
-        // FIX #4: Host sends back current state — forward ONLY to the requester
-        socket.on('room:state_response', ({ roomCode, state }) => {
+        // Relay state response back to specific requester
+        socket.on('room:state_response', ({ roomCode, state, requesterSocketId }) => {
             if (!roomCode || !state) return;
-            // Broadcast to the whole room so the newly joined tab gets it
-            // (background.js will filter to only Netflix tabs)
-            socket.to(`room:${roomCode}`).emit('room:state_response', { state });
+            if (requesterSocketId) {
+                io.to(requesterSocketId).emit('room:state_response', { state });
+            } else {
+                // Fallback: relay to all (shouldn't be needed with server-side state)
+                socket.to(`room:${roomCode}`).emit('room:state_response', { state });
+            }
         });
 
-        // Relay chat to everyone in the room (including sender)
-        socket.on('room:chat', ({ roomCode, message }) => {
-            if (!roomCode) return;
-            io.to(`room:${roomCode}`).emit('room:message', { 
-                message, 
-                userId: socket.user._id, 
-                username: socket.user.username, 
-                avatar: socket.user.profilePicture, 
-                timestamp: new Date() 
+        // ── Emoji Reactions ──────────────────────────────────────────────────
+        socket.on('room:reaction', ({ roomCode, emoji }) => {
+            if (!roomCode || !emoji) return;
+            io.to(`room:${roomCode}`).emit('room:reaction', {
+                emoji,
+                username: socket.user.username,
+                socketId: socket.id
             });
         });
 
+        // ── Chat ─────────────────────────────────────────────────────────────
+        socket.on('room:chat', ({ roomCode, message }) => {
+            if (!roomCode || !message?.trim()) return;
+            io.to(`room:${roomCode}`).emit('room:message', {
+                message: message.trim(),
+                userId: socket.user._id,
+                username: socket.user.username,
+                avatar: socket.user.profilePicture,
+                timestamp: new Date()
+            });
+        });
+
+        // ── Disconnect ───────────────────────────────────────────────────────
         socket.on('disconnect', () => {
+            socket._watchRooms.forEach(roomCode => handleLeaveRoom(socket, roomCode));
             logger.info(`[Socket] Disconnected: ${socket.id}`);
         });
     });
@@ -138,9 +295,7 @@ exports.init = (httpServer) => {
  * Returns the global io instance.
  */
 exports.getIO = () => {
-    if (!io) {
-        throw new Error("Socket.io not initialized!");
-    }
+    if (!io) throw new Error('Socket.io not initialized!');
     return io;
 };
 

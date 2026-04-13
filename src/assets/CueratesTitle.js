@@ -1,14 +1,14 @@
 import React from 'react';
 
 /**
- * CinelogTitle — renders the "CINELOG" wordmark + optional subtitle/rule.
+ * CueratesTitle — renders the "CUERATES" wordmark + optional subtitle/rule.
  *
  * Props:
  *   titleSize   — font-size (px) for the main wordmark. Default 42.
  *   showSubtitle — show "YOUR MOVIE JOURNAL" + separator line. Default true.
  *   style       — extra styles on the outer wrapper.
  */
-const CinelogTitle = ({ titleSize = 42, showSubtitle = true, style = {} }) => {
+const CueratesTitle = ({ titleSize = 42, showSubtitle = true, style = {} }) => {
   const subtitleSize = titleSize * 0.27;
   const lineWidth = titleSize * 4.6;
 
@@ -74,4 +74,4 @@ const CinelogTitle = ({ titleSize = 42, showSubtitle = true, style = {} }) => {
   );
 };
 
-export default CinelogTitle;
+export default CueratesTitle;

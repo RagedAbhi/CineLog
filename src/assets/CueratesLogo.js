@@ -1,6 +1,6 @@
 import React from 'react';
 
-const CinelogLogo = ({ size = 80, style = {} }) => {
+const CueratesLogo = ({ size = 80, style = {} }) => {
   const s = size;
   const cx = s / 2;
   const cy = s / 2;
@@ -133,4 +133,4 @@ const CinelogLogo = ({ size = 80, style = {} }) => {
   );
 };
 
-export default CinelogLogo;
+export default CueratesLogo;

@@ -1,4 +1,32 @@
 const Media = require('../models/Media');
+const searchService = require('../services/searchService');
+
+/**
+ * Helper: Background metadata recovery.
+ * If an item is missing its plot or genre, try to enrich it via searchService.
+ */
+const healMetadata = async (media) => {
+    if (media.plot && media.genre && media.genre !== 'Unknown') return media;
+
+    try {
+        const enrichment = await searchService.enrichMediaMetadata(media);
+        if (enrichment) {
+            let changed = false;
+            if (enrichment.plot && !media.plot) { media.plot = enrichment.plot; changed = true; }
+            if (enrichment.genre && (!media.genre || media.genre === 'Unknown')) { media.genre = enrichment.genre; changed = true; }
+            if (enrichment.cast && !media.cast) { media.cast = enrichment.cast; changed = true; }
+            if (enrichment.director && !media.director) { media.director = enrichment.director; changed = true; }
+
+            if (changed) {
+                await media.save();
+                console.log(`[AutoHeal] Successfully enriched metadata for: ${media.title}`);
+            }
+        }
+    } catch (err) {
+        console.error(`[AutoHeal] Failed to enrich ${media.title}:`, err.message);
+    }
+    return media;
+};
  
 // Helper: Scrub empty/null fields to prevent overwriting rich metadata with partial info
 const scrubUpdateData = (data) => {
@@ -30,7 +58,10 @@ exports.getMediaById = async (req, res) => {
         if (!media) {
             return res.status(404).json({ message: 'Media not found' });
         }
-        res.status(200).json(media);
+
+        // Proactive healing: Fill missing plot/genre if user is requesting this specific item
+        const healed = await healMetadata(media);
+        res.status(200).json(healed);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching media details', error: error.message });
     }
@@ -82,11 +113,16 @@ exports.createMedia = async (req, res) => {
             return res.status(200).json(updated);
         }
 
-        // Case 3: New item - Create as normal
-        const media = await Media.create({
+        // Case 3: New item - Create with potential enrichment
+        const media = new Media({
             ...req.body,
             userId: req.user.id
         });
+
+        // Enrich BEFORE first save to ensure DB integrity
+        await healMetadata(media);
+        await media.save();
+
         res.status(201).json(media);
     } catch (error) {
         res.status(400).json({ message: 'Error creating media', error: error.message });

@@ -36,18 +36,18 @@ export const fetchStreamingAvailability = async (title, type, year, imdbID = nul
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 const getCachedData = (key) => {
-    const cached = localStorage.getItem(`cinelog_cache_${key}`);
+    const cached = localStorage.getItem(`cuerates_cache_${key}`);
     if (!cached) return null;
     const { data, timestamp } = JSON.parse(cached);
     if (Date.now() - timestamp > CACHE_TTL) {
-        localStorage.removeItem(`cinelog_cache_${key}`);
+        localStorage.removeItem(`cuerates_cache_${key}`);
         return null;
     }
     return data;
 };
 
 const setCachedData = (key, data) => {
-    localStorage.setItem(`cinelog_cache_${key}`, JSON.stringify({
+    localStorage.setItem(`cuerates_cache_${key}`, JSON.stringify({
         data,
         timestamp: Date.now()
     }));
@@ -305,18 +305,6 @@ const resolveTMDBId = async (movie) => {
     if (movie.title) {
         try {
             const cleanYear = movie.year ? String(movie.year).match(/\d{4}/)?.[0] : null;
-            const searchParams = { api_key: TMDB_API_KEY, query: movie.title };
-            if (cleanYear) {
-                if (tmdbType === 'movie') searchParams.year = cleanYear;
-                else searchParams.first_air_date_year = cleanYear;
-            }
-            const searchResponse = await axios.get(`${BASE_URL}/search/${tmdbType}`, { params: searchParams });
-            const result = searchResponse.data.results[0];
-            if (result) return result.id;
-        } catch (e) {}
-    }
-
-    return null;
 };
 
 /**

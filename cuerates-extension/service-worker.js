@@ -1,11 +1,11 @@
 /**
- * CineLog Extension — Service Worker v4.1
+ * Cuerates Extension — Service Worker v5.1
  * Lightweight Auth/Storage Bridge
  */
 
 const BACKEND_URL = 'https://cuerates.onrender.com';
 
-console.log('[CineLog] Service Worker v4.1 Active');
+console.log('[Cuerates] Service Worker v5.1 Active');
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -23,43 +23,43 @@ async function broadcastToNetflixTabs(message) {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     switch (message.type) {
 
-        case 'CINELOG_SET_TOKEN': {
+        case 'CUERATES_SET_TOKEN': {
             const { token, user } = message;
-            chrome.storage.local.set({ cinelogToken: token, cinelogUser: user });
+            chrome.storage.local.set({ cueratesToken: token, cueratesUser: user });
             sendResponse({ ok: true });
             break;
         }
 
-        case 'CINELOG_LOGOUT': {
-            chrome.storage.local.remove(['cinelogToken', 'cinelogUser']);
+        case 'CUERATES_LOGOUT': {
+            chrome.storage.local.remove(['cueratesToken', 'cueratesUser']);
             chrome.storage.session.clear();
-            broadcastToNetflixTabs({ type: 'CINELOG_ROOM_LEFT' });
+            broadcastToNetflixTabs({ type: 'CUERATES_ROOM_LEFT' });
             sendResponse({ ok: true });
             break;
         }
 
-        case 'CINELOG_JOIN_ROOM': {
+        case 'CUERATES_JOIN_ROOM': {
             chrome.storage.session.set({ roomCode: message.roomCode });
-            broadcastToNetflixTabs({ type: 'CINELOG_ROOM_JOINED', roomCode: message.roomCode });
+            broadcastToNetflixTabs({ type: 'CUERATES_ROOM_JOINED', roomCode: message.roomCode });
             sendResponse({ ok: true });
             break;
         }
 
-        case 'CINELOG_LEAVE_ROOM': {
+        case 'CUERATES_LEAVE_ROOM': {
             chrome.storage.session.remove('roomCode');
-            broadcastToNetflixTabs({ type: 'CINELOG_ROOM_LEFT' });
+            broadcastToNetflixTabs({ type: 'CUERATES_ROOM_LEFT' });
             sendResponse({ ok: true });
             break;
         }
 
-        case 'CINELOG_GET_STATUS': {
+        case 'CUERATES_GET_STATUS': {
             Promise.all([
-                chrome.storage.local.get(['cinelogToken', 'cinelogUser']),
+                chrome.storage.local.get(['cueratesToken', 'cueratesUser']),
                 chrome.storage.session.get('roomCode')
             ]).then(([local, session]) => {
                 sendResponse({
-                    token: local.cinelogToken || null,
-                    user: local.cinelogUser || null,
+                    token: local.cueratesToken || null,
+                    user: local.cueratesUser || null,
                     roomCode: session.roomCode || null
                 });
             });

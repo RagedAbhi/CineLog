@@ -44,7 +44,7 @@ const useSocket = () => {
             if (socket) {
                 // We keep the socket alive unless the user logs out
                 // or we can disconnect here if we want per-component scope.
-                // For CineLog, global scope is better.
+                // For Cuerates, global scope is better.
             }
         };
     }, [user, dispatch]);

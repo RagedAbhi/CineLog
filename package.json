@@ -1,6 +1,7 @@
 {
-  "name": "cinelog",
+  "name": "cuerates",
   "version": "1.0.0",
+  "description": "Experience Cinema Together",
   "private": true,
   "dependencies": {
     "@gsap/react": "^2.1.2",

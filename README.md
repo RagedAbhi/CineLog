@@ -1,4 +1,4 @@
-# 🎬 CineLog — Personal Movie Watchlist & Review Tracker
+# 🎬 Cuerates — Personal Movie Watchlist & Review Tracker
 
 A fully-featured movie journaling app built with **React Class Components**, **Redux (no toolkit)**, **Axios**, **React Router v6**, and **Recharts**.
 
@@ -21,7 +21,7 @@ A fully-featured movie journaling app built with **React Class Components**, **R
 ## Project Structure
 
 ```
-cinelog/
+cuerates/
 ├── db.json                    ← JSON Server database (mock backend)
 ├── public/
 │   └── index.html

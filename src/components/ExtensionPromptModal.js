@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, Download, CheckCircle, Chrome } from 'lucide-react';
-import CinelogLogo from '../assets/CinelogLogo';
+import CueratesLogo from '../assets/CueratesLogo';
 
-const EXTENSION_DOWNLOAD_URL = 'https://cinelog-wdaj.onrender.com/extension/cinelog-extension.zip';
+const EXTENSION_DOWNLOAD_URL = 'https://cinelog-wdaj.onrender.com/extension/cuerates-extension.zip';
 const EXTENSION_STORE_URL = ''; // Fill in once published to Chrome Web Store
 
 /**
@@ -39,12 +39,12 @@ const ExtensionPromptModal = ({ onClose, onInstalled }) => {
                 {step === 'prompt' && (
                     <>
                         <div className="ext-logo-wrap">
-                            <CinelogLogo size={88} />
+                            <CueratesLogo size={88} />
                         </div>
 
                         <h2 className="ext-title">Watch Together</h2>
                         <p className="ext-desc">
-                            Install the <strong>CineLog Extension</strong> to watch Netflix in perfect sync with your friends — straight from your browser.
+                            Install the <strong>Cuerates Extension</strong> to watch Netflix in perfect sync with your friends — straight from your browser.
                         </p>
 
                         <div className="ext-features">
@@ -95,7 +95,7 @@ const ExtensionPromptModal = ({ onClose, onInstalled }) => {
                             </div>
                             <div className="ext-step">
                                 <span className="ext-step-num">4</span>
-                                <span>Pin the <strong>CineLog</strong> icon to your toolbar and click it to log in</span>
+                                <span>Pin the <strong>Cuerates</strong> icon to your toolbar and click it to log in</span>
                             </div>
                         </div>
 

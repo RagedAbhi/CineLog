@@ -1,7 +1,7 @@
 {
-    "name": "cinelog-server",
+    "name": "cuerates-server",
     "version": "1.0.0",
-    "description": "Backend for CineLog movie diary",
+    "description": "Backend for Cuerates movie diary",
     "main": "index.js",
     "scripts": {
         "start": "node index.js",

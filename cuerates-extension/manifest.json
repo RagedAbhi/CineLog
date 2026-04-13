@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "CineLog — Watch Together",
-  "version": "1.2.0",
-  "description": "Watch Netflix in perfect sync with your friends via CineLog.",
+  "name": "Cuerates",
+  "short_name": "Cuerates",
+  "version": "5.1.0",
+  "description": "Sync Netflix with friends and discover trending hits on Cuerates.",
   "permissions": [
     "storage",
     "tabs",

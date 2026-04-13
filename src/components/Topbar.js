@@ -137,7 +137,7 @@ const Topbar = () => {
                         {/* Extension Install Button */}
                         {!isMobile && (
                             <a
-                                href="https://github.com/RagedAbhi/cinelog"
+                                href="https://github.com/RagedAbhi/cuerates"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="extension-install-btn"
@@ -189,7 +189,7 @@ const Topbar = () => {
                                     <div className="dropdown-divider" />
 
                                     <a
-                                        href="https://github.com/RagedAbhi/cinelog"
+                                        href="https://github.com/RagedAbhi/cuerates"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="dropdown-item"

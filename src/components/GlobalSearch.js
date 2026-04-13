@@ -28,7 +28,7 @@ const GlobalSearch = () => {
     
     // Load recent searches
     useEffect(() => {
-        const stored = localStorage.getItem('cinelog_recent_searches');
+        const stored = localStorage.getItem('cuerates_recent_searches');
         if (stored) {
             try { setRecentSearches(JSON.parse(stored)); } catch(e){}
         }
@@ -38,7 +38,7 @@ const GlobalSearch = () => {
         if (!term || !term.trim()) return;
         setRecentSearches(prev => {
             const newSearches = [term, ...prev.filter(t => t.toLowerCase() !== term.toLowerCase())].slice(0, 8);
-            localStorage.setItem('cinelog_recent_searches', JSON.stringify(newSearches));
+            localStorage.setItem('cuerates_recent_searches', JSON.stringify(newSearches));
             return newSearches;
         });
     }, []);
@@ -46,7 +46,7 @@ const GlobalSearch = () => {
     const clearRecentSearches = (e) => {
         e.stopPropagation();
         setRecentSearches([]);
-        localStorage.removeItem('cinelog_recent_searches');
+        localStorage.removeItem('cuerates_recent_searches');
     };
 
     const handleSelect = useCallback((item) => {
