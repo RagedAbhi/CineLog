@@ -29,8 +29,9 @@
     let heartbeatTimer = null;
     let lastHeartbeat = null;   // { currentTime, paused, receivedAt }
     let members       = [];
-    let isBuffering   = false;
-    let suppressUntil = 0;      // timestamp — suppress outgoing emits until this time
+    let isBuffering       = false;
+    let suppressUntil     = 0;     // timestamp — suppress outgoing emits until this time
+    let initialSyncDone   = false; // true after first join seek — prevents redirect on reconnect
 
     console.log('%c🎬 [Cuerates] Sync Engine v5.0 Active', 'color: #818cf8; font-size: 14px; font-weight: bold;');
 
@@ -124,6 +125,37 @@
         }, SYNC_DEBOUNCE_MS);
     }
 
+    // ── Initial Join Seek (Teleparty-style URL redirect) ─────────────────────
+    // Uses Netflix's native ?t= param so the player initialises at the right
+    // position itself — no internal API call on an unready player (fixes O7375).
+
+    function initialJoinSeek(currentTime, paused) {
+        if (!window.location.pathname.includes('/watch/')) return;
+        if (initialSyncDone) return; // already synced this session
+
+        const delta = Math.abs(playerGetTime() - currentTime);
+
+        if (delta <= SEEK_TOLERANCE_S) {
+            // Already close — just match play/pause state, no redirect needed
+            suppressEmit(1500);
+            if (paused) playerPause(); else playerPlay();
+            initialSyncDone = true;
+            return;
+        }
+
+        // Large seek — hand off to Netflix natively via URL (avoids O7375)
+        const url = new URL(window.location.href);
+        url.searchParams.set('t', Math.floor(currentTime));
+        url.searchParams.set('clroom', roomCode);
+        if (paused) {
+            url.searchParams.set('clpaused', '1');
+        } else {
+            url.searchParams.delete('clpaused');
+        }
+        showBadge('🚀 Syncing to host…');
+        setTimeout(() => { window.location.href = url.toString(); }, 500);
+    }
+
     // ── Apply Incoming Sync ──────────────────────────────────────────────────
 
     function applySync(action, targetTime, seq) {
@@ -132,6 +164,8 @@
         // Sequence-based dedup: ignore replays (seq === -1 bypasses for initial state)
         if (seq !== undefined && seq !== -1 && seq <= lastSeqApplied) return;
         if (seq !== undefined && seq !== -1) lastSeqApplied = seq;
+
+        initialSyncDone = true; // session is live — future state responses use internal API
 
         suppressEmit(1500);
 
@@ -240,8 +274,8 @@
             updateHostBadge();
 
             if (lastState) {
-                // Server has stored playback state — sync after player loads
-                setTimeout(() => applySync(lastState.paused ? 'pause' : 'play', lastState.currentTime, -1), 2000);
+                // Server has stored playback state — use URL redirect for initial seek (avoids O7375)
+                setTimeout(() => initialJoinSeek(lastState.currentTime, lastState.paused), 1500);
             } else if (!hostFlag) {
                 // No stored state yet — ask host directly
                 setTimeout(() => socket.emit('room:request_state', { roomCode }), 2000);
@@ -336,7 +370,8 @@
 
         socket.on('room:state_response', ({ state }) => {
             if (!state) return;
-            setTimeout(() => applySync(state.paused ? 'pause' : 'play', state.currentTime, -1), 2000);
+            // Use URL redirect for initial seek — only falls through to applySync if already synced
+            setTimeout(() => initialJoinSeek(state.currentTime, state.paused), 1500);
         });
 
         // ── Connection status ────────────────────────────────────────────────
@@ -391,8 +426,23 @@
         roomCode = code;
         currentUser = user;
 
+        initialSyncDone = false; // reset on every new room join
+
         startWatcher();
         connectSocket(token);
+
+        // After a URL-redirect sync, Netflix loads at the right time but may auto-play
+        // when the host is paused. Re-apply the pause once the video element is ready.
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('clpaused') === '1') {
+            const pauseInterval = setInterval(() => {
+                if (video && !video.paused) {
+                    playerPause();
+                    clearInterval(pauseInterval);
+                }
+            }, 200);
+            setTimeout(() => clearInterval(pauseInterval), 10000);
+        }
 
         if (window.location.pathname.includes('/watch/')) {
             injectOverlay();
