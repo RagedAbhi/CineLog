@@ -133,8 +133,13 @@ class DiscoverPage extends Component {
                         {recommendations.map(movie => (
                             <MovieCard 
                                 key={movie.id} 
-                                movie={{...movie, isExternal: true}} 
-                                navigate={this.props.navigate} 
+                                movie={{
+                                    ...movie,
+                                    isExternal: true,
+                                    // MovieCard click handler uses imdbID || _id for external items.
+                                    // Discover items only have a TMDB numeric `id`, so we alias it here.
+                                    imdbID: movie.imdbID || String(movie.id)
+                                }} 
                             />
                         ))}
                     </div>
