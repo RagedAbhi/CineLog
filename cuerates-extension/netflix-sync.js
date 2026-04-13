@@ -133,6 +133,16 @@
         if (!window.location.pathname.includes('/watch/')) return;
         if (initialSyncDone) return; // already synced this session
 
+        // Already redirected once via URL — don't redirect again.
+        // Trust the ?t= position that Netflix is currently loading.
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('t')) {
+            initialSyncDone = true;
+            suppressEmit(1500);
+            if (paused) playerPause(); else playerPlay();
+            return;
+        }
+
         const delta = Math.abs(playerGetTime() - currentTime);
 
         if (delta <= SEEK_TOLERANCE_S) {
