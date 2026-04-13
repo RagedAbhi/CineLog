@@ -13,6 +13,7 @@
     const DRIFT_CHECK_MS   = 10000;
     const DRIFT_HARD_S     = 3.0;
     const DRIFT_SOFT_S     = 1.0;
+    const LARGE_SEEK_S     = 30.0; // Seconds — threshold for native URL redirect
 
     let socket        = null;
     let video         = null;
@@ -129,14 +130,13 @@
     // Uses Netflix's native ?t= param so the player initialises at the right
     // position itself — no internal API call on an unready player (fixes O7375).
 
-    function initialJoinSeek(currentTime, paused) {
+    function initialJoinSeek(currentTime, paused, force = false) {
         if (!window.location.pathname.includes('/watch/')) return;
-        if (initialSyncDone) return; // already synced this session
+        if (initialSyncDone && !force) return; // already synced this session
 
-        // Already redirected once via URL — don't redirect again.
-        // Trust the ?t= position that Netflix is currently loading.
+        // Already redirected once via URL — don't redirect again (if not forced).
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('t')) {
+        if (urlParams.has('t') && !force) {
             initialSyncDone = true;
             suppressEmit(1500);
             if (paused) playerPause(); else playerPlay();
@@ -145,7 +145,7 @@
 
         const delta = Math.abs(playerGetTime() - currentTime);
 
-        if (delta <= SEEK_TOLERANCE_S) {
+        if (!force && delta <= SEEK_TOLERANCE_S) {
             // Already close — just match play/pause state, no redirect needed
             suppressEmit(1500);
             if (paused) playerPause(); else playerPlay();
@@ -162,7 +162,7 @@
         } else {
             url.searchParams.delete('clpaused');
         }
-        showBadge('🚀 Syncing to host…');
+        showBadge(force ? '🚀 Re-syncing to host…' : '🚀 Syncing to host…');
         setTimeout(() => { window.location.href = url.toString(); }, 500);
     }
 
@@ -182,12 +182,21 @@
         // Compensate for socket latency: target is already in the past by latencyMs
         const compensated = targetTime + (latencyMs / 1000);
         const current = playerGetTime();
+        const delta = Math.abs(current - compensated);
 
-        if (action === 'seek' || Math.abs(current - compensated) > SEEK_TOLERANCE_S) {
+        // HYBRID SYNC (Teleparty Style): 
+        // Small changes use seamless API. Large changes (>30s) use a native URL redirect 
+        // to prevent player crashes (O7375).
+        if (action === 'seek' || delta > LARGE_SEEK_S) {
+            initialJoinSeek(compensated, action === 'pause' || (action === 'seek' && targetTime === current), true);
+            return;
+        }
+
+        if (delta > SEEK_TOLERANCE_S) {
             playerSeek(compensated);
         }
 
-        if (action === 'play' || action === 'seek') {
+        if (action === 'play') {
             playerPlay();
         } else if (action === 'pause') {
             playerPause();
