@@ -53,10 +53,14 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
 
                 <div className="word-section">
                     <div className="word-display">
-                        {displayState.map((char, i) => (
-                            <span key={i} className={`char ${char === ' ' ? 'space' : ''}`}>
-                                {char === '_' ? '' : char}
-                            </span>
+                        {displayState.join('').split(' ').map((word, wordIdx) => (
+                            <div key={wordIdx} className="word-wrapper">
+                                {word.split('').map((char, charIdx) => (
+                                    <span key={charIdx} className="char">
+                                        {char === '_' ? '' : char}
+                                    </span>
+                                ))}
+                            </div>
                         ))}
                     </div>
                     
@@ -129,9 +133,13 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                 .word-display {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 10px;
+                    gap: 30px; /* Space between words */
                     justify-content: center;
                     margin-bottom: 30px;
+                }
+                .word-wrapper {
+                    display: flex;
+                    gap: 10px; /* Space between letters in a word */
                 }
                 .char {
                     width: 40px;
@@ -143,10 +151,6 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                     font-size: 2rem;
                     font-weight: 800;
                     text-transform: uppercase;
-                }
-                .char.space {
-                    border-bottom: none;
-                    width: 20px;
                 }
                 .status-pill {
                     display: inline-block;
