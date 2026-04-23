@@ -70,8 +70,9 @@ const GameRoom = () => {
                 setRoom(prev => ({ ...prev, scores: data.scores, status: 'finished' }));
                 
                 // Persist stats if this is the end of the game
-                const myScore = data.scores[user._id.toString()] || 0;
-                const won = data.winner === user._id.toString();
+                const myUserId = user?._id?.toString();
+                const myScore = data.scores[myUserId] || 0;
+                const won = data.winner === myUserId;
                 saveFinalStats(myScore, won);
                 break;
 
@@ -96,7 +97,7 @@ const GameRoom = () => {
             default:
                 break;
         }
-    }, [dispatch, navigate, user._id]);
+    }, [dispatch, navigate, user?._id]);
 
     const { emit } = useGameSocket({ roomCode: code, onEvent });
 
@@ -168,7 +169,7 @@ const GameRoom = () => {
         }
     };
 
-    if (loading) return <div className="loading-container"><div className="spinner" /></div>;
+    if (!user || loading) return <div className="loading-container"><div className="spinner" /></div>;
     
     if (!room) {
         navigate('/games');
