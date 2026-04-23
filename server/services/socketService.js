@@ -422,22 +422,62 @@ exports.init = (httpServer) => {
             if (!room || room.status !== 'in-progress' || room.game !== 'plot-redacted') return;
 
             const puzzle = room.currentPuzzle;
-            const normalize = (s) => s.toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/[^\w]/g, '');
-            const isCorrect = normalize(submission) === normalize(puzzle.answer);
+            
+            // Advanced Normalization
+            const clean = (s) => s.toLowerCase()
+                .replace(/\b(the|a|an)\b/g, '') // Global article removal
+                .replace(/[^\w]/g, '');         // Remove non-alphanumeric
 
-            if (isCorrect) {
-                let score = 100 - (puzzle.hintsUsed * 40);
-                if (score < 20) score = 20; // Minimum score
+            const submissionClean = clean(submission);
+            const answerClean = clean(puzzle.answer);
+
+            // 1. Check for Exact Match
+            let matchType = null;
+            if (submissionClean === answerClean) {
+                matchType = 'exact';
+            } 
+            
+            // 2. Check for Subtitle Match (e.g. "Star Wars" for "Star Wars: A New Hope")
+            if (!matchType && (puzzle.answer.includes(':') || puzzle.answer.includes('-') || puzzle.answer.includes('–'))) {
+                const mainTitle = puzzle.answer.split(/[:–-]/)[0].trim();
+                if (submissionClean === clean(mainTitle)) {
+                    matchType = 'subtitle';
+                }
+            }
+
+            // 3. Keyword / Partial Match logic
+            if (!matchType) {
+                const getKeywords = (s) => s.toLowerCase().split(/\W+/).filter(w => w.length > 2 && !['the', 'and', 'for'].includes(w));
+                const submissionKeywords = getKeywords(submission);
+                const answerKeywords = getKeywords(puzzle.answer);
+                
+                if (answerKeywords.length > 0) {
+                    const matches = answerKeywords.filter(kw => submissionKeywords.includes(kw));
+                    const coverage = matches.length / answerKeywords.length;
+                    if (coverage >= 0.8) matchType = 'partial';
+                }
+            }
+
+            if (matchType) {
+                // Calculate base score based on hints
+                let baseScore = 100 - (puzzle.hintsUsed * 40);
+                if (baseScore < 20) baseScore = 20;
+
+                // Apply match quality modifiers
+                let finalScore = baseScore;
+                if (matchType === 'subtitle') finalScore = Math.floor(baseScore * 0.9);
+                if (matchType === 'partial') finalScore = Math.floor(baseScore * 0.8);
 
                 // Multiplayer speed bonus logic
                 const alreadyAnswered = Object.keys(puzzle.submissions).length > 0;
-                if (alreadyAnswered) score = Math.floor(score * 0.8);
+                if (alreadyAnswered) finalScore = Math.floor(finalScore * 0.8);
 
-                gameService.updateScore(roomCode, socket.user._id.toString(), score);
+                gameService.updateScore(roomCode, socket.user._id.toString(), finalScore);
                 puzzle.submissions[socket.user._id.toString()] = [submission];
 
                 io.to(roomCode).emit('game:round_end', {
                     result: 'correct',
+                    matchType,
                     answeredBy: socket.user.username,
                     answer: puzzle.answer,
                     metadata: puzzle.metadata,

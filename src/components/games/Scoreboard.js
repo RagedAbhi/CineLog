@@ -38,6 +38,11 @@ const Scoreboard = ({ phase, room, userId, roundResult, onPlayAgain }) => {
                             <h2 className={roundResult?.result === 'won' || roundResult?.result === 'correct' ? 'text-green-500' : 'text-red-500'}>
                                 {roundResult?.result === 'won' || roundResult?.result === 'correct' ? 'Correct!' : 'Round Over'}
                             </h2>
+                            {roundResult?.matchType && roundResult.matchType !== 'exact' && (
+                                <div className="match-quality-badge">
+                                    {roundResult.matchType === 'subtitle' ? 'Subtitle Match! -10%' : 'Close Call! -20%'}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -118,6 +123,18 @@ const Scoreboard = ({ phase, room, userId, roundResult, onPlayAgain }) => {
                     text-transform: uppercase;
                     letter-spacing: 2px;
                     margin-bottom: 10px;
+                }
+                .match-quality-badge {
+                    display: inline-block;
+                    margin-top: 10px;
+                    padding: 4px 12px;
+                    background: rgba(234, 179, 8, 0.1);
+                    border: 1px solid rgba(234, 179, 8, 0.3);
+                    color: #eab308;
+                    border-radius: 20px;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
                 }
                 .reveal-section {
                     margin: 30px 0;
