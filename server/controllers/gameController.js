@@ -93,9 +93,8 @@ const saveGameStats = async (req, res) => {
 
 // Internal function to generate Hangman puzzle
 const getHangmanPuzzle = async (userId, excludeIds = []) => {
+    // Query entire Media collection instead of just one user
     const movies = await Media.find({
-        userId,
-        status: { $in: ['watchlist', 'watched'] },
         _id: { $nin: excludeIds }
     });
 

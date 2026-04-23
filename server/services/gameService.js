@@ -90,7 +90,7 @@ function advanceRound(code) {
     const room = rooms.get(code);
     if (!room) return true;
 
-    if (room.round >= room.maxRounds) {
+    if (room.maxRounds !== Infinity && room.round >= room.maxRounds) {
         room.status = 'finished';
         return true;
     }

@@ -343,6 +343,10 @@ exports.init = (httpServer) => {
                     return socket.emit('game:error', { message: 'Not enough movies to start a game!' });
                 }
 
+                if (!room.guest) {
+                    room.maxRounds = Infinity;
+                }
+
                 gameService.startRound(roomCode, puzzle);
                 room.usedMediaIds.push(puzzle.id);
                 

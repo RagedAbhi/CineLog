@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
-import { Gamepad2, Users, Trophy, Play, Plus, Search, ChevronRight } from 'lucide-react';
+import { Gamepad2, Users, Trophy, Play, Plus, Search, ChevronRight, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import config from '../config';
 import { showToast } from '../store/actions';
@@ -111,6 +111,10 @@ const GamesPage = () => {
     return (
         <div className="container-fluid games-container">
             <div className="page-header">
+                <button className="btn-back-link" onClick={() => navigate('/')}>
+                    <ArrowLeft size={16} />
+                    Back to Dashboard
+                </button>
                 <div className="header-with-icon">
                     <Gamepad2 size={32} className="text-accent" />
                     <h2>Game Room</h2>
@@ -175,6 +179,22 @@ const GamesPage = () => {
             <style jsx>{`
                 .games-container {
                     padding-bottom: 50px;
+                }
+                .btn-back-link {
+                    background: transparent;
+                    border: none;
+                    color: var(--text-secondary);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 0.9rem;
+                    padding: 0;
+                    margin-bottom: 20px;
+                    cursor: pointer;
+                    transition: color 0.2s;
+                }
+                .btn-back-link:hover {
+                    color: var(--accent);
                 }
                 .games-grid {
                     display: grid;

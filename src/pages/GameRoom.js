@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
+import { ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import useGameSocket from '../hooks/useGameSocket';
 import config from '../config';
@@ -161,6 +162,10 @@ const GameRoom = () => {
 
     return (
         <div className="game-room-page">
+            <button className="btn-exit-room" onClick={() => navigate('/games')}>
+                <ArrowLeft size={16} />
+                Leave Room
+            </button>
             {phase === 'lobby' && (
                 <GameLobby 
                     room={room} 
@@ -211,6 +216,20 @@ const GameRoom = () => {
                 .game-room-page {
                     min-height: 80vh;
                     padding-top: 20px;
+                }
+                .btn-exit-room {
+                    background: transparent;
+                    border: none;
+                    color: var(--text-secondary);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 0.9rem;
+                    margin-bottom: 20px;
+                    cursor: pointer;
+                }
+                .btn-exit-room:hover {
+                    color: var(--accent);
                 }
                 .game-header-stats {
                     display: flex;
