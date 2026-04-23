@@ -158,56 +158,42 @@ class DiscoverPage extends Component {
 
                 {/* Filter Bar */}
                 <div className="discover-filter-bar">
-                    {/* Type Filter */}
-                    <div className="filter-group">
-                        {['all', 'movie', 'series'].map(t => (
+                    {/* Segmented Type Control */}
+                    <div className="filter-segment">
+                        {[{v:'all',l:'All'},{v:'movie',l:'Movies'},{v:'series',l:'Shows'}].map(t => (
                             <button
-                                key={t}
-                                className={`filter-pill ${typeFilter === t ? 'active' : ''}`}
-                                onClick={() => this.setState({ typeFilter: t })}
-                            >
-                                {t === 'all' ? '🎬 All' : t === 'movie' ? '🎥 Movies' : '📺 Shows'}
-                            </button>
+                                key={t.v}
+                                className={`segment-btn ${typeFilter === t.v ? 'active' : ''}`}
+                                onClick={() => this.setState({ typeFilter: t.v })}
+                            >{t.l}</button>
                         ))}
                     </div>
 
-                    <div className="filter-divider" />
+                    {/* Genre Dropdown */}
+                    <select
+                        className="filter-select"
+                        value={genreFilter || ''}
+                        onChange={e => this.setState({ genreFilter: e.target.value ? parseInt(e.target.value) : null })}
+                    >
+                        <option value="">Genre</option>
+                        {GENRES.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
 
-                    {/* Genre Filter */}
-                    <div className="filter-group filter-scroll">
-                        {GENRES.map(g => (
-                            <button
-                                key={g.id}
-                                className={`filter-pill ${genreFilter === g.id ? 'active' : ''}`}
-                                onClick={() => this.setFilter('genreFilter', g.id)}
-                            >
-                                {g.name}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="filter-divider" />
-
-                    {/* Language Filter */}
-                    <div className="filter-group filter-scroll">
-                        {LANGUAGES.map(l => (
-                            <button
-                                key={l.code}
-                                className={`filter-pill ${languageFilter === l.code ? 'active' : ''}`}
-                                onClick={() => this.setFilter('languageFilter', l.code)}
-                            >
-                                {l.name}
-                            </button>
-                        ))}
-                    </div>
+                    {/* Language Dropdown */}
+                    <select
+                        className="filter-select"
+                        value={languageFilter || ''}
+                        onChange={e => this.setState({ languageFilter: e.target.value || null })}
+                    >
+                        <option value="">Language</option>
+                        {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+                    </select>
 
                     {activeFilters > 0 && (
                         <button
-                            className="filter-clear"
+                            className="filter-clear-btn"
                             onClick={() => this.setState({ typeFilter: 'all', genreFilter: null, languageFilter: null })}
-                        >
-                            ✕ Clear ({activeFilters})
-                        </button>
+                        >Clear</button>
                     )}
                 </div>
 
@@ -270,69 +256,71 @@ class DiscoverPage extends Component {
                     .discover-filter-bar {
                         display: flex;
                         align-items: center;
-                        gap: 8px;
-                        flex-wrap: wrap;
+                        gap: 10px;
                         margin-bottom: 24px;
-                        padding: 14px 16px;
-                        background: rgba(255,255,255,0.03);
-                        border: 1px solid rgba(255,255,255,0.07);
-                        border-radius: 16px;
                     }
-                    .filter-group {
+                    .filter-segment {
                         display: flex;
-                        gap: 6px;
-                        flex-wrap: wrap;
-                    }
-                    .filter-scroll {
-                        flex-wrap: nowrap;
-                        overflow-x: auto;
-                        scrollbar-width: none;
-                        max-width: 100%;
-                    }
-                    .filter-scroll::-webkit-scrollbar { display: none; }
-                    .filter-divider {
-                        width: 1px;
-                        height: 24px;
-                        background: rgba(255,255,255,0.1);
+                        background: rgba(255,255,255,0.05);
+                        border: 1px solid rgba(255,255,255,0.08);
+                        border-radius: 10px;
+                        padding: 3px;
+                        gap: 2px;
                         flex-shrink: 0;
                     }
-                    .filter-pill {
+                    .segment-btn {
                         padding: 5px 14px;
-                        border-radius: 100px;
-                        border: 1px solid rgba(255,255,255,0.1);
-                        background: rgba(255,255,255,0.04);
-                        color: rgba(255,255,255,0.6);
-                        font-size: 0.8rem;
+                        border-radius: 7px;
+                        border: none;
+                        background: transparent;
+                        color: rgba(255,255,255,0.45);
+                        font-size: 0.82rem;
                         font-weight: 600;
                         cursor: pointer;
+                        transition: all 0.18s ease;
                         white-space: nowrap;
-                        transition: all 0.2s ease;
                     }
-                    .filter-pill:hover {
+                    .segment-btn:hover { color: rgba(255,255,255,0.8); }
+                    .segment-btn.active {
                         background: rgba(255,255,255,0.1);
-                        color: white;
-                        border-color: rgba(255,255,255,0.2);
+                        color: #fff;
                     }
-                    .filter-pill.active {
-                        background: var(--accent, #a855f7);
-                        border-color: var(--accent, #a855f7);
-                        color: white;
-                        box-shadow: 0 0 12px rgba(168,85,247,0.3);
-                    }
-                    .filter-clear {
-                        padding: 5px 12px;
-                        border-radius: 100px;
-                        border: 1px solid rgba(239,68,68,0.3);
-                        background: rgba(239,68,68,0.1);
-                        color: #ef4444;
-                        font-size: 0.78rem;
-                        font-weight: 700;
+                    .filter-select {
+                        appearance: none;
+                        -webkit-appearance: none;
+                        background: rgba(255,255,255,0.05) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+                        border: 1px solid rgba(255,255,255,0.08);
+                        border-radius: 10px;
+                        color: rgba(255,255,255,0.7);
+                        font-size: 0.82rem;
+                        font-weight: 600;
+                        padding: 6px 30px 6px 12px;
                         cursor: pointer;
-                        white-space: nowrap;
-                        transition: all 0.2s;
-                        flex-shrink: 0;
+                        transition: border-color 0.18s, color 0.18s;
+                        min-width: 110px;
+                        outline: none;
                     }
-                    .filter-clear:hover { background: rgba(239,68,68,0.2); }
+                    .filter-select:hover, .filter-select:focus {
+                        border-color: rgba(255,255,255,0.2);
+                        color: #fff;
+                    }
+                    .filter-select option {
+                        background: #1a1a2e;
+                        color: #fff;
+                    }
+                    .filter-clear-btn {
+                        padding: 6px 14px;
+                        border-radius: 10px;
+                        border: 1px solid rgba(255,255,255,0.08);
+                        background: transparent;
+                        color: rgba(255,255,255,0.35);
+                        font-size: 0.78rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.18s;
+                        white-space: nowrap;
+                    }
+                    .filter-clear-btn:hover { color: #ef4444; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); }
                     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
                 `}</style>
             </div>
