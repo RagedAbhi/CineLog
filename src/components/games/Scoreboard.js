@@ -35,7 +35,7 @@ const Scoreboard = ({ phase, room, userId, roundResult, onPlayAgain }) => {
                     ) : (
                         <>
                             <div className="round-badge">
-                                {room.maxRounds === Infinity ? `Round ${room.round} Complete` : `Round ${room.round} of ${room.maxRounds} Complete`}
+                                {room.maxRounds === Infinity ? 'Success!' : `Round ${room.round} of ${room.maxRounds} Complete`}
                             </div>
                             <h2 className={roundResult?.result === 'won' || roundResult?.result === 'correct' ? 'text-green-500' : 'text-red-500'}>
                                 {roundResult?.result === 'won' || roundResult?.result === 'correct' ? 'Correct!' : 'Round Over'}
