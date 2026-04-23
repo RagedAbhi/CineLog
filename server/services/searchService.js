@@ -615,25 +615,17 @@ async function processResults(results, userId) {
  * 3. Filters out already owned/watched items.
  * 4. Ranks via processResults for social and personalized weighting.
  */
-exports.getDiscoveryFeed = async (userId, page = 1, limit = 20) => {
-    const cacheKey = `discover_trending_${userId}`;
-    const cached = await SearchCache.findOne({ query: cacheKey, expiresAt: { $gt: new Date() } });
-    
-    // Calculate slice indices
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-
-    if (cached) {
-        return cached.results.slice(startIndex, endIndex);
-    }
-
+exports.getDiscoveryFeed = async (userId, page = 1, limit = 60) => {
     try {
         const userLibrary = await Media.find({ userId }).select('title').lean();
         const libraryTitles = new Set(userLibrary.map(m => m.title?.toLowerCase().trim()));
 
-        // Fetch Trending Movies and TV for the week (Top 5 pages for a larger pool)
+        // We fetch 3 TMDB pages per requested application page (20 * 3 = 60 movies + 60 tv = 120 raw items)
+        const startTmdbPage = (page - 1) * 3 + 1;
+        const endTmdbPage = page * 3;
+
         const fetchPromises = [];
-        for (let i = 1; i <= 5; i++) {
+        for (let i = startTmdbPage; i <= endTmdbPage; i++) {
             fetchPromises.push(axios.get(`${BASE_URL}/trending/movie/week`, { httpsAgent, params: { api_key: TMDB_API_KEY, page: i } }));
             fetchPromises.push(axios.get(`${BASE_URL}/trending/tv/week`, { httpsAgent, params: { api_key: TMDB_API_KEY, page: i } }));
         }
@@ -675,16 +667,8 @@ exports.getDiscoveryFeed = async (userId, page = 1, limit = 20) => {
         const candidates = Array.from(uniqueItems.values());
         const processed = await processResults(candidates, userId);
 
-        // Cache up to 200 items for 12 hours
-        const resultsToCache = processed.slice(0, 200);
-
-        await SearchCache.findOneAndUpdate(
-            { query: cacheKey },
-            { query: cacheKey, results: resultsToCache, expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000) },
-            { upsert: true }
-        );
-
-        return resultsToCache.slice(startIndex, endIndex);
+        // Return up to 'limit' items
+        return processed.slice(0, limit);
     } catch (error) {
         console.error('[SearchService] Trending Feed failed:', error.message);
         return [];

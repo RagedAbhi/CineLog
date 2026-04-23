@@ -36,8 +36,6 @@ class DiscoverPage extends Component {
             { opacity: 0, y: -20 }, 
             { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
         );
-
-        this.setupObserver();
     }
 
     componentWillUnmount() {
@@ -46,24 +44,24 @@ class DiscoverPage extends Component {
         }
     }
 
-    setupObserver = () => {
-        const options = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        };
-
-        this.observer = new IntersectionObserver((entries) => {
-            const [entry] = entries;
-            if (entry.isIntersecting && !this.state.loading && !this.state.loadingMore && this.state.hasMore) {
-                this.loadMore();
-            }
-        }, options);
-
-        if (this.bottomBoundaryRef.current) {
-            this.observer.observe(this.bottomBoundaryRef.current);
+    handleObserver = (node) => {
+        if (this.observer) this.observer.disconnect();
+        if (node) {
+            const options = {
+                root: null,
+                rootMargin: '100px',
+                threshold: 0.1
+            };
+            this.observer = new IntersectionObserver((entries) => {
+                const [entry] = entries;
+                if (entry.isIntersecting && !this.state.loading && !this.state.loadingMore && this.state.hasMore) {
+                    this.loadMore();
+                }
+            }, options);
+            this.observer.observe(node);
         }
     }
+
 
     loadMore = () => {
         this.setState(prevState => ({
@@ -94,7 +92,7 @@ class DiscoverPage extends Component {
             const token = localStorage.getItem('token');
             const res = await axios.get(`${config.API_URL}/api/search/discover`, {
                 headers: { Authorization: `Bearer ${token}` },
-                params: { page, limit: 20 }
+                params: { page, limit: 60 }
             });
             const recs = res.data;
             
@@ -102,7 +100,7 @@ class DiscoverPage extends Component {
                 recommendations: isInitialLoad ? recs : [...prevState.recommendations, ...recs], 
                 loading: false,
                 loadingMore: false,
-                hasMore: recs.length === 20,
+                hasMore: recs.length === 60,
                 feedGeneratedAt: isInitialLoad ? Date.now() : prevState.feedGeneratedAt
             }), () => {
                 // Grid staggered animation mapping
@@ -196,7 +194,7 @@ class DiscoverPage extends Component {
                         </div>
                         
                         {/* Intersection Observer target */}
-                        <div ref={this.bottomBoundaryRef} style={{ height: '20px', margin: '20px 0' }}></div>
+                        <div ref={this.handleObserver} style={{ height: '20px', margin: '20px 0' }}></div>
                         
                         {this.state.loadingMore && (
                             <div className="bottom-loader" style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
