@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import MovieCard from '../components/MovieCard';
+import CineSelect from '../components/CineSelect';
 import axios from 'axios';
 import config from '../config';
 import { fetchMovies } from '../store/thunks';
@@ -166,24 +167,24 @@ class DiscoverPage extends Component {
                     </div>
 
                     {/* Genre Dropdown */}
-                    <select
-                        className="filter-select"
-                        value={genreFilter || ''}
-                        onChange={e => this.setState({ genreFilter: e.target.value ? parseInt(e.target.value) : null })}
-                    >
-                        <option value="">Genre</option>
-                        {GENRES.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                    </select>
+                    <div style={{ width: '140px' }}>
+                        <CineSelect
+                            options={[{ value: '', label: 'All Genres' }, ...GENRES.map(g => ({ value: String(g.id), label: g.name }))]}
+                            value={genreFilter ? String(genreFilter) : ''}
+                            onChange={val => this.setState({ genreFilter: val ? parseInt(val) : null })}
+                            placeholder="Genre"
+                        />
+                    </div>
 
                     {/* Language Dropdown */}
-                    <select
-                        className="filter-select"
-                        value={languageFilter || ''}
-                        onChange={e => this.setState({ languageFilter: e.target.value || null })}
-                    >
-                        <option value="">Language</option>
-                        {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-                    </select>
+                    <div style={{ width: '150px' }}>
+                        <CineSelect
+                            options={[{ value: '', label: 'All Languages' }, ...LANGUAGES.map(l => ({ value: l.code, label: l.name }))]}
+                            value={languageFilter || ''}
+                            onChange={val => this.setState({ languageFilter: val || null })}
+                            placeholder="Language"
+                        />
+                    </div>
 
                     {activeFilters > 0 && (
                         <button
@@ -278,25 +279,6 @@ class DiscoverPage extends Component {
                     .segment-btn:hover { color: rgba(255,255,255,0.8); }
                     .segment-btn.active {
                         background: rgba(255,255,255,0.1);
-                        color: #fff;
-                    }
-                    .filter-select {
-                        appearance: none;
-                        -webkit-appearance: none;
-                        background: rgba(255,255,255,0.05) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
-                        border: 1px solid rgba(255,255,255,0.08);
-                        border-radius: 10px;
-                        color: rgba(255,255,255,0.7);
-                        font-size: 0.82rem;
-                        font-weight: 600;
-                        padding: 6px 30px 6px 12px;
-                        cursor: pointer;
-                        transition: border-color 0.18s, color 0.18s;
-                        min-width: 110px;
-                        outline: none;
-                    }
-                    .filter-select:hover, .filter-select:focus {
-                        border-color: rgba(255,255,255,0.2);
                         color: #fff;
                     }
                     .filter-select option {
