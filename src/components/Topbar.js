@@ -85,18 +85,19 @@ const Topbar = () => {
             transition={{ duration: 0.35, ease: 'easeInOut' }}
         >
             <div className="topbar-inner">
-                {/* Left: Logo & Search */}
+                {/* Left: Logo */}
                 <div className="topbar-left">
                     <NavLink to="/" className="hover:opacity-80 transition-opacity">
                         <CueratesLogo layout="horizontal" size={40} />
                     </NavLink>
-
-                    {!isMobile && (
-                        <div className="topbar-search-container">
-                            <GlobalSearch />
-                        </div>
-                    )}
                 </div>
+
+                {/* Center: Search */}
+                {!isMobile && (
+                    <div className="topbar-center">
+                        <GlobalSearch />
+                    </div>
+                )}
 
                 {/* Right: Nav & Profile */}
                 <div className="topbar-right">
@@ -160,7 +161,6 @@ const Topbar = () => {
                                     <span className="avatar-icon">👤</span>
                                 )}
                             </div>
-                            <span className="user-name-compact">{user?.username || 'Profile'}</span>
                         </div>
 
                         <AnimatePresence>
