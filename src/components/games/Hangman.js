@@ -69,16 +69,20 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                     </div>
                     
                     <div className="turn-indicator">
-                        {turn ? (
-                            <div className={`status-pill ${isMyTurn ? 'mine' : 'theirs'}`}>
-                                {isMyTurn ? "Your Turn" : "Opponent's Turn"}
+                        {puzzle.isRevealed ? (
+                            <div className={`status-pill ${puzzle.revealResult === 'won' ? 'mine' : 'theirs'}`}>
+                                {puzzle.revealResult === 'won' ? 'CORRECT!' : 'ROUND OVER'}
                             </div>
                         ) : (
-                            <div className={`status-pill ${puzzle.isRevealed ? (puzzle.revealResult === 'won' ? 'mine' : 'theirs') : 'mine'}`}>
-                                {puzzle.isRevealed 
-                                    ? (puzzle.revealResult === 'won' ? 'CORRECT!' : 'ROUND OVER') 
-                                    : 'Solo Mode'}
-                            </div>
+                            <>
+                                {turn ? (
+                                    <div className={`status-pill ${isMyTurn ? 'mine' : 'theirs'}`}>
+                                        {isMyTurn ? "Your Turn" : "Opponent's Turn"}
+                                    </div>
+                                ) : (
+                                    <div className="status-pill mine">Solo Mode</div>
+                                )}
+                            </>
                         )}
                     </div>
 

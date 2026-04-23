@@ -25,7 +25,24 @@ const PlotRedacted = ({ roomCode, puzzle, scores, emit }) => {
 
     return (
         <div className="plot-redacted-game">
-            <div className="game-layout">
+            {puzzle.isRevealed ? (
+                <div className="reveal-container">
+                    <div className="reveal-card-premium">
+                        <img src={puzzle.metadata?.poster} alt={puzzle.answer} className="reveal-poster" />
+                        <div className="reveal-info">
+                            <div className={`reveal-status ${puzzle.revealResult === 'won' ? 'won' : 'lost'}`}>
+                                {puzzle.revealResult === 'won' ? 'CORRECT!' : 'ROUND OVER'}
+                            </div>
+                            <h2 className="reveal-title">{puzzle.answer}</h2>
+                            <p className="reveal-meta">{puzzle.metadata?.year} • {puzzle.metadata?.type}</p>
+                            <div className="unredacted-plot">
+                                {puzzle.metadata?.fullPlot || puzzle.redactedPlot?.replace(/█/g, '')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="game-layout">
                 <div className="plot-section">
                     <div className="plot-card">
                         <div className="plot-content">
@@ -92,8 +109,65 @@ const PlotRedacted = ({ roomCode, puzzle, scores, emit }) => {
                     </form>
                 </div>
             </div>
+            )}
 
             <style jsx>{`
+                .reveal-container {
+                    display: flex;
+                    justify-content: center;
+                    animation: fadeIn 0.5s ease-out;
+                }
+                .reveal-card-premium {
+                    display: flex;
+                    gap: 30px;
+                    background: var(--bg-card);
+                    padding: 30px;
+                    border-radius: 24px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    max-width: 700px;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+                }
+                .reveal-poster {
+                    width: 180px;
+                    border-radius: 16px;
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+                }
+                .reveal-info {
+                    flex: 1;
+                    text-align: left;
+                }
+                .reveal-status {
+                    display: inline-block;
+                    padding: 4px 12px;
+                    border-radius: 100px;
+                    font-size: 0.75rem;
+                    font-weight: 800;
+                    margin-bottom: 12px;
+                }
+                .reveal-status.won { background: #10b981; color: white; }
+                .reveal-status.lost { background: #ef4444; color: white; }
+                .reveal-title {
+                    font-size: 2rem;
+                    font-weight: 800;
+                    margin: 0 0 5px 0;
+                }
+                .reveal-meta {
+                    color: var(--text-muted);
+                    font-weight: 600;
+                    margin-bottom: 20px;
+                }
+                .unredacted-plot {
+                    font-size: 1rem;
+                    line-height: 1.6;
+                    color: var(--text-secondary);
+                    max-height: 150px;
+                    overflow-y: auto;
+                    padding-right: 10px;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
                 .plot-redacted-game {
                     max-width: 800px;
                     margin: 0 auto;
