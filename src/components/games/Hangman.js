@@ -1,16 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
-    const { displayState, guessedLetters, wrongGuesses, turn, maxWrong } = puzzle;
+    const { displayState, guessedLetters, wrongGuesses, turn, maxWrong, hint } = puzzle;
     const isMyTurn = turn === null || turn === userId;
 
     const handleGuess = (letter) => {
-        if (!isMyTurn) return;
-        emit('game:guess_letter', { roomCode, letter });
+        const char = letter.toLowerCase();
+        if (!isMyTurn || guessedLetters.includes(char)) return;
+        emit('game:guess_letter', { roomCode, letter: char });
     };
+
+    // Physical Keyboard Support
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            const key = e.key.toUpperCase();
+            if (ALPHABET.includes(key)) {
+                handleGuess(key);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isMyTurn, guessedLetters, roomCode]); // Re-bind when state changes
 
     const HangmanDrawing = ({ wrong }) => (
         <svg width="200" height="250" viewBox="0 0 200 250" className="hangman-svg">
@@ -55,6 +69,13 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                             <div className="status-pill mine">Solo Mode</div>
                         )}
                     </div>
+
+                    {hint && (
+                        <div className="hint-display">
+                            <span className="hint-label">Hint:</span>
+                            <span className="hint-text">{hint}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="keyboard-section">
@@ -163,6 +184,26 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                 }
                 .key:disabled {
                     cursor: not-allowed;
+                }
+                .hint-display {
+                    margin-top: 20px;
+                    background: rgba(255, 255, 255, 0.03);
+                    padding: 10px 15px;
+                    border-radius: 12px;
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                .hint-label {
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }
+                .hint-text {
+                    font-weight: 600;
+                    color: var(--text-secondary);
                 }
             `}</style>
         </div>

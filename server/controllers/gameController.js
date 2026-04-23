@@ -118,6 +118,7 @@ const getHangmanPuzzle = async (userId) => {
         wrongGuesses: 0,
         maxWrong: 6,
         turn: null, // Set by caller for multiplayer
+        hint: `${selected.genre} (${selected.year})`,
         metadata: {
             poster: selected.poster,
             year: selected.year,
