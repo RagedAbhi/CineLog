@@ -110,8 +110,12 @@ const GameRoom = () => {
                 setRoom(res.data);
                 if (res.data.status === 'in-progress') setPhase('playing');
                 else if (res.data.status === 'finished') setPhase('game-over');
+                else if (res.data.isSolo && res.data.status === 'waiting') {
+                    // Auto-start solo games
+                    emit('game:start', { roomCode: code });
+                }
             } catch (err) {
-                dispatch(showToast('Room not found', 'error'));
+                dispatch(showToast('Game session not found', 'error'));
                 navigate('/games');
             } finally {
                 setLoading(false);
@@ -120,9 +124,15 @@ const GameRoom = () => {
         fetchRoom();
     }, [code, dispatch, navigate]);
 
-    const handleStart = () => {
+    const handleStart = useCallback(() => {
         emit('game:start', { roomCode: code });
-    };
+    }, [emit, code]);
+
+    useEffect(() => {
+        if (room && room.isSolo && phase === 'lobby' && room.status === 'waiting') {
+            handleStart();
+        }
+    }, [room, phase, handleStart]);
 
     const handleCopy = (text) => {
         navigator.clipboard.writeText(text);
