@@ -756,7 +756,8 @@ function mapMediaItem(item) {
         rating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
         overview: item.overview,
         genreIds: item.genre_ids || [],
-        popularity: item.popularity
+        popularity: item.popularity,
+        originalLanguage: item.original_language || null
     };
 }
 
