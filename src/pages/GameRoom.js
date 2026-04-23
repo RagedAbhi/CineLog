@@ -169,6 +169,11 @@ const GameRoom = () => {
     };
 
     if (loading) return <div className="loading-container"><div className="spinner" /></div>;
+    
+    if (!room) {
+        navigate('/games');
+        return null;
+    }
 
     return (
         <div className="game-room-page">
