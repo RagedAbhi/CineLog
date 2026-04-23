@@ -183,7 +183,7 @@ const GameRoom = () => {
         }
     };
 
-    if (!user || loading) return <div className="loading-container"><div className="spinner" /></div>;
+    if (!user || loading || (phase === 'lobby' && room?.isSolo)) return <div className="loading-container"><div className="spinner" /></div>;
     
     if (!room) {
         navigate('/games');
