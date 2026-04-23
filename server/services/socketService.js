@@ -2,6 +2,8 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const gameService = require('./gameService');
+const gameController = require('../controllers/gameController');
 
 let io = null;
 
@@ -281,8 +283,236 @@ exports.init = (httpServer) => {
         // ── Disconnect ───────────────────────────────────────────────────────
         socket.on('disconnect', () => {
             socket._watchRooms.forEach(roomCode => handleLeaveRoom(socket, roomCode));
+            
+            // Cleanup game rooms on disconnect
+            const gameRooms = Array.from(gameService.getRooms ? gameService.getRooms().values() : []); // Fallback if getRooms not added
+            // Actually, we'll iterate over all rooms to find where this socket is
+            // Better to track game rooms on the socket object like we do with _watchRooms
+            if (socket._gameRoomCode) {
+                const room = gameService.getRoom(socket._gameRoomCode);
+                if (room && room.status === 'in-progress') {
+                    io.to(socket._gameRoomCode).emit('game:player_left', { 
+                        username: socket.user.username 
+                    });
+                    gameService.endGame(socket._gameRoomCode);
+                }
+                gameService.deleteRoom(socket._gameRoomCode);
+            }
+
             logger.info(`[Socket] Disconnected: ${socket.id}`);
         });
+
+        // ── Games Feature ────────────────────────────────────────────────────
+        socket.on('game:join_room', ({ roomCode }) => {
+            if (!roomCode) return;
+            const room = gameService.getRoom(roomCode);
+            if (!room) return;
+
+            gameService.setSocketId(roomCode, socket.user._id.toString(), socket.id);
+            socket.join(roomCode);
+            socket._gameRoomCode = roomCode;
+
+            if (room.guest && room.guest.userId === socket.user._id.toString()) {
+                // Notify host that guest joined
+                const hostSocketId = room.host.socketId;
+                if (hostSocketId) {
+                    io.to(hostSocketId).emit('game:player_joined', { 
+                        username: socket.user.username 
+                    });
+                }
+            }
+            logger.info(`[Socket Game] ${socket.user.username} joined game room ${roomCode}`);
+        });
+
+        socket.on('game:start', async ({ roomCode }) => {
+            const room = gameService.getRoom(roomCode);
+            if (!room || room.host.userId !== socket.user._id.toString()) return;
+
+            try {
+                let puzzle;
+                if (room.game === 'hangman') {
+                    puzzle = await gameController.getHangmanPuzzle(room.host.userId);
+                    if (puzzle && room.guest) {
+                        puzzle.turn = room.host.userId; // Host starts
+                    }
+                } else if (room.game === 'plot-redacted') {
+                    puzzle = await gameController.getPlotRedactedPuzzle(room.host.userId);
+                }
+
+                if (!puzzle) {
+                    return socket.emit('game:error', { message: 'Not enough movies to start a game!' });
+                }
+
+                gameService.startRound(roomCode, puzzle);
+                
+                // Emit puzzle without answer
+                const { answer, ...puzzleData } = puzzle;
+                io.to(roomCode).emit('game:puzzle', {
+                    ...puzzleData,
+                    round: room.round,
+                    maxRounds: room.maxRounds
+                });
+            } catch (err) {
+                logger.error('[Socket Game Start]', err);
+                socket.emit('game:error', { message: 'Failed to start game' });
+            }
+        });
+
+        socket.on('game:guess_letter', ({ roomCode, letter }) => {
+            const room = gameService.getRoom(roomCode);
+            if (!room || room.status !== 'in-progress' || room.game !== 'hangman') return;
+
+            const puzzle = room.currentPuzzle;
+            if (puzzle.turn && puzzle.turn !== socket.user._id.toString()) return;
+
+            const guess = letter.toLowerCase();
+            if (puzzle.guessedLetters.includes(guess)) return;
+
+            puzzle.guessedLetters.push(guess);
+            const answer = puzzle.answer.toLowerCase();
+            let correct = false;
+
+            if (answer.includes(guess)) {
+                correct = true;
+                // Update displayState
+                for (let i = 0; i < puzzle.answer.length; i++) {
+                    if (puzzle.answer[i].toLowerCase() === guess) {
+                        puzzle.displayState[i] = puzzle.answer[i];
+                    }
+                }
+                gameService.updateScore(roomCode, socket.user._id.toString(), 15);
+            } else {
+                puzzle.wrongGuesses += 1;
+                gameService.updateScore(roomCode, socket.user._id.toString(), -5);
+                // Switch turn
+                if (room.guest) {
+                    puzzle.turn = puzzle.turn === room.host.userId ? room.guest.userId : room.host.userId;
+                }
+            }
+
+            const isWon = !puzzle.displayState.includes('_');
+            const isLost = puzzle.wrongGuesses >= puzzle.maxWrong;
+
+            io.to(roomCode).emit('game:state_update', {
+                displayState: puzzle.displayState,
+                guessedLetters: puzzle.guessedLetters,
+                wrongGuesses: puzzle.wrongGuesses,
+                turn: puzzle.turn,
+                scores: room.scores
+            });
+
+            if (isWon || isLost) {
+                if (isWon) {
+                    gameService.updateScore(roomCode, socket.user._id.toString(), 50);
+                }
+                
+                io.to(roomCode).emit('game:round_end', {
+                    result: isWon ? 'won' : 'lost',
+                    answer: puzzle.answer,
+                    metadata: puzzle.metadata,
+                    scores: room.scores
+                });
+
+                handleNextRound(roomCode);
+            }
+        });
+
+        socket.on('game:submit_answer', ({ roomCode, answer: submission }) => {
+            const room = gameService.getRoom(roomCode);
+            if (!room || room.status !== 'in-progress' || room.game !== 'plot-redacted') return;
+
+            const puzzle = room.currentPuzzle;
+            const normalize = (s) => s.toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/[^\w]/g, '');
+            const isCorrect = normalize(submission) === normalize(puzzle.answer);
+
+            if (isCorrect) {
+                let score = 100 - (puzzle.hintsUsed * 40);
+                if (score < 20) score = 20; // Minimum score
+
+                // Multiplayer speed bonus logic
+                const alreadyAnswered = Object.keys(puzzle.submissions).length > 0;
+                if (alreadyAnswered) score = Math.floor(score * 0.8);
+
+                gameService.updateScore(roomCode, socket.user._id.toString(), score);
+                puzzle.submissions[socket.user._id.toString()] = [submission];
+
+                io.to(roomCode).emit('game:round_end', {
+                    result: 'correct',
+                    answeredBy: socket.user.username,
+                    answer: puzzle.answer,
+                    metadata: puzzle.metadata,
+                    scores: room.scores
+                });
+
+                handleNextRound(roomCode);
+            } else {
+                gameService.updateScore(roomCode, socket.user._id.toString(), -10);
+                if (!puzzle.submissions[socket.user._id.toString()]) {
+                    puzzle.submissions[socket.user._id.toString()] = [];
+                }
+                puzzle.submissions[socket.user._id.toString()].push(submission);
+
+                io.to(roomCode).emit('game:state_update', {
+                    wrongSubmission: true,
+                    scores: room.scores
+                });
+            }
+        });
+
+        socket.on('game:hint_request', ({ roomCode }) => {
+            const room = gameService.getRoom(roomCode);
+            if (!room || room.status !== 'in-progress' || room.game !== 'plot-redacted') return;
+
+            const puzzle = room.currentPuzzle;
+            if (puzzle.hintsUsed < 2) {
+                puzzle.hintsUsed += 1;
+                const hint = puzzle.hints[puzzle.hintsUsed - 1];
+                io.to(roomCode).emit('game:hint', { hint, hintsUsed: puzzle.hintsUsed });
+            }
+        });
+
+        async function handleNextRound(roomCode) {
+            const room = gameService.getRoom(roomCode);
+            if (!room) return;
+
+            setTimeout(async () => {
+                const isOver = gameService.advanceRound(roomCode);
+                if (isOver) {
+                    const scores = room.scores;
+                    let winner = 'draw';
+                    const userIds = Object.keys(scores);
+                    if (userIds.length === 2) {
+                        if (scores[userIds[0]] > scores[userIds[1]]) winner = userIds[0];
+                        else if (scores[userIds[1]] > scores[userIds[0]]) winner = userIds[1];
+                    }
+                    io.to(roomCode).emit('game:over', { scores, winner });
+                } else {
+                    io.to(roomCode).emit('game:next_round');
+                    
+                    // Generate new puzzle
+                    let puzzle;
+                    if (room.game === 'hangman') {
+                        puzzle = await gameController.getHangmanPuzzle(room.host.userId);
+                        if (puzzle && room.guest) {
+                            // Alternate starting turn
+                            puzzle.turn = room.round % 2 === 1 ? room.host.userId : room.guest.userId;
+                        }
+                    } else if (room.game === 'plot-redacted') {
+                        puzzle = await gameController.getPlotRedactedPuzzle(room.host.userId);
+                    }
+
+                    if (puzzle) {
+                        gameService.startRound(roomCode, puzzle);
+                        const { answer, ...puzzleData } = puzzle;
+                        io.to(roomCode).emit('game:puzzle', {
+                            ...puzzleData,
+                            round: room.round,
+                            maxRounds: room.maxRounds
+                        });
+                    }
+                }
+            }, 5000);
+        }
     });
 
     return io;

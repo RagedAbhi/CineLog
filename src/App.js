@@ -26,6 +26,8 @@ import Profile from './pages/Profile';
 import FriendsPage from './pages/FriendsPage';
 import Messenger from './pages/Messenger.js';
 import DiscoverPage from './pages/DiscoverPage';
+import GamesPage from './pages/GamesPage';
+import GameRoom from './pages/GameRoom';
 import { fetchCurrentUser, fetchRecommendations, fetchRecentChats } from './store/thunks';
 import config from './config';
 
@@ -185,6 +187,8 @@ const App = () => {
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/games" element={<GamesPage />} />
+              <Route path="/games/room/:code" element={<GameRoom />} />
               <Route path="/search" element={<div className="teleport-route-placeholder" />} />
               <Route path="/auth" element={<Navigate to="/" replace />} />
               <Route path="/profile" element={<Profile />} />

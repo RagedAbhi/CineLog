@@ -13,7 +13,21 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Media'
     }],
-    isPrivate: { type: Boolean, default: false }
+    isPrivate: { type: Boolean, default: false },
+    gameStats: {
+        hangman: {
+            gamesPlayed: { type: Number, default: 0 },
+            wins: { type: Number, default: 0 },
+            totalScore: { type: Number, default: 0 },
+            highScore: { type: Number, default: 0 }
+        },
+        plotRedacted: {
+            gamesPlayed: { type: Number, default: 0 },
+            wins: { type: Number, default: 0 },
+            totalScore: { type: Number, default: 0 },
+            highScore: { type: Number, default: 0 }
+        }
+    }
 }, { timestamps: true });
 
 // Hash password before saving

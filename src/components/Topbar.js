@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/thunks';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, Puzzle, Sparkles } from 'lucide-react';
+import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, Puzzle, Sparkles, Gamepad2 } from 'lucide-react';
 
 import GlobalSearch from './GlobalSearch';
 import CueratesLogo from './CueratesLogo';
@@ -66,6 +66,7 @@ const Topbar = () => {
         { path: '/tvshows', label: 'Shows', icon: Tv },
         { path: '/discover', label: 'Discover', icon: Sparkles },
         { path: '/friends', label: 'Social', icon: Users },
+        { path: '/games', label: 'Games', icon: Gamepad2 },
     ];
 
     const isMovieDetail = location.pathname.startsWith('/movies/') && location.pathname !== '/movies-list';
