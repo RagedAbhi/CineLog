@@ -615,23 +615,41 @@ async function processResults(results, userId) {
  * 3. Filters out already owned/watched items.
  * 4. Ranks via processResults for social and personalized weighting.
  */
-exports.getDiscoveryFeed = async (userId) => {
+exports.getDiscoveryFeed = async (userId, page = 1, limit = 20) => {
     const cacheKey = `discover_trending_${userId}`;
     const cached = await SearchCache.findOne({ query: cacheKey, expiresAt: { $gt: new Date() } });
-    if (cached) return cached.results;
+    
+    // Calculate slice indices
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    if (cached) {
+        return cached.results.slice(startIndex, endIndex);
+    }
 
     try {
         const userLibrary = await Media.find({ userId }).select('title').lean();
         const libraryTitles = new Set(userLibrary.map(m => m.title?.toLowerCase().trim()));
 
-        // Fetch Trending Movies and TV for the week
-        const [moviesRes, tvRes] = await Promise.all([
-            axios.get(`${BASE_URL}/trending/movie/week`, { httpsAgent, params: { api_key: TMDB_API_KEY } }),
-            axios.get(`${BASE_URL}/trending/tv/week`, { httpsAgent, params: { api_key: TMDB_API_KEY } })
-        ]);
+        // Fetch Trending Movies and TV for the week (Top 5 pages for a larger pool)
+        const fetchPromises = [];
+        for (let i = 1; i <= 5; i++) {
+            fetchPromises.push(axios.get(`${BASE_URL}/trending/movie/week`, { httpsAgent, params: { api_key: TMDB_API_KEY, page: i } }));
+            fetchPromises.push(axios.get(`${BASE_URL}/trending/tv/week`, { httpsAgent, params: { api_key: TMDB_API_KEY, page: i } }));
+        }
 
-        const trendingMovies = moviesRes.data.results || [];
-        const trendingTv = tvRes.data.results || [];
+        const responses = await Promise.allSettled(fetchPromises);
+        
+        let trendingMovies = [];
+        let trendingTv = [];
+
+        responses.forEach((res, index) => {
+            if (res.status === 'fulfilled' && res.value?.data?.results) {
+                // Even indices are movies, odd are TV shows
+                if (index % 2 === 0) trendingMovies.push(...res.value.data.results);
+                else trendingTv.push(...res.value.data.results);
+            }
+        });
 
         // Interleave Movie and TV results for 50/50 variety
         let blend = [];
@@ -657,16 +675,16 @@ exports.getDiscoveryFeed = async (userId) => {
         const candidates = Array.from(uniqueItems.values());
         const processed = await processResults(candidates, userId);
 
-        const results = processed.slice(0, 60);
+        // Cache up to 200 items for 12 hours
+        const resultsToCache = processed.slice(0, 200);
 
-        // Cache for 12 hours (trending content is more stable than personalized recs)
         await SearchCache.findOneAndUpdate(
             { query: cacheKey },
-            { query: cacheKey, results, expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000) },
+            { query: cacheKey, results: resultsToCache, expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000) },
             { upsert: true }
         );
 
-        return results;
+        return resultsToCache.slice(startIndex, endIndex);
     } catch (error) {
         console.error('[SearchService] Trending Feed failed:', error.message);
         return [];

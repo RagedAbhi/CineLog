@@ -142,7 +142,10 @@ exports.getProvidersById = async (req, res) => {
 exports.getDiscoverFeed = async (req, res) => {
     try {
         const userId = req.user.id;
-        const results = await searchService.getDiscoveryFeed(userId);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        
+        const results = await searchService.getDiscoveryFeed(userId, page, limit);
         res.status(200).json(results);
     } catch (error) {
         console.error('Discover Feed Error:', error);

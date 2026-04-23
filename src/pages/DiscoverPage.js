@@ -13,11 +13,16 @@ class DiscoverPage extends Component {
         this.state = {
             recommendations: [],
             loading: true,
+            loadingMore: false,
             error: null,
-            feedGeneratedAt: null
+            feedGeneratedAt: null,
+            page: 1,
+            hasMore: true
         };
         this.headerRef = React.createRef();
         this.gridRef = React.createRef();
+        this.bottomBoundaryRef = React.createRef();
+        this.observer = null;
     }
 
     async componentDidMount() {
@@ -31,6 +36,42 @@ class DiscoverPage extends Component {
             { opacity: 0, y: -20 }, 
             { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
         );
+
+        this.setupObserver();
+    }
+
+    componentWillUnmount() {
+        if (this.observer) {
+            this.observer.disconnect();
+        }
+    }
+
+    setupObserver = () => {
+        const options = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        this.observer = new IntersectionObserver((entries) => {
+            const [entry] = entries;
+            if (entry.isIntersecting && !this.state.loading && !this.state.loadingMore && this.state.hasMore) {
+                this.loadMore();
+            }
+        }, options);
+
+        if (this.bottomBoundaryRef.current) {
+            this.observer.observe(this.bottomBoundaryRef.current);
+        }
+    }
+
+    loadMore = () => {
+        this.setState(prevState => ({
+            page: prevState.page + 1,
+            loadingMore: true
+        }), () => {
+            this.generateFeed(true, this.state.page);
+        });
     }
 
     componentDidUpdate(prevProps) {
@@ -44,22 +85,28 @@ class DiscoverPage extends Component {
         }
     }
 
-    generateFeed = async (silent = false) => {
-        if (!silent) this.setState({ loading: true, error: null });
+    generateFeed = async (silent = false, page = 1) => {
+        const isInitialLoad = page === 1;
+        if (!silent && isInitialLoad) this.setState({ loading: true, error: null, page: 1, hasMore: true });
+        if (!isInitialLoad) this.setState({ loadingMore: true });
         
         try {
             const token = localStorage.getItem('token');
             const res = await axios.get(`${config.API_URL}/api/search/discover`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
+                params: { page, limit: 20 }
             });
             const recs = res.data;
-            this.setState({ 
-                recommendations: recs, 
+            
+            this.setState(prevState => ({ 
+                recommendations: isInitialLoad ? recs : [...prevState.recommendations, ...recs], 
                 loading: false,
-                feedGeneratedAt: Date.now()
-            }, () => {
+                loadingMore: false,
+                hasMore: recs.length === 20,
+                feedGeneratedAt: isInitialLoad ? Date.now() : prevState.feedGeneratedAt
+            }), () => {
                 // Grid staggered animation mapping
-                if (!silent && this.gridRef.current) {
+                if (!silent && isInitialLoad && this.gridRef.current) {
                     gsap.fromTo(this.gridRef.current.children, 
                         { opacity: 0, y: 30 },
                         { opacity: 1, y: 0, duration: 0.6, stagger: 0.05, ease: "back.out(1.2)" }
@@ -68,7 +115,7 @@ class DiscoverPage extends Component {
             });
         } catch (error) {
             console.error("Discovery engine failed:", error);
-            this.setState({ loading: false, error: "Failed to generate your personalized feed." });
+            this.setState({ loading: false, loadingMore: false, error: "Failed to generate your personalized feed." });
             this.props.showToast("Personalization engine encountered an error", "error");
         }
     }
@@ -134,18 +181,34 @@ class DiscoverPage extends Component {
                 )}
 
                 {!loading && !error && recommendations.length > 0 && (
-                    <div className="movie-grid discover-grid" ref={this.gridRef}>
-                        {recommendations.map(movie => (
-                            <MovieCard 
-                                key={movie.id} 
-                                movie={{
-                                    ...movie,
-                                    isExternal: true,
-                                    imdbID: movie.imdbID || String(movie.id)
-                                }} 
-                            />
-                        ))}
-                    </div>
+                    <>
+                        <div className="movie-grid discover-grid" ref={this.gridRef}>
+                            {recommendations.map(movie => (
+                                <MovieCard 
+                                    key={`${movie.id}-${movie.mediaType}`} 
+                                    movie={{
+                                        ...movie,
+                                        isExternal: true,
+                                        imdbID: movie.imdbID || String(movie.id)
+                                    }} 
+                                />
+                            ))}
+                        </div>
+                        
+                        {/* Intersection Observer target */}
+                        <div ref={this.bottomBoundaryRef} style={{ height: '20px', margin: '20px 0' }}></div>
+                        
+                        {this.state.loadingMore && (
+                            <div className="bottom-loader" style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+                                <div className="spinner" style={{ width: '30px', height: '30px', border: '3px solid rgba(255,165,0,0.1)', borderTopColor: '#f39c12', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                            </div>
+                        )}
+                        {!this.state.hasMore && recommendations.length > 0 && (
+                            <div style={{ textAlign: 'center', color: '#666', padding: '30px 0', fontSize: '0.9rem' }}>
+                                You've reached the end of the line! Check back later for more.
+                            </div>
+                        )}
+                    </>
                 )}
                 <style>{`
                     .discover-grid {
