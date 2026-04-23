@@ -55,11 +55,15 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                     <div className="word-display">
                         {displayState.join('').split(' ').map((word, wordIdx) => (
                             <div key={wordIdx} className="word-wrapper">
-                                {word.split('').map((char, charIdx) => (
-                                    <span key={charIdx} className="char">
-                                        {char === '_' ? '' : char}
-                                    </span>
-                                ))}
+                                {word.split('').map((char, charIdx) => {
+                                    const isRevealed = puzzle.isRevealed;
+                                    const result = puzzle.revealResult;
+                                    return (
+                                        <span key={charIdx} className={`char ${isRevealed ? (result === 'won' ? 'revealed-won' : 'revealed-lost') : ''}`}>
+                                            {char === '_' ? '' : char}
+                                        </span>
+                                    );
+                                })}
                             </div>
                         ))}
                     </div>
@@ -151,6 +155,16 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                     font-size: 2rem;
                     font-weight: 800;
                     text-transform: uppercase;
+                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+                .char.revealed-won {
+                    color: #10b981;
+                    border-bottom-color: #10b981;
+                    transform: scale(1.1);
+                }
+                .char.revealed-lost {
+                    color: #ef4444;
+                    border-bottom-color: #ef4444;
                 }
                 .status-pill {
                     display: inline-block;

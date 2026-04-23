@@ -54,7 +54,21 @@ const GameRoom = () => {
 
             case 'game:round_end':
                 setRoundResult(data);
-                setPhase('round-end');
+                if (room?.game === 'hangman') {
+                    // Reveal answer in place for a smoother flow
+                    setPuzzle(prev => ({
+                        ...prev,
+                        displayState: data.answer.split(''),
+                        isRevealed: true,
+                        revealResult: data.result
+                    }));
+                    // Delay the scoreboard overlay
+                    setTimeout(() => {
+                        setPhase('round-end');
+                    }, 1500);
+                } else {
+                    setPhase('round-end');
+                }
                 setRoom(prev => ({ ...prev, scores: data.scores }));
                 break;
 
