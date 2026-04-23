@@ -7,6 +7,62 @@ import axios from 'axios';
 import config from '../config';
 import { showToast } from '../store/actions';
 
+// Stable component definitions outside the main component
+const GameCard = ({ title, description, game, icon: Icon, color, loading, onCreateRoom }) => (
+    <motion.div 
+        className="game-card-premium"
+        whileHover={{ y: -5 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+    >
+        <div className={`game-card-icon-bg ${color}`}>
+            <Icon size={32} className="text-white" />
+        </div>
+        <div className="game-card-content">
+            <h3>{title}</h3>
+            <p>{description}</p>
+            <div className="game-card-actions">
+                <button 
+                    className="btn-game btn-solo" 
+                    onClick={() => onCreateRoom(game)}
+                    disabled={loading}
+                >
+                    <Play size={16} />
+                    Solo
+                </button>
+                <button 
+                    className="btn-game btn-multi" 
+                    onClick={() => onCreateRoom(game)}
+                    disabled={loading}
+                >
+                    <Plus size={16} />
+                    Room
+                </button>
+            </div>
+        </div>
+    </motion.div>
+);
+
+const StatCard = ({ title, stats }) => (
+    <div className="stat-card-premium">
+        <h4>{title}</h4>
+        <div className="stat-grid">
+            <div className="stat-item">
+                <span className="stat-label">Played</span>
+                <span className="stat-value">{stats.gamesPlayed}</span>
+            </div>
+            <div className="stat-item">
+                <span className="stat-label">Wins</span>
+                <span className="stat-value">{stats.wins}</span>
+            </div>
+            <div className="stat-item">
+                <span className="stat-label">High Score</span>
+                <span className="stat-value">{stats.highScore}</span>
+            </div>
+        </div>
+    </div>
+);
+
 const GamesPage = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -52,61 +108,6 @@ const GamesPage = () => {
         }
     };
 
-    const GameCard = ({ title, description, game, icon: Icon, color }) => (
-        <motion.div 
-            className="game-card-premium"
-            whileHover={{ y: -5 }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-        >
-            <div className={`game-card-icon-bg ${color}`}>
-                <Icon size={32} className="text-white" />
-            </div>
-            <div className="game-card-content">
-                <h3>{title}</h3>
-                <p>{description}</p>
-                <div className="game-card-actions">
-                    <button 
-                        className="btn-game btn-solo" 
-                        onClick={() => handleCreateRoom(game)}
-                        disabled={loading}
-                    >
-                        <Play size={16} />
-                        Solo
-                    </button>
-                    <button 
-                        className="btn-game btn-multi" 
-                        onClick={() => handleCreateRoom(game)}
-                        disabled={loading}
-                    >
-                        <Plus size={16} />
-                        Room
-                    </button>
-                </div>
-            </div>
-        </motion.div>
-    );
-
-    const StatCard = ({ title, stats }) => (
-        <div className="stat-card-premium">
-            <h4>{title}</h4>
-            <div className="stat-grid">
-                <div className="stat-item">
-                    <span className="stat-label">Played</span>
-                    <span className="stat-value">{stats.gamesPlayed}</span>
-                </div>
-                <div className="stat-item">
-                    <span className="stat-label">Wins</span>
-                    <span className="stat-value">{stats.wins}</span>
-                </div>
-                <div className="stat-item">
-                    <span className="stat-label">High Score</span>
-                    <span className="stat-value">{stats.highScore}</span>
-                </div>
-            </div>
-        </div>
-    );
-
     return (
         <div className="container-fluid games-container">
             <div className="page-header">
@@ -124,6 +125,8 @@ const GamesPage = () => {
                     game="hangman"
                     icon={Gamepad2}
                     color="bg-blue-600"
+                    loading={loading}
+                    onCreateRoom={handleCreateRoom}
                 />
                 <GameCard 
                     title="Plot Redacted"
@@ -131,6 +134,8 @@ const GamesPage = () => {
                     game="plot-redacted"
                     icon={Users}
                     color="bg-purple-600"
+                    loading={loading}
+                    onCreateRoom={handleCreateRoom}
                 />
             </div>
 

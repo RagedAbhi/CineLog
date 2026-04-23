@@ -56,6 +56,12 @@ const PlotRedacted = ({ roomCode, puzzle, scores, emit }) => {
                             <Lightbulb size={16} />
                             {hintsUsed >= 2 ? `Genre: ${puzzle.revealedHints?.[1]?.value || '?'}` : 'Hint 2: Genre'}
                         </button>
+                        <button 
+                            className="btn-give-up-plot"
+                            onClick={() => emit('game:give_up', { roomCode })}
+                        >
+                            Give Up
+                        </button>
                     </div>
 
                     <form className="guess-form" onSubmit={handleSubmit}>
@@ -141,6 +147,19 @@ const PlotRedacted = ({ roomCode, puzzle, scores, emit }) => {
                 }
                 .btn-hint:disabled:not(.revealed) {
                     opacity: 0.3;
+                }
+                .btn-give-up-plot {
+                    background: rgba(239, 68, 68, 0.1);
+                    border: 1px solid rgba(239, 68, 68, 0.2);
+                    color: #ef4444;
+                    border-radius: 12px;
+                    padding: 10px 20px;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                }
+                .btn-give-up-plot:hover {
+                    background: rgba(239, 68, 68, 0.2);
                 }
                 .guess-form {
                     position: relative;

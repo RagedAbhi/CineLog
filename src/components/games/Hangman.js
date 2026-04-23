@@ -70,6 +70,13 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                         )}
                     </div>
 
+                    <button 
+                        className="btn-give-up"
+                        onClick={() => emit('game:give_up', { roomCode })}
+                    >
+                        Give Up
+                    </button>
+
                     {hint && (
                         <div className="hint-display">
                             <span className="hint-label">Hint:</span>
@@ -153,6 +160,21 @@ const Hangman = ({ roomCode, userId, puzzle, scores, emit }) => {
                 .status-pill.mine { background: #10b981; color: white; }
                 .status-pill.theirs { background: #ef4444; color: white; opacity: 0.7; }
                 
+                .btn-give-up {
+                    margin-top: 15px;
+                    padding: 8px 16px;
+                    background: rgba(239, 68, 68, 0.1);
+                    border: 1px solid rgba(239, 68, 68, 0.2);
+                    color: #ef4444;
+                    border-radius: 10px;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                }
+                .btn-give-up:hover {
+                    background: rgba(239, 68, 68, 0.2);
+                }
+
                 .keyboard-grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));

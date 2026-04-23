@@ -471,6 +471,22 @@ exports.init = (httpServer) => {
             }
         });
 
+        socket.on('game:give_up', ({ roomCode }) => {
+            const room = gameService.getRoom(roomCode);
+            if (!room || room.status !== 'in-progress') return;
+
+            const puzzle = room.currentPuzzle;
+            
+            io.to(roomCode).emit('game:round_end', {
+                result: 'gave-up',
+                answer: puzzle.answer,
+                metadata: puzzle.metadata,
+                scores: room.scores
+            });
+
+            handleNextRound(roomCode);
+        });
+
         async function handleNextRound(roomCode) {
             const room = gameService.getRoom(roomCode);
             if (!room) return;
