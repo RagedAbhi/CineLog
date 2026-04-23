@@ -134,30 +134,26 @@ class DiscoverPage extends Component {
         const activeFilters = (typeFilter !== 'all' ? 1 : 0) + (genreFilter ? 1 : 0) + (languageFilter ? 1 : 0);
 
         return (
-            <div className="collection-page discover-page">
-                {/* Header */}
-                <div className="page-header" ref={this.headerRef} style={{ marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <div>
-                            <h2>Trending Now</h2>
-                            <p className="page-subtitle" style={{ color: '#999', fontSize: '0.95rem' }}>
-                                The most popular global movies and shows this week.
-                            </p>
-                        </div>
-                        <button
-                            className="primary-btn"
-                            onClick={() => this.generateFeed(false)}
-                            disabled={loading}
-                            style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={loading ? 'spin' : ''}><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-                            Refresh
-                        </button>
+            <div className="container-fluid">
+                {/* Header — matches page-header pattern used in Movies/TV pages */}
+                <div className="page-header" ref={this.headerRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <h2>Trending Now</h2>
+                        <p>The most popular global movies and shows this week.</p>
                     </div>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => this.generateFeed(false)}
+                        disabled={loading}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loading ? 'spin' : ''}><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+                        Refresh
+                    </button>
                 </div>
 
-                {/* Filter Bar */}
-                <div className="discover-filter-bar">
+                {/* Filter Bar — uses the shared filters-bar class for consistent spacing */}
+                <div className="filters-bar discover-filters">
                     {/* Segmented Type Control */}
                     <div className="filter-segment">
                         {[{v:'all',l:'All'},{v:'movie',l:'Movies'},{v:'series',l:'Shows'}].map(t => (
@@ -191,9 +187,9 @@ class DiscoverPage extends Component {
 
                     {activeFilters > 0 && (
                         <button
-                            className="filter-clear-btn"
+                            className="btn-clear"
                             onClick={() => this.setState({ typeFilter: 'all', genreFilter: null, languageFilter: null })}
-                        >Clear</button>
+                        >Clear filters</button>
                     )}
                 </div>
 
@@ -253,11 +249,10 @@ class DiscoverPage extends Component {
                         grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
                         gap: 16px !important;
                     }
-                    .discover-filter-bar {
+                    .discover-filters {
                         display: flex;
                         align-items: center;
                         gap: 10px;
-                        margin-bottom: 24px;
                     }
                     .filter-segment {
                         display: flex;
@@ -308,19 +303,6 @@ class DiscoverPage extends Component {
                         background: #1a1a2e;
                         color: #fff;
                     }
-                    .filter-clear-btn {
-                        padding: 6px 14px;
-                        border-radius: 10px;
-                        border: 1px solid rgba(255,255,255,0.08);
-                        background: transparent;
-                        color: rgba(255,255,255,0.35);
-                        font-size: 0.78rem;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: all 0.18s;
-                        white-space: nowrap;
-                    }
-                    .filter-clear-btn:hover { color: #ef4444; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); }
                     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
                 `}</style>
             </div>
