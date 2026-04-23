@@ -55,20 +55,27 @@ const GameRoom = () => {
             case 'game:round_end':
                 setRoundResult(data);
                 if (room?.game === 'hangman') {
-                    // Reveal answer in place for a smoother flow
+                    // Reveal answer in place
                     setPuzzle(prev => ({
                         ...prev,
                         displayState: data.answer.split(''),
                         isRevealed: true,
                         revealResult: data.result
                     }));
-                    // Delay the scoreboard overlay
+                }
+
+                // Only show scoreboard overlay if it's NOT a solo game
+                if (!room?.isSolo) {
+                    const delay = room?.game === 'hangman' ? 1500 : 0;
                     setTimeout(() => {
                         setPhase('round-end');
-                    }, 1500);
-                } else {
-                    setPhase('round-end');
+                    }, delay);
+                } else if (room?.game !== 'hangman') {
+                    // For Plot Redacted solo, we still need a reveal mechanism 
+                    // if we aren't showing the scoreboard.
+                    setPuzzle(prev => ({ ...prev, isRevealed: true, answer: data.answer }));
                 }
+
                 setRoom(prev => ({ ...prev, scores: data.scores }));
                 break;
 
