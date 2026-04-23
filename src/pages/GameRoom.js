@@ -118,7 +118,7 @@ const GameRoom = () => {
             default:
                 break;
         }
-    }, [dispatch, navigate, user?._id]);
+    }, [dispatch, navigate, user?._id, room]);
 
     const { emit } = useGameSocket({ roomCode: code, onEvent });
 
