@@ -331,12 +331,12 @@ exports.init = (httpServer) => {
             try {
                 let puzzle;
                 if (room.game === 'hangman') {
-                    puzzle = await gameController.getHangmanPuzzle(room.host.userId);
+                    puzzle = await gameController.getHangmanPuzzle(room.host.userId, room.usedMediaIds);
                     if (puzzle && room.guest) {
                         puzzle.turn = room.host.userId; // Host starts
                     }
                 } else if (room.game === 'plot-redacted') {
-                    puzzle = await gameController.getPlotRedactedPuzzle(room.host.userId);
+                    puzzle = await gameController.getPlotRedactedPuzzle(room.host.userId, room.usedMediaIds);
                 }
 
                 if (!puzzle) {
@@ -344,6 +344,7 @@ exports.init = (httpServer) => {
                 }
 
                 gameService.startRound(roomCode, puzzle);
+                room.usedMediaIds.push(puzzle.id);
                 
                 // Emit puzzle without answer
                 const { answer, ...puzzleData } = puzzle;
@@ -548,17 +549,18 @@ exports.init = (httpServer) => {
                     // Generate new puzzle
                     let puzzle;
                     if (room.game === 'hangman') {
-                        puzzle = await gameController.getHangmanPuzzle(room.host.userId);
+                        puzzle = await gameController.getHangmanPuzzle(room.host.userId, room.usedMediaIds);
                         if (puzzle && room.guest) {
                             // Alternate starting turn
                             puzzle.turn = room.round % 2 === 1 ? room.host.userId : room.guest.userId;
                         }
                     } else if (room.game === 'plot-redacted') {
-                        puzzle = await gameController.getPlotRedactedPuzzle(room.host.userId);
+                        puzzle = await gameController.getPlotRedactedPuzzle(room.host.userId, room.usedMediaIds);
                     }
 
                     if (puzzle) {
                         gameService.startRound(roomCode, puzzle);
+                        room.usedMediaIds.push(puzzle.id);
                         const { answer, ...puzzleData } = puzzle;
                         io.to(roomCode).emit('game:puzzle', {
                             ...puzzleData,

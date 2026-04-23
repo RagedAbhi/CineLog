@@ -92,10 +92,11 @@ const saveGameStats = async (req, res) => {
 };
 
 // Internal function to generate Hangman puzzle
-const getHangmanPuzzle = async (userId) => {
+const getHangmanPuzzle = async (userId, excludeIds = []) => {
     const movies = await Media.find({
         userId,
-        status: { $in: ['watchlist', 'watched'] }
+        status: { $in: ['watchlist', 'watched'] },
+        _id: { $nin: excludeIds }
     });
 
     // Filter out short titles
@@ -112,6 +113,7 @@ const getHangmanPuzzle = async (userId) => {
     );
 
     return {
+        id: selected._id,
         answer: title,
         displayState,
         guessedLetters: [],
@@ -129,11 +131,12 @@ const getHangmanPuzzle = async (userId) => {
 };
 
 // Internal function to generate Plot Redacted puzzle
-const getPlotRedactedPuzzle = async (userId) => {
+const getPlotRedactedPuzzle = async (userId, excludeIds = []) => {
     const movies = await Media.find({
         userId,
         status: 'watched',
-        plot: { $exists: true }
+        plot: { $exists: true },
+        _id: { $nin: excludeIds }
     });
 
     const validMovies = movies.filter(m => m.plot && m.plot.length >= 30);
@@ -144,6 +147,7 @@ const getPlotRedactedPuzzle = async (userId) => {
     const redactedPlot = redactPlot(selected.plot, selected.title);
 
     return {
+        id: selected._id,
         answer: selected.title,
         redactedPlot,
         hintsUsed: 0,

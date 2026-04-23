@@ -29,7 +29,8 @@ function createRoom(game, hostUser) {
             [hostUser._id.toString()]: 0
         },
         currentPuzzle: null,
-        roundResults: []
+        roundResults: [],
+        usedMediaIds: []
     };
 
     rooms.set(code, room);
