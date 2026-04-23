@@ -20,13 +20,20 @@ const GameLobby = ({ room, userId, onStart, onCopy }) => {
                     <h2>Lobby</h2>
                 </div>
 
-                <div className="room-code-section">
-                    <span className="label">Room Code</span>
-                    <div className="code-display" onClick={() => onCopy(room.code)}>
-                        <code>{room.code}</code>
-                        <Copy size={18} />
+                {!room.isSolo ? (
+                    <div className="room-code-section">
+                        <span className="label">Room Code</span>
+                        <div className="code-display" onClick={() => onCopy(room.code)}>
+                            <code>{room.code}</code>
+                            <Copy size={18} />
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="room-code-section">
+                        <span className="label">Solo Session</span>
+                        <p className="text-sm text-muted">Ready to play alone? Press start below.</p>
+                    </div>
+                )}
 
                 <div className="players-section">
                     <h3>Players</h3>

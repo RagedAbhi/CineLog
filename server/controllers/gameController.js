@@ -6,13 +6,13 @@ const logger = require('../utils/logger');
 
 const createRoom = async (req, res) => {
     try {
-        const { game } = req.body;
+        const { game, isSolo } = req.body;
         if (!['hangman', 'plot-redacted'].includes(game)) {
             return res.status(400).json({ message: 'Invalid game type' });
         }
 
-        const roomCode = gameService.createRoom(game, req.user);
-        res.status(201).json({ roomCode });
+        const roomCode = gameService.createRoom(game, req.user, isSolo);
+        res.status(201).json({ roomCode, isSolo });
     } catch (error) {
         logger.error('Error creating room:', error);
         res.status(500).json({ message: 'Server error' });

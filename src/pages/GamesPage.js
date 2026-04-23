@@ -24,7 +24,7 @@ const GameCard = ({ title, description, game, icon: Icon, color, loading, onCrea
             <div className="game-card-actions">
                 <button 
                     className="btn-game btn-solo" 
-                    onClick={() => onCreateRoom(game)}
+                    onClick={() => onCreateRoom(game, true)}
                     disabled={loading}
                 >
                     <Play size={16} />
@@ -32,7 +32,7 @@ const GameCard = ({ title, description, game, icon: Icon, color, loading, onCrea
                 </button>
                 <button 
                     className="btn-game btn-multi" 
-                    onClick={() => onCreateRoom(game)}
+                    onClick={() => onCreateRoom(game, false)}
                     disabled={loading}
                 >
                     <Plus size={16} />
@@ -75,16 +75,21 @@ const GamesPage = () => {
         plotRedacted: { gamesPlayed: 0, wins: 0, totalScore: 0, highScore: 0 }
     };
 
-    const handleCreateRoom = async (game) => {
+    const handleCreateRoom = async (game, isSolo = false) => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const res = await axios.post(`${config.API_URL}/api/games/rooms`, { game }, {
+            const res = await axios.post(`${config.API_URL}/api/games/rooms`, { game, isSolo }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            navigate(`/games/room/${res.data.roomCode}`);
+            
+            if (isSolo) {
+                navigate(`/games/solo/${game}/${res.data.roomCode}`);
+            } else {
+                navigate(`/games/room/${res.data.roomCode}`);
+            }
         } catch (err) {
-            dispatch(showToast('Failed to create room', 'error'));
+            dispatch(showToast('Failed to start game', 'error'));
         } finally {
             setLoading(false);
         }

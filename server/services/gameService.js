@@ -7,7 +7,7 @@ function generateRoomCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-function createRoom(game, hostUser) {
+function createRoom(game, hostUser, isSolo = false) {
     let code;
     do {
         code = generateRoomCode();
@@ -16,6 +16,7 @@ function createRoom(game, hostUser) {
     const room = {
         code,
         game,
+        isSolo,
         host: {
             userId: hostUser._id.toString(),
             socketId: null,
@@ -24,7 +25,7 @@ function createRoom(game, hostUser) {
         guest: null,
         status: 'waiting',
         round: 0,
-        maxRounds: 5,
+        maxRounds: isSolo ? Infinity : 5,
         scores: {
             [hostUser._id.toString()]: 0
         },

@@ -178,10 +178,12 @@ const GameRoom = () => {
             {phase === 'playing' && puzzle && (
                 <div className="game-container">
                     <div className="game-header-stats">
-                        <div className="round-info">Round {room.round}/5</div>
+                        <div className="round-info">
+                            {room.isSolo ? 'Endless Mode' : `Round ${room.round}/5`}
+                        </div>
                         <div className="score-ticker">
                             {room.host.username}: {room.scores[room.host.userId]}
-                            {room.guest && ` | ${room.guest.username}: ${room.scores[room.guest.userId]}`}
+                            {!room.isSolo && room.guest && ` | ${room.guest.username}: ${room.scores[room.guest.userId]}`}
                         </div>
                     </div>
                     

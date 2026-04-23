@@ -189,6 +189,7 @@ const App = () => {
               <Route path="/" element={<Dashboard />} />
               <Route path="/games" element={<GamesPage />} />
               <Route path="/games/room/:code" element={<GameRoom />} />
+              <Route path="/games/solo/:game/:code" element={<GameRoom />} />
               <Route path="/search" element={<div className="teleport-route-placeholder" />} />
               <Route path="/auth" element={<Navigate to="/" replace />} />
               <Route path="/profile" element={<Profile />} />
