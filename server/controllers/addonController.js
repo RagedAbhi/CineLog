@@ -71,6 +71,11 @@ exports.installAddon = async (req, res) => {
         };
 
         const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Guard: initialise field if missing on older documents
+        if (!user.installedAddons) user.installedAddons = [];
+
         const existingIdx = user.installedAddons.findIndex(a => a.id === manifest.id);
         if (existingIdx >= 0) {
             user.installedAddons[existingIdx] = addonData;
