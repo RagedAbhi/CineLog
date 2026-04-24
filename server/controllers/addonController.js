@@ -119,11 +119,11 @@ exports.uninstallAddon = async (req, res) => {
 };
 
 exports.fetchStreams = async (req, res) => {
-    let { imdbId, tmdbId, type } = req.query;
+    let { imdbId, tmdbId, type, season, episode } = req.query;
     if (!type) type = 'movie';
 
     try {
-        // Resolve IMDB ID via TMDB if needed
+        // 1. Resolve IMDB ID via TMDB if needed
         if (!imdbId && tmdbId && TMDB_API_KEY) {
             const tmdbType = type === 'series' ? 'tv' : 'movie';
             const extRes = await axios.get(
@@ -133,17 +133,59 @@ exports.fetchStreams = async (req, res) => {
             imdbId = extRes.data.imdb_id;
         }
 
+        if (!imdbId) {
+            return res.status(400).json({ error: 'IMDB ID could not be resolved.' });
+        }
+
         const user = await User.findById(req.user._id).select('installedAddons');
         const addons = user.installedAddons || [];
 
-        // Return metadata to the client so it can perform the fetches
-        res.json({ 
-            imdbId, 
-            addons: addons.map(a => ({ id: a.id, name: a.name, baseUrl: a.baseUrl })),
-            message: 'Client-side fetching recommended to bypass datacenter blocks.'
+        if (addons.length === 0) {
+            return res.json({ streams: [], imdbId, noAddons: true });
+        }
+
+        const streamPath = (type === 'series' && season && episode)
+            ? `/stream/series/${imdbId}:${season}:${episode}.json`
+            : `/stream/movie/${imdbId}.json`;
+
+        // 2. STREMIO DESKTOP MASKING: Mimic the official desktop app headers
+        const desktopHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Stremio/4.4.159',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Origin': 'https://web.stremio.com',
+            'Referer': 'https://web.stremio.com/',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'cross-site'
+        };
+
+        const results = await Promise.allSettled(
+            addons.map(async (addon) => {
+                const url = `${addon.baseUrl.replace(/\/$/, '')}${streamPath}`;
+                const response = await axios.get(url, { 
+                    headers: desktopHeaders,
+                    timeout: 15000 
+                });
+                const streams = response.data?.streams || [];
+                return streams.map(s => ({
+                    ...s,
+                    addonName: addon.name,
+                    addonId: addon.id,
+                }));
+            })
+        );
+
+        const allStreams = [];
+        results.forEach(result => {
+            if (result.status === 'fulfilled') {
+                allStreams.push(...result.value);
+            }
         });
+
+        res.json({ streams: allStreams, imdbId });
     } catch (err) {
         logger.error('fetchStreams error:', err);
-        res.status(500).json({ error: 'Failed to resolve stream metadata' });
+        res.status(500).json({ error: 'Failed to fetch streams' });
     }
 };
