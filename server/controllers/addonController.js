@@ -123,18 +123,21 @@ exports.fetchStreams = async (req, res) => {
     if (!type) type = 'movie';
 
     try {
-        // 1. Resolve IMDB ID via TMDB if needed
-        if (!imdbId && tmdbId && TMDB_API_KEY) {
-            const tmdbType = type === 'series' ? 'tv' : 'movie';
-            const extRes = await axios.get(
-                `https://api.themoviedb.org/3/${tmdbType}/${tmdbId}/external_ids`,
-                { params: { api_key: TMDB_API_KEY }, timeout: 8000 }
-            );
-            imdbId = extRes.data.imdb_id;
+        // 1. Resolve IMDB ID via TMDB if it's missing or numeric
+        if (!imdbId || !String(imdbId).startsWith('tt')) {
+            const idToUse = imdbId || tmdbId;
+            if (idToUse && TMDB_API_KEY) {
+                const tmdbType = type === 'series' ? 'tv' : 'movie';
+                const extRes = await axios.get(
+                    `https://api.themoviedb.org/3/${tmdbType}/${idToUse}/external_ids`,
+                    { params: { api_key: TMDB_API_KEY }, timeout: 8000 }
+                );
+                imdbId = extRes.data.imdb_id;
+            }
         }
 
         if (!imdbId) {
-            return res.status(400).json({ error: 'IMDB ID could not be resolved.' });
+            return res.status(400).json({ error: 'IMDB ID required' });
         }
 
         const user = await User.findById(req.user._id).select('installedAddons');
@@ -148,47 +151,27 @@ exports.fetchStreams = async (req, res) => {
             ? `/stream/series/${imdbId}:${season}:${episode}.json`
             : `/stream/movie/${imdbId}.json`;
 
-        // 2. STREMIO DESKTOP MASKING: Mimic the official desktop app headers
-        const desktopHeaders = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Stremio/4.4.159',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Origin': 'https://web.stremio.com',
-            'Referer': 'https://web.stremio.com/',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'cross-site'
-        };
-
+        // 2. INTERNAL PROXY WITH DESKTOP MASKING
         const results = await Promise.allSettled(
             addons.map(async (addon) => {
                 const url = `${addon.baseUrl.replace(/\/$/, '')}${streamPath}`;
-                logger.info(`[AddonProxy] Fetching streams for ${imdbId} from ${addon.name} (${url})`);
-                
                 try {
                     const response = await axios.get(url, { 
                         headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Stremio/4.4.159',
                             'Accept': 'application/json, text/plain, */*',
-                            'Origin': 'https://web.stremio.com',
-                            'Referer': 'https://web.stremio.com/',
-                            'X-Stremio-Client': 'stremio-web'
+                            'X-Stremio-Client': 'stremio-desktop'
                         },
-                        timeout: 12000 
+                        timeout: 10000 
                     });
                     const streams = response.data?.streams || [];
-                    logger.info(`[AddonProxy] Success: ${addon.name} returned ${streams.length} streams.`);
                     return streams.map(s => ({
                         ...s,
                         addonName: addon.name,
                         addonId: addon.id,
                     }));
-                } catch (fetchErr) {
-                    logger.error(`[AddonProxy] ${addon.name} failed: ${fetchErr.response?.status || fetchErr.message}`);
-                    if (fetchErr.response?.status === 403) {
-                        logger.error(`[AddonProxy] 403 FORBIDDEN - Torrentio is blocking this server IP.`);
-                    }
-                    throw fetchErr;
+                } catch (e) {
+                    return [];
                 }
             })
         );
@@ -202,7 +185,7 @@ exports.fetchStreams = async (req, res) => {
 
         res.json({ streams: allStreams, imdbId });
     } catch (err) {
-        logger.error('fetchStreams error:', err);
-        res.status(500).json({ error: 'Failed to fetch streams' });
+        logger.error('fetchStreams Proxy Error:', err);
+        res.status(500).json({ error: 'Failed to fetch streams via proxy' });
     }
 };
