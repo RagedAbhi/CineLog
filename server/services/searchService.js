@@ -529,81 +529,84 @@ async function processResults(results, userId) {
             };
         }
 
-        const mapped = mapMediaItem(item);
+        const mediaItem = mapMediaItem(item);
 
-        // Mark library status
-        const normalizedTitle = mapped.title.toLowerCase().trim();
+        // Mark library status - Use ID first, then title+type as fallback
+        const normalizedTitle = mediaItem.title?.toLowerCase().trim();
         const existing = userLibrary.find(lib =>
-            (lib.imdbID && lib.imdbID === String(mapped.id)) ||
-            (lib.title.toLowerCase().trim() === normalizedTitle && lib.mediaType === mapped.mediaType)
+            (lib.imdbID && (lib.imdbID === String(mediaItem.id) || lib.imdbID === String(item.imdb_id))) ||
+            (lib.title?.toLowerCase().trim() === normalizedTitle && lib.mediaType === mediaItem.mediaType)
         );
+
         if (existing) {
-            mapped.libraryStatus = existing.status;
-            mapped.libraryId = existing._id;
+            mediaItem.libraryStatus = existing.status;
+            mediaItem.libraryId = existing._id;
         }
 
-        return mapped;
+        return mediaItem;
     });
 
     // Score each media item
     const { genreScores, maxScore } = tasteProfile;
 
-    // Batch friend activity query — one DB call for all results instead of N calls
+    // Batch friend activity query
     const nonPersonResults = mapped.filter(i => i.mediaType !== 'person');
+    const itemIds = nonPersonResults.map(i => String(i.id));
     const titles = [...new Set(nonPersonResults.map(i => i.title))];
 
-    const friendWatched = friendIds.length > 0 && titles.length > 0
+    const friendWatched = friendIds.length > 0 && (itemIds.length > 0 || titles.length > 0)
         ? await Media.find({
+            userId: { $in: friendIds },
             $or: [
-                { title: { $in: titles }, userId: { $in: friendIds } }
+                { imdbID: { $in: itemIds } },
+                { title: { $in: titles } }
             ]
           }).populate('userId', 'username name').lean()
         : [];
 
-    // Build friend activity map keyed by title (normalized)
-    const friendActivityMap = {};
+    // Build friend activity map - PRIORITIZE ID
+    const friendActivityById = {};
+    const friendActivityByTitle = {};
+
     friendWatched.forEach(fw => {
-        const key = fw.title.toLowerCase().trim();
-        if (!friendActivityMap[key]) friendActivityMap[key] = [];
-        friendActivityMap[key].push(fw);
+        if (fw.imdbID) {
+            if (!friendActivityById[fw.imdbID]) friendActivityById[fw.imdbID] = [];
+            friendActivityById[fw.imdbID].push(fw);
+        } else {
+            const key = fw.title.toLowerCase().trim();
+            if (!friendActivityByTitle[key]) friendActivityByTitle[key] = [];
+            friendActivityByTitle[key].push(fw);
+        }
     });
 
-    // Apply scores
+    // Apply scores and metadata safely
     for (const item of mapped) {
         if (item.mediaType === 'person') continue;
 
         let score = 0;
 
-        // 1. Taste profile genre match (proportional to user preference strength)
+        // 1. Taste profile genre match
         if (item.genreIds?.length > 0 && Object.keys(genreScores).length > 0) {
             const genreNames = item.genreIds.map(id => GENRE_MAP[id]).filter(Boolean);
             const genreBoost = genreNames.reduce((sum, g) => {
-                return sum + ((genreScores[g] || 0) / maxScore) * 15;
+                return sum + ((genreScores[g] || 0) / (maxScore || 1)) * 15;
             }, 0);
-            score += Math.min(genreBoost, 15); // cap at 15
+            score += Math.min(genreBoost, 15);
         }
 
-        // 2. Click history repeat interest
-        // (UserBehavior still logged — keep the signal even though preferredGenres is replaced)
-        // No lookup here to avoid extra DB call; this was always lightweight
+        // 2. Friend activity - ID Match first, then title
+        const friendsWhoWatched = friendActivityById[String(item.id)] || 
+                                 friendActivityByTitle[item.title?.toLowerCase().trim()] || [];
 
-        // 3. Friend activity (fixed: title-based match)
-        const titleKey = item.title?.toLowerCase().trim();
-        const friendsWhoWatched = friendActivityMap[titleKey] || [];
         if (friendsWhoWatched.length > 0) {
             score += friendsWhoWatched.length * 3;
             item.socialMetadata = {
                 count: friendsWhoWatched.length,
-                friends: friendsWhoWatched.slice(0, 2).map(f => f.userId?.name || f.userId?.username),
+                friends: [...new Set(friendsWhoWatched.map(f => f.userId?.name || f.userId?.username))].slice(0, 2),
                 text: `${friendsWhoWatched.length} friend${friendsWhoWatched.length > 1 ? 's' : ''} watched this`
             };
         }
 
-        // 4. Global popularity (tie-breaker)
-        score += Math.min((item.popularity || 0) / 10, 10);
-
-        item.personalizationScore = score;
-    }
 
     return mapped.sort((a, b) => (b.personalizationScore || 0) - (a.personalizationScore || 0));
 }
