@@ -46,7 +46,13 @@ exports.installAddon = async (req, res) => {
     if (!manifestUrl) return res.status(400).json({ error: 'manifestUrl is required' });
 
     try {
-        const manifestRes = await axios.get(manifestUrl, { timeout: 12000 });
+        const manifestRes = await axios.get(manifestUrl, { 
+            timeout: 12000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+            }
+        });
         const manifest = manifestRes.data;
 
         if (!manifest.id || !manifest.name) {
@@ -87,6 +93,9 @@ exports.installAddon = async (req, res) => {
         res.json({ success: true, addon: addonData });
     } catch (err) {
         logger.error('installAddon error:', err);
+        if (err.response?.status === 403) {
+            return res.status(403).json({ error: 'Addon Error: Access Denied (403). The addon server is blocking our connection. Try again later or use a different URL.' });
+        }
         const remoteMsg = err.response?.data?.error || err.response?.data?.message || err.message;
         res.status(400).json({ error: `Addon Error: ${remoteMsg || 'Installation failed'}` });
     }
