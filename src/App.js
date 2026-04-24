@@ -28,6 +28,7 @@ import Messenger from './pages/Messenger.js';
 import DiscoverPage from './pages/DiscoverPage';
 import GamesPage from './pages/GamesPage';
 import GameRoom from './pages/GameRoom';
+import AddonsPage from './pages/AddonsPage';
 import { fetchCurrentUser, fetchRecommendations, fetchRecentChats } from './store/thunks';
 import config from './config';
 
@@ -204,6 +205,7 @@ const App = () => {
               <Route path="/watched" element={<Watched />} />
               <Route path="/watchlist" element={<Watchlist />} />
               <Route path="/person/:id" element={<PersonPage />} />
+              <Route path="/addons" element={<AddonsPage />} />
             </Routes>
           </AnimatePresence>
         </main>

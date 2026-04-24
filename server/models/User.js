@@ -14,6 +14,14 @@ const userSchema = new mongoose.Schema({
         ref: 'Media'
     }],
     isPrivate: { type: Boolean, default: false },
+    installedAddons: [{
+        id: { type: String, required: true },
+        name: { type: String, required: true },
+        description: { type: String, default: '' },
+        baseUrl: { type: String, required: true },
+        logo: { type: String, default: '' },
+        installedAt: { type: Date, default: Date.now }
+    }],
     gameStats: {
         hangman: {
             gamesPlayed: { type: Number, default: 0 },

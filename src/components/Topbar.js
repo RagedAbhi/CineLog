@@ -67,6 +67,7 @@ const Topbar = () => {
         { path: '/discover', label: 'Discover', icon: Sparkles },
         { path: '/friends', label: 'Social', icon: Users },
         { path: '/games', label: 'Games', icon: Gamepad2 },
+        { path: '/addons', label: 'Addons', icon: Puzzle },
     ];
 
     const isMovieDetail = location.pathname.startsWith('/movies/') && location.pathname !== '/movies-list';

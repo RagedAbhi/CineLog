@@ -18,6 +18,8 @@ const searchRoutes = require('./routes/searchRoutes');
 const watchRoomRoutes = require('./routes/watchRoomRoutes');
 const engagementRoutes = require('./routes/engagementRoutes');
 const gameRoutes = require('./routes/gameRoutes');
+const addonRoutes = require('./routes/addonRoutes');
+const torrentRoutes = require('./routes/torrentRoutes');
 
 const app = express();
 app.set('trust proxy', 1); // Trust the reverse proxy (Render) to properly track client IPs for rate-limiting
@@ -53,6 +55,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/rooms', watchRoomRoutes);
 app.use('/api/engagement', engagementRoutes);
 app.use('/api/games', gameRoutes);
+app.use('/api/addons', addonRoutes);
+app.use('/api/torrent', torrentRoutes);
 
 // Database Connection
 const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cuerates';

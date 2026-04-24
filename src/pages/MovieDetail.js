@@ -7,6 +7,8 @@ import { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie } from '
 import MarkWatchedModal from '../components/MarkWatchedModal';
 import AddMovieModal from '../components/AddMovieModal';
 import WatchTogetherModal from '../components/WatchTogetherModal';
+import StreamSourcesModal from '../components/StreamSourcesModal';
+import VideoPlayerModal from '../components/VideoPlayerModal';
 import { fetchStreamingAvailability, fetchTrailerID } from '../services/tmdbService';
 import { getMovieDetailsExternal } from '../services/movieService';
 import { showToast, showRecommendModal, showConfirmModal, showTrailerModal, setTeleporting } from '../store/actions';
@@ -39,6 +41,10 @@ class MovieDetail extends Component {
       localLoading: false,
       showWatchTogether: false,
       watchTogetherNetflixUrl: null,
+      showStreamSources: false,
+      showVideoPlayer: false,
+      playerUrl: null,
+      playerTitle: null,
       engagement: null,
       watchedByFriends: [],
       showWatchersModal: false,
@@ -823,8 +829,15 @@ class MovieDetail extends Component {
                   <button className="btn btn-secondary" onClick={this.handleRecommendClick}>
                     ✉ Recommend to Friend
                   </button>
-                  <button 
-                    className="btn btn-secondary" 
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => this.setState({ showStreamSources: true })}
+                    style={{ background: 'var(--accent-gradient)', border: 'none' }}
+                  >
+                    ▶ Watch Now
+                  </button>
+                  <button
+                    className="btn btn-secondary"
                     onClick={this.handlePlayTrailer}
                   >
                     ▶ Watch Trailer
@@ -1063,7 +1076,7 @@ class MovieDetail extends Component {
           )}
 
           {this.state.showAddModal && (
-            <AddMovieModal 
+            <AddMovieModal
               initialData={{
                   title: movie.title,
                   mediaType: movie.mediaType,
@@ -1074,8 +1087,29 @@ class MovieDetail extends Component {
                   await this.props.addMovie(data);
                   this.setState({ showAddModal: false });
                   this.props.showToast('Added to library!', 'success');
-              }} 
-              onClose={() => this.setState({ showAddModal: false })} 
+              }}
+              onClose={() => this.setState({ showAddModal: false })}
+            />
+          )}
+
+          {this.state.showStreamSources && (
+            <StreamSourcesModal
+              movie={movie}
+              onClose={() => this.setState({ showStreamSources: false })}
+              onWatch={(url, title) => this.setState({
+                showStreamSources: false,
+                showVideoPlayer: true,
+                playerUrl: url,
+                playerTitle: title,
+              })}
+            />
+          )}
+
+          {this.state.showVideoPlayer && this.state.playerUrl && (
+            <VideoPlayerModal
+              url={this.state.playerUrl}
+              title={this.state.playerTitle || movie.title}
+              onClose={() => this.setState({ showVideoPlayer: false, playerUrl: null, playerTitle: null })}
             />
           )}
         </div>
