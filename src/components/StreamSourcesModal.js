@@ -65,21 +65,27 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
         setError('');
         setStreams([]);
         try {
+            // HIGH-TRUST LOOKUP: Ensure we have a valid format
+            let idToUse = movie.imdbID;
+            // If imdbID is a number or doesn't start with 'tt', treat it as a TMDB ID
+            if (idToUse && !String(idToUse).startsWith('tt')) {
+                idToUse = null; // Force backend resolution
+            }
+
             const data = await fetchStreams({
-                imdbId: movie.imdbID || null,
-                tmdbId: movie.tmdbId || null,
+                imdbId: idToUse,
+                tmdbId: movie.tmdbId || movie.id,
                 type: isSeries ? 'series' : 'movie',
                 season: isSeries ? season : undefined,
                 episode: isSeries ? episode : undefined,
             });
-
+            
             if (data.noAddons) {
                 setNoAddons(true);
             } else {
                 setNoAddons(false);
                 setStreams(data.streams || []);
                 setResolvedImdbId(data.imdbId || '');
-                // Addon metadata might be in data.addons from the backend proxy
                 if (data.addons) setInstalledCount(data.addons.length);
             }
         } catch (e) {
