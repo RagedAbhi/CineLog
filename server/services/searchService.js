@@ -605,8 +605,8 @@ async function processResults(results, userId) {
                 friends: [...new Set(friendsWhoWatched.map(f => f.userId?.name || f.userId?.username))].slice(0, 2),
                 text: `${friendsWhoWatched.length} friend${friendsWhoWatched.length > 1 ? 's' : ''} watched this`
             };
-        }
-
+        item.personalizationScore = score;
+    }
 
     return mapped.sort((a, b) => (b.personalizationScore || 0) - (a.personalizationScore || 0));
 }
