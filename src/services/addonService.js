@@ -38,15 +38,19 @@ export const uninstallAddon = async (addonId) => {
 
 export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, episode }) => {
     try {
-        // 1. Resolve IMDB ID via TMDB if missing (CRITICAL for Torrentio)
+        // 1. Resolve IMDB ID via TMDB if missing or invalid (CRITICAL for Torrentio)
         let finalImdbId = imdbId;
-        if (!finalImdbId && tmdbId) {
-            const tmdbType = type === 'series' ? 'tv' : 'movie';
-            const tmdbKey = process.env.REACT_APP_TMDB_API_KEY;
-            const tmdbRes = await axios.get(`https://api.themoviedb.org/3/${tmdbType}/${tmdbId}/external_ids`, {
-                params: { api_key: tmdbKey }
-            });
-            finalImdbId = tmdbRes.data.imdb_id;
+        // If imdbId is missing OR is a numeric TMDB ID (doesn't start with 'tt')
+        if (!finalImdbId || !String(finalImdbId).startsWith('tt')) {
+            const idToUse = finalImdbId || tmdbId;
+            if (idToUse) {
+                const tmdbType = type === 'series' ? 'tv' : 'movie';
+                const tmdbKey = process.env.REACT_APP_TMDB_API_KEY;
+                const tmdbRes = await axios.get(`https://api.themoviedb.org/3/${tmdbType}/${idToUse}/external_ids`, {
+                    params: { api_key: tmdbKey }
+                });
+                finalImdbId = tmdbRes.data.imdb_id;
+            }
         }
 
         if (!finalImdbId) {

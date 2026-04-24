@@ -48,6 +48,7 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
     const [season, setSeason] = useState(1);
     const [episode, setEpisode] = useState(1);
     const [installedCount, setInstalledCount] = useState(0);
+    const [resolvedImdbId, setResolvedImdbId] = useState('');
     const navigate = useNavigate();
 
     const isSeries = movie?.mediaType === 'series';
@@ -74,6 +75,7 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
             } else {
                 setNoAddons(false);
                 setStreams(data.streams || []);
+                setResolvedImdbId(data.imdbId || '');
                 // Addon metadata might be in data.addons from the backend proxy
                 if (data.addons) setInstalledCount(data.addons.length);
             }
@@ -345,7 +347,7 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                     </p>
                     {/* Debug Info */}
                     <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>
-                        Debug: IMDB: {movie.imdbID || 'N/A'} | TMDB: {movie.tmdbId || 'N/A'} | Installed: {installedCount} | Results: {streams.length}
+                        Debug: SearchID: {resolvedImdbId || 'Pending...'} | Installed: {installedCount} | Results: {streams.length}
                     </p>
                 </div>
             </motion.div>
