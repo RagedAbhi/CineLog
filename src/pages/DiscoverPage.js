@@ -225,7 +225,12 @@ class DiscoverPage extends Component {
                             {filtered.map(movie => (
                                 <MovieCard
                                     key={`${movie.id}-${movie.mediaType}`}
-                                    movie={{ ...movie, isExternal: true, imdbID: movie.imdbID || String(movie.id) }}
+                                    movie={{ 
+                                        ...movie, 
+                                        isExternal: true, 
+                                        tmdbId: String(movie.id),
+                                        imdbID: movie.imdb_id || movie.imdbID || null 
+                                    }}
                                 />
                             ))}
                         </div>
