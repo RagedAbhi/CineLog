@@ -119,7 +119,7 @@ exports.uninstallAddon = async (req, res) => {
 };
 
 exports.fetchStreams = async (req, res) => {
-    let { imdbId, tmdbId, type, season, episode } = req.query;
+    let { imdbId, tmdbId, type } = req.query;
     if (!type) type = 'movie';
 
     try {
@@ -133,44 +133,17 @@ exports.fetchStreams = async (req, res) => {
             imdbId = extRes.data.imdb_id;
         }
 
-        if (!imdbId) {
-            return res.status(400).json({ error: 'IMDB ID could not be resolved. Add this title to your library first.' });
-        }
-
         const user = await User.findById(req.user._id).select('installedAddons');
         const addons = user.installedAddons || [];
 
-        if (addons.length === 0) {
-            return res.json({ streams: [], imdbId, noAddons: true });
-        }
-
-        const streamPath = (type === 'series' && season && episode)
-            ? `/stream/series/${imdbId}:${season}:${episode}.json`
-            : `/stream/movie/${imdbId}.json`;
-
-        const results = await Promise.allSettled(
-            addons.map(async (addon) => {
-                const url = `${addon.baseUrl}${streamPath}`;
-                const response = await axios.get(url, { timeout: 20000 });
-                const streams = response.data?.streams || [];
-                return streams.map(s => ({
-                    ...s,
-                    addonName: addon.name,
-                    addonId: addon.id,
-                }));
-            })
-        );
-
-        const allStreams = [];
-        results.forEach(result => {
-            if (result.status === 'fulfilled') {
-                allStreams.push(...result.value);
-            }
+        // Return metadata to the client so it can perform the fetches
+        res.json({ 
+            imdbId, 
+            addons: addons.map(a => ({ id: a.id, name: a.name, baseUrl: a.baseUrl })),
+            message: 'Client-side fetching recommended to bypass datacenter blocks.'
         });
-
-        res.json({ streams: allStreams, imdbId });
     } catch (err) {
         logger.error('fetchStreams error:', err);
-        res.status(500).json({ error: 'Failed to fetch streams' });
+        res.status(500).json({ error: 'Failed to resolve stream metadata' });
     }
 };

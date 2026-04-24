@@ -37,17 +37,59 @@ export const uninstallAddon = async (addonId) => {
 };
 
 export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, episode }) => {
-    const params = { type };
-    if (imdbId) params.imdbId = imdbId;
-    if (tmdbId) params.tmdbId = String(tmdbId);
-    if (season) params.season = season;
-    if (episode) params.episode = episode;
+    try {
+        // 1. Get user's installed addons from our backend
+        const { installedAddons } = await getInstalledAddons();
+        if (!installedAddons || installedAddons.length === 0) {
+            return { streams: [], noAddons: true };
+        }
 
-    const res = await axios.get(`${config.API_URL}/api/addons/streams`, {
-        headers: auth(),
-        params,
-    });
-    return res.data; // { streams, imdbId, noAddons? }
+        // 2. Ensure we have an IMDB ID (Torrentio needs it)
+        let finalImdbId = imdbId;
+        if (!finalImdbId && tmdbId) {
+            const tmdbType = type === 'series' ? 'tv' : 'movie';
+            const tmdbKey = process.env.REACT_APP_TMDB_API_KEY;
+            const tmdbRes = await axios.get(`https://api.themoviedb.org/3/${tmdbType}/${tmdbId}/external_ids`, {
+                params: { api_key: tmdbKey }
+            });
+            finalImdbId = tmdbRes.data.imdb_id;
+        }
+
+        if (!finalImdbId) {
+            throw new Error('Could not resolve IMDB ID for this title.');
+        }
+
+        // 3. Fetch streams from each addon DIRECTLY in the browser
+        const streamPath = (type === 'series' && season && episode)
+            ? `/stream/series/${finalImdbId}:${season}:${episode}.json`
+            : `/stream/movie/${finalImdbId}.json`;
+
+        const promises = installedAddons.map(async (addon) => {
+            try {
+                // Normalize URL to prevent double slashes
+                const base = addon.baseUrl.replace(/\/$/, '');
+                const url = `${base}${streamPath}`;
+                const res = await axios.get(url, { timeout: 15000 });
+                const streams = res.data?.streams || [];
+                return streams.map(s => ({
+                    ...s,
+                    addonName: addon.name,
+                    addonId: addon.id,
+                }));
+            } catch (err) {
+                console.error(`Failed to fetch streams from ${addon.name}:`, err.message);
+                return [];
+            }
+        });
+
+        const results = await Promise.all(promises);
+        const allStreams = results.flat();
+
+        return { streams: allStreams, imdbId: finalImdbId };
+    } catch (error) {
+        console.error('Error fetching streams client-side:', error);
+        return { streams: [], error: error.message };
+    }
 };
 
 export const buildTorrentStreamUrl = ({ magnet, infoHash, fileIdx }) => {
