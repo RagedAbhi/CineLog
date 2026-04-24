@@ -183,7 +183,11 @@ exports.fetchStreams = async (req, res) => {
             }
         });
 
-        res.json({ streams: allStreams, imdbId });
+        res.json({ 
+            streams: allStreams, 
+            imdbId, 
+            addons: addons.map(a => ({ id: a.id, name: a.name })) 
+        });
     } catch (err) {
         logger.error('fetchStreams Proxy Error:', err);
         res.status(500).json({ error: 'Failed to fetch streams via proxy' });

@@ -54,7 +54,10 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
     const isSeries = movie?.mediaType === 'series';
 
     useEffect(() => {
-        if (movie) loadStreams();
+        if (movie) {
+            setResolvedImdbId(''); // Reset ID to prevent 'leaks' from previous movies
+            loadStreams();
+        }
     }, [movie, season, episode]);
 
     const loadStreams = async () => {
