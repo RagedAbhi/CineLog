@@ -163,16 +163,33 @@ exports.fetchStreams = async (req, res) => {
         const results = await Promise.allSettled(
             addons.map(async (addon) => {
                 const url = `${addon.baseUrl.replace(/\/$/, '')}${streamPath}`;
-                const response = await axios.get(url, { 
-                    headers: desktopHeaders,
-                    timeout: 15000 
-                });
-                const streams = response.data?.streams || [];
-                return streams.map(s => ({
-                    ...s,
-                    addonName: addon.name,
-                    addonId: addon.id,
-                }));
+                logger.info(`[AddonProxy] Fetching streams for ${imdbId} from ${addon.name} (${url})`);
+                
+                try {
+                    const response = await axios.get(url, { 
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'Accept': 'application/json, text/plain, */*',
+                            'Origin': 'https://web.stremio.com',
+                            'Referer': 'https://web.stremio.com/',
+                            'X-Stremio-Client': 'stremio-web'
+                        },
+                        timeout: 12000 
+                    });
+                    const streams = response.data?.streams || [];
+                    logger.info(`[AddonProxy] Success: ${addon.name} returned ${streams.length} streams.`);
+                    return streams.map(s => ({
+                        ...s,
+                        addonName: addon.name,
+                        addonId: addon.id,
+                    }));
+                } catch (fetchErr) {
+                    logger.error(`[AddonProxy] ${addon.name} failed: ${fetchErr.response?.status || fetchErr.message}`);
+                    if (fetchErr.response?.status === 403) {
+                        logger.error(`[AddonProxy] 403 FORBIDDEN - Torrentio is blocking this server IP.`);
+                    }
+                    throw fetchErr;
+                }
             })
         );
 

@@ -47,6 +47,7 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
     const [noAddons, setNoAddons] = useState(false);
     const [season, setSeason] = useState(1);
     const [episode, setEpisode] = useState(1);
+    const [installedCount, setInstalledCount] = useState(0);
     const navigate = useNavigate();
 
     const isSeries = movie?.mediaType === 'series';
@@ -73,6 +74,8 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
             } else {
                 setNoAddons(false);
                 setStreams(data.streams || []);
+                // Addon metadata might be in data.addons from the backend proxy
+                if (data.addons) setInstalledCount(data.addons.length);
             }
         } catch (e) {
             const msg = e.response?.data?.error || e.message || 'Failed to fetch streams';
@@ -337,8 +340,12 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                     flexShrink: 0,
                 }}>
                     <p style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', lineHeight: 1.5 }}>
-                        Streams are provided by third-party addons. Cuerates does not host or distribute content.
+                        Streams are provided by third-party addons. CineLog does not host or distribute content.
                         Torrent streams are proxied through the local server for playback.
+                    </p>
+                    {/* Debug Info */}
+                    <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>
+                        Debug: IMDB: {movie.imdbID || 'N/A'} | TMDB: {movie.tmdbId || 'N/A'} | Installed: {installedCount} | Results: {streams.length}
                     </p>
                 </div>
             </motion.div>
