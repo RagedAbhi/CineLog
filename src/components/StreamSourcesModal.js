@@ -65,16 +65,19 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
         setError('');
         setStreams([]);
         try {
-            // HIGH-TRUST LOOKUP: Ensure we have a valid format
-            let idToUse = movie.imdbID;
-            // If imdbID is a number or doesn't start with 'tt', treat it as a TMDB ID
+            // ROBUST ID EXTRACTION: Look in every possible field
+            const rawImdb = movie.imdbID || movie.imdb_id;
+            const rawTmdb = movie.tmdbId || movie.tmdb_id || (typeof movie.id === 'number' || /^\d+$/.test(movie.id) ? movie.id : null);
+
+            let idToUse = rawImdb;
+            // If imdbID is a number, treat it as a TMDB ID
             if (idToUse && !String(idToUse).startsWith('tt')) {
-                idToUse = null; // Force backend resolution
+                idToUse = null; 
             }
 
             const data = await fetchStreams({
                 imdbId: idToUse,
-                tmdbId: movie.tmdbId || movie.id,
+                tmdbId: rawTmdb,
                 type: isSeries ? 'series' : 'movie',
                 season: isSeries ? season : undefined,
                 episode: isSeries ? episode : undefined,
