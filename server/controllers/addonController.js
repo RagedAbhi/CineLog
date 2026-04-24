@@ -42,20 +42,24 @@ exports.getAddons = async (req, res) => {
 };
 
 exports.installAddon = async (req, res) => {
-    const { manifestUrl } = req.body;
+    let { manifestUrl, manifest } = req.body;
     if (!manifestUrl) return res.status(400).json({ error: 'manifestUrl is required' });
 
     try {
-        const manifestRes = await axios.get(manifestUrl, { 
-            timeout: 12000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'application/json'
-            }
-        });
-        const manifest = manifestRes.data;
+        // If the frontend couldn't fetch it (e.g. CORS), we try one last time from server
+        // but usually the frontend will pass the manifest data here to bypass 403s.
+        if (!manifest) {
+            const manifestRes = await axios.get(manifestUrl, { 
+                timeout: 12000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json'
+                }
+            });
+            manifest = manifestRes.data;
+        }
 
-        if (!manifest.id || !manifest.name) {
+        if (!manifest || !manifest.id || !manifest.name) {
             return res.status(400).json({ error: 'Invalid Stremio manifest (missing id or name)' });
         }
 

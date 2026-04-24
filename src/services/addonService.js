@@ -9,9 +9,20 @@ export const getInstalledAddons = async () => {
 };
 
 export const installAddon = async (manifestUrl) => {
+    let manifest = null;
+    try {
+        // Try to fetch manifest in the browser first (uses user's IP, avoids server blocks)
+        const browserRes = await axios.get(manifestUrl, { timeout: 8000 });
+        if (browserRes.data && browserRes.data.id) {
+            manifest = browserRes.data;
+        }
+    } catch (e) {
+        console.warn('Browser-side manifest fetch failed, falling back to server fetch:', e.message);
+    }
+
     const res = await axios.post(
         `${config.API_URL}/api/addons/install`,
-        { manifestUrl },
+        { manifestUrl, manifest },
         { headers: auth() }
     );
     return res.data; // { success, addon }
