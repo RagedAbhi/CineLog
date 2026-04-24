@@ -87,13 +87,8 @@ exports.installAddon = async (req, res) => {
         res.json({ success: true, addon: addonData });
     } catch (err) {
         logger.error('installAddon error:', err);
-        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ECONNRESET') {
-            return res.status(400).json({ error: 'Could not reach the addon URL. Check the URL and try again.' });
-        }
-        if (err.response?.status === 404) {
-            return res.status(400).json({ error: 'Manifest not found at that URL (404).' });
-        }
-        res.status(500).json({ error: 'Failed to install addon' });
+        const remoteMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+        res.status(400).json({ error: `Addon Error: ${remoteMsg || 'Installation failed'}` });
     }
 };
 

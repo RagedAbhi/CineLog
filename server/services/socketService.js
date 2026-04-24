@@ -71,7 +71,9 @@ function handleLeaveRoom(socket, roomCode) {
  */
 exports.init = (httpServer) => {
     io = new Server(httpServer, {
-        cors: { origin: '*', methods: ['GET', 'POST'] }
+        cors: { origin: '*', methods: ['GET', 'POST'] },
+        pingTimeout: 60000,
+        pingInterval: 25000
     });
 
     // Authentication Middleware

@@ -377,7 +377,7 @@ const AddonsPage = () => {
                             </h3>
                             <p style={{ fontSize: '0.85rem', color: 'var(--muted-foreground)', lineHeight: 1.7, marginBottom: 20 }}>
                                 <strong style={{ color: 'var(--foreground)' }}>{pendingInstall.name}</strong> is a third-party addon
-                                and is not affiliated with, endorsed by, or operated by Cuerates or Anthropic.
+                                and is not affiliated with, endorsed by, or operated by CineLog or Google DeepMind.
                                 <br /><br />
                                 By installing this addon, you accept <strong>full responsibility</strong> for the content it provides
                                 and any actions you take with that content. Cuerates does not host, index, or distribute any media.

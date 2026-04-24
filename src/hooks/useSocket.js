@@ -14,7 +14,11 @@ const useSocket = () => {
 
     useEffect(() => {
         if (user && !socket) {
-            socket = io(SOCKET_URL);
+            const token = localStorage.getItem('token');
+            socket = io(SOCKET_URL, {
+                auth: { token },
+                transports: ['websocket']
+            });
 
             socket.on('connect', () => {
                 console.log('[Socket] Connected to server');

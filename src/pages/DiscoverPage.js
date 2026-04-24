@@ -156,11 +156,11 @@ class DiscoverPage extends Component {
                 {/* Filter Bar — uses the shared filters-bar class for consistent spacing */}
                 <div className="filters-bar discover-filters">
                     {/* Segmented Type Control */}
-                    <div className="filter-segment">
+                    <div className="filter-toggle-group">
                         {[{v:'all',l:'All'},{v:'movie',l:'Movies'},{v:'series',l:'Shows'}].map(t => (
                             <button
                                 key={t.v}
-                                className={`segment-btn ${typeFilter === t.v ? 'active' : ''}`}
+                                className={`filter-toggle-btn ${typeFilter === t.v ? 'active' : ''}`}
                                 onClick={() => this.setState({ typeFilter: t.v })}
                             >{t.l}</button>
                         ))}
