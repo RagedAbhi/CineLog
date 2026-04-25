@@ -61,6 +61,7 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
     }, [movie, season, episode]);
 
     const loadStreams = async () => {
+        console.log('[DEBUG] Stream Modal Movie Object:', movie);
         setLoading(true);
         setError('');
         setStreams([]);

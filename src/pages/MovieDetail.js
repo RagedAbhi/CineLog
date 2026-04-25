@@ -1094,7 +1094,11 @@ class MovieDetail extends Component {
 
           {this.state.showStreamSources && (
             <StreamSourcesModal
-              movie={movie}
+              movie={{ 
+                ...movie, 
+                imdbID: movie.imdbID || (String(this.props.movieId).startsWith('tt') ? this.props.movieId : null),
+                tmdbId: movie.tmdbId || (!String(this.props.movieId).startsWith('tt') ? this.props.movieId : null)
+              }}
               onClose={() => this.setState({ showStreamSources: false })}
               onWatch={(url, title) => this.setState({
                 showStreamSources: false,
