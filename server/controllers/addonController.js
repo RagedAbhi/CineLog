@@ -158,8 +158,8 @@ exports.fetchStreams = async (req, res) => {
         }
 
         const streamPath = (type === 'series' && season && episode)
-            ? `/stream/series/${imdbId}:${season}:${episode}.json`
-            : `/stream/movie/${imdbId}.json`;
+            ? `/stream/series/${finalImdbId}:${season}:${episode}.json`
+            : `/stream/movie/${finalImdbId}.json`;
 
         // 2. INTERNAL PROXY WITH DESKTOP MASKING
         const results = await Promise.allSettled(
@@ -193,10 +193,10 @@ exports.fetchStreams = async (req, res) => {
             }
         });
 
-        res.json({ 
-            streams: allStreams, 
-            imdbId, 
-            addons: addons.map(a => ({ id: a.id, name: a.name })) 
+        res.json({
+            streams: allStreams,
+            imdbId: finalImdbId,
+            addons: addons.map(a => ({ id: a.id, name: a.name }))
         });
     } catch (err) {
         logger.error('fetchStreams Proxy Error:', err);

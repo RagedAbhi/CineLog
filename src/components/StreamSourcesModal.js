@@ -68,13 +68,15 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
         try {
             // ROBUST ID EXTRACTION: Look in every possible field
             const rawImdb = movie.imdbID || movie.imdb_id;
-            const rawTmdb = movie.tmdbId || movie.tmdb_id || (typeof movie.id === 'number' || /^\d+$/.test(movie.id) ? movie.id : null);
 
-            let idToUse = rawImdb;
-            // If imdbID is a number, treat it as a TMDB ID
-            if (idToUse && !String(idToUse).startsWith('tt')) {
-                idToUse = null; 
-            }
+            // A valid IMDB ID always starts with 'tt'. If movie.imdbID is numeric
+            // (e.g. a TMDB ID stored in the wrong field), keep it as a TMDB fallback.
+            const imdbFromField = rawImdb && String(rawImdb).startsWith('tt') ? rawImdb : null;
+            const tmdbFromImdbField = rawImdb && !String(rawImdb).startsWith('tt') && /^\d+$/.test(String(rawImdb)) ? rawImdb : null;
+
+            const idToUse = imdbFromField;
+            const rawTmdb = movie.tmdbId || movie.tmdb_id || tmdbFromImdbField ||
+                (typeof movie.id === 'number' || /^\d+$/.test(String(movie.id || '')) ? movie.id : null);
 
             const data = await fetchStreams({
                 imdbId: idToUse,
