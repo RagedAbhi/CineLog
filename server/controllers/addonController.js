@@ -143,14 +143,33 @@ exports.fetchStreams = async (req, res) => {
             }
         }
 
-        // Step 2: title+year search → get TMDB ID → resolve IMDB ID
+        // Step 2: title+year search → pick best matching result → resolve IMDB ID
         if (!finalImdbId && title && TMDB_API_KEY) {
             try {
+                const yearParam = tmdbType === 'tv' ? 'first_air_date_year' : 'primary_release_year';
                 const searchRes = await axios.get(
                     `https://api.themoviedb.org/3/search/${tmdbType}`,
-                    { params: { api_key: TMDB_API_KEY, query: title, ...(year ? { year } : {}) }, timeout: 8000 }
+                    { params: { api_key: TMDB_API_KEY, query: title, ...(year ? { [yearParam]: year } : {}) }, timeout: 8000 }
                 );
-                const hit = searchRes.data.results?.[0];
+                const results = searchRes.data.results || [];
+                const titleField = tmdbType === 'tv' ? 'name' : 'title';
+                const queryLower = title.toLowerCase().trim();
+
+                // 1. Exact title match
+                let hit = results.find(r =>
+                    (r[titleField] || '').toLowerCase().trim() === queryLower
+                );
+                // 2. Title match + year match
+                if (!hit && year) {
+                    hit = results.find(r => {
+                        const rYear = (r.release_date || r.first_air_date || '').slice(0, 4);
+                        return rYear === String(year) &&
+                            (r[titleField] || '').toLowerCase().includes(queryLower.slice(0, 8));
+                    });
+                }
+                // 3. First result as last resort
+                hit = hit || results[0];
+
                 if (hit?.id) {
                     const extRes = await axios.get(
                         `https://api.themoviedb.org/3/${tmdbType}/${hit.id}/external_ids`,
