@@ -45,6 +45,7 @@ class MovieDetail extends Component {
       showVideoPlayer: false,
       playerUrl: null,
       playerTitle: null,
+      playerStream: null,
       engagement: null,
       watchedByFriends: [],
       showWatchersModal: false,
@@ -1100,20 +1101,22 @@ class MovieDetail extends Component {
                 tmdbId: movie.tmdbId || (!String(this.props.movieId).startsWith('tt') ? this.props.movieId : null)
               }}
               onClose={() => this.setState({ showStreamSources: false })}
-              onWatch={(url, title) => this.setState({
+              onWatch={(url, title, stream) => this.setState({
                 showStreamSources: false,
                 showVideoPlayer: true,
                 playerUrl: url,
                 playerTitle: title,
+                playerStream: stream || null,
               })}
             />
           )}
 
-          {this.state.showVideoPlayer && this.state.playerUrl && (
+          {this.state.showVideoPlayer && (this.state.playerUrl || this.state.playerStream) && (
             <VideoPlayerModal
               url={this.state.playerUrl}
+              stream={this.state.playerStream}
               title={this.state.playerTitle || movie.title}
-              onClose={() => this.setState({ showVideoPlayer: false, playerUrl: null, playerTitle: null })}
+              onClose={() => this.setState({ showVideoPlayer: false, playerUrl: null, playerTitle: null, playerStream: null })}
             />
           )}
         </div>

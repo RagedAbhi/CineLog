@@ -53,12 +53,13 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
 
     const isSeries = movie?.mediaType === 'series';
 
+    const movieKey = movie?._id || movie?.title || '';
     useEffect(() => {
         if (movie) {
-            setResolvedImdbId(''); // Reset ID to prevent 'leaks' from previous movies
+            setResolvedImdbId('');
             loadStreams();
         }
-    }, [movie, season, episode]);
+    }, [movieKey, season, episode]); // movieKey is a stable string — prevents reload on parent re-render
 
     const loadStreams = async () => {
         console.log('[DEBUG] Stream Modal Movie Object:', movie);
@@ -118,9 +119,14 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
     }, {});
 
     const handleWatch = (stream) => {
-        const url = resolveStreamUrl(stream);
-        if (!url) return;
-        onWatch(url, movie.title, stream);
+        if (isMagnetOrHash(stream)) {
+            // Pass raw stream to player — browser WebTorrent handles it, no backend needed
+            onWatch(null, movie.title, stream);
+        } else {
+            const url = stream.url;
+            if (!url) return;
+            onWatch(url, movie.title, stream);
+        }
     };
 
     return (
