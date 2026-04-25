@@ -36,9 +36,9 @@ export const uninstallAddon = async (addonId) => {
     return res.data;
 };
 
-export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, episode }) => {
+export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, episode, title, year }) => {
     try {
-        const params = { type, imdbId, tmdbId, season, episode };
+        const params = { type, imdbId, tmdbId, season, episode, title, year };
         const res = await axios.get(`${config.API_URL}/api/addons/streams`, {
             headers: auth(),
             params,

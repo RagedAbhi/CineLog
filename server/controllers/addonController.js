@@ -119,38 +119,53 @@ exports.uninstallAddon = async (req, res) => {
 };
 
 exports.fetchStreams = async (req, res) => {
-    let { imdbId, tmdbId, type, season, episode } = req.query;
+    let { imdbId, tmdbId, type, season, episode, title, year } = req.query;
     if (!type) type = 'movie';
 
     try {
         const accountData = await User.findById(req.user.id).select('installedAddons');
         const addons = accountData?.installedAddons || [];
 
-        // 1. Resolve IMDB ID via TMDB if missing or invalid (CRITICAL for Torrentio)
-        let finalImdbId = imdbId;
-        
-        // If imdbId is missing OR is a numeric TMDB ID OR is a known corrupted ID (like tt0358273 leak)
-        if (!finalImdbId || !String(finalImdbId).startsWith('tt') || finalImdbId === 'tt0358273') {
-            const idToUse = (tmdbId && tmdbId !== 'undefined') ? tmdbId : null;
-            
-            if (idToUse && /^\d+$/.test(idToUse)) {
-                try {
-                    const tmdbType = type === 'series' ? 'tv' : 'movie';
-                    const tmdbKey = process.env.TMDB_API_KEY;
-                    const tmdbRes = await axios.get(`https://api.themoviedb.org/3/${tmdbType}/${idToUse}/external_ids`, {
-                        params: { api_key: tmdbKey }
-                    });
-                    finalImdbId = tmdbRes.data.imdb_id;
-                } catch (tmdbErr) {
-                    console.error('[AddonProxy] TMDB ID Resolution failed:', tmdbErr.message);
-                }
+        const tmdbType = type === 'series' ? 'tv' : 'movie';
+        let finalImdbId = (imdbId && String(imdbId).startsWith('tt')) ? imdbId : null;
+
+        // Step 1: numeric tmdbId → resolve IMDB ID via /external_ids
+        const numericTmdbId = (tmdbId && /^\d+$/.test(String(tmdbId))) ? tmdbId : null;
+        if (!finalImdbId && numericTmdbId && TMDB_API_KEY) {
+            try {
+                const extRes = await axios.get(
+                    `https://api.themoviedb.org/3/${tmdbType}/${numericTmdbId}/external_ids`,
+                    { params: { api_key: TMDB_API_KEY }, timeout: 8000 }
+                );
+                finalImdbId = extRes.data.imdb_id || null;
+            } catch (e) {
+                console.error('[AddonProxy] tmdbId→IMDB resolution failed:', e.message);
             }
         }
-        
-        // FINAL SAFETY: If we STILL don't have a valid ID, we MUST return 0 results 
+
+        // Step 2: title+year search → get TMDB ID → resolve IMDB ID
+        if (!finalImdbId && title && TMDB_API_KEY) {
+            try {
+                const searchRes = await axios.get(
+                    `https://api.themoviedb.org/3/search/${tmdbType}`,
+                    { params: { api_key: TMDB_API_KEY, query: title, ...(year ? { year } : {}) }, timeout: 8000 }
+                );
+                const hit = searchRes.data.results?.[0];
+                if (hit?.id) {
+                    const extRes = await axios.get(
+                        `https://api.themoviedb.org/3/${tmdbType}/${hit.id}/external_ids`,
+                        { params: { api_key: TMDB_API_KEY }, timeout: 8000 }
+                    );
+                    finalImdbId = extRes.data.imdb_id || null;
+                }
+            } catch (e) {
+                console.error('[AddonProxy] Title search fallback failed:', e.message);
+            }
+        }
+
         if (!finalImdbId || !String(finalImdbId).startsWith('tt')) {
-             console.warn(`[AddonProxy] No valid IMDB ID found for ${type}. Aborting ghost search.`);
-             return res.status(200).json({ streams: [], imdbId: null, addons: addons });
+            console.warn(`[AddonProxy] Could not resolve IMDB ID for "${title || imdbId}"`);
+            return res.status(200).json({ streams: [], imdbId: null, addons });
         }
 
         if (addons.length === 0) {

@@ -66,24 +66,24 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
         setError('');
         setStreams([]);
         try {
-            // ROBUST ID EXTRACTION: Look in every possible field
-            const rawImdb = movie.imdbID || movie.imdb_id;
+            // Only send imdbId if it's a real tt-format IMDB ID
+            const rawImdb = movie.imdbID || movie.imdb_id || '';
+            const imdbId = String(rawImdb).startsWith('tt') ? rawImdb : null;
 
-            // A valid IMDB ID always starts with 'tt'. If movie.imdbID is numeric
-            // (e.g. a TMDB ID stored in the wrong field), keep it as a TMDB fallback.
-            const imdbFromField = rawImdb && String(rawImdb).startsWith('tt') ? rawImdb : null;
-            const tmdbFromImdbField = rawImdb && !String(rawImdb).startsWith('tt') && /^\d+$/.test(String(rawImdb)) ? rawImdb : null;
-
-            const idToUse = imdbFromField;
-            const rawTmdb = movie.tmdbId || movie.tmdb_id || tmdbFromImdbField ||
-                (typeof movie.id === 'number' || /^\d+$/.test(String(movie.id || '')) ? movie.id : null);
+            // Only send tmdbId if it's a purely numeric TMDB ID (never send MongoDB ObjectIds)
+            const candidates = [movie.tmdbId, movie.tmdb_id, movie.id, rawImdb];
+            const tmdbId = candidates
+                .map(v => String(v || ''))
+                .find(v => /^\d+$/.test(v) && v.length > 0) || null;
 
             const data = await fetchStreams({
-                imdbId: idToUse,
-                tmdbId: rawTmdb,
+                imdbId,
+                tmdbId,
                 type: isSeries ? 'series' : 'movie',
                 season: isSeries ? season : undefined,
                 episode: isSeries ? episode : undefined,
+                title: movie.title,
+                year: movie.year,
             });
             
             if (data.noAddons) {
