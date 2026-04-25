@@ -123,17 +123,33 @@ exports.fetchStreams = async (req, res) => {
     if (!type) type = 'movie';
 
     try {
-        // 1. Resolve IMDB ID via TMDB if it's missing or numeric
-        if (!imdbId || !String(imdbId).startsWith('tt')) {
-            const idToUse = imdbId || tmdbId;
-            if (idToUse && TMDB_API_KEY) {
-                const tmdbType = type === 'series' ? 'tv' : 'movie';
-                const extRes = await axios.get(
-                    `https://api.themoviedb.org/3/${tmdbType}/${idToUse}/external_ids`,
-                    { params: { api_key: TMDB_API_KEY }, timeout: 8000 }
-                );
-                imdbId = extRes.data.imdb_id;
+        // 1. Resolve IMDB ID via TMDB if missing or invalid (CRITICAL for Torrentio)
+        let finalImdbId = imdbId;
+        const user = await User.findById(req.user._id).select('installedAddons');
+        
+        // If imdbId is missing OR is a numeric TMDB ID OR is a known corrupted ID (like tt0358273 leak)
+        if (!finalImdbId || !String(finalImdbId).startsWith('tt') || finalImdbId === 'tt0358273') {
+            const idToUse = (tmdbId && tmdbId !== 'undefined') ? tmdbId : null;
+            
+            if (idToUse && /^\d+$/.test(idToUse)) {
+                try {
+                    const tmdbType = type === 'series' ? 'tv' : 'movie';
+                    const tmdbKey = process.env.TMDB_API_KEY;
+                    const tmdbRes = await axios.get(`https://api.themoviedb.org/3/${tmdbType}/${idToUse}/external_ids`, {
+                        params: { api_key: tmdbKey }
+                    });
+                    finalImdbId = tmdbRes.data.imdb_id;
+                } catch (tmdbErr) {
+                    console.error('[AddonProxy] TMDB ID Resolution failed:', tmdbErr.message);
+                }
             }
+        }
+        
+        // FINAL SAFETY: If we STILL don't have a valid ID, we MUST return 0 results 
+        // instead of searching for a random 'Ghost ID'.
+        if (!finalImdbId || !String(finalImdbId).startsWith('tt')) {
+             console.warn(`[AddonProxy] No valid IMDB ID found for ${type}. Aborting to prevent ghost search.`);
+             return res.status(200).json({ streams: [], imdbId: null, addons: user.installedAddons });
         }
 
         if (!imdbId) {
