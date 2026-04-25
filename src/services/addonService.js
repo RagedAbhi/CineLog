@@ -36,6 +36,40 @@ export const uninstallAddon = async (addonId) => {
     return res.data;
 };
 
+// Step 1: ask backend to resolve the IMDB ID + get addon list
+export const resolveImdbId = async ({ imdbId, tmdbId, type = 'movie', title, year }) => {
+    const res = await axios.get(`${config.API_URL}/api/addons/resolve`, {
+        headers: auth(),
+        params: { imdbId, tmdbId, type, title, year },
+        timeout: 20000,
+    });
+    return res.data; // { imdbId, addons }
+};
+
+// Step 2: call each addon directly from the browser (avoids cloud IP blocking)
+export const fetchStreamsFromBrowser = async ({ imdbId, addons, type = 'movie', season, episode }) => {
+    if (!imdbId || !addons?.length) return [];
+
+    const streamPath = (type === 'series' && season && episode)
+        ? `/stream/series/${imdbId}:${season}:${episode}.json`
+        : `/stream/movie/${imdbId}.json`;
+
+    const results = await Promise.allSettled(
+        addons.map(async (addon) => {
+            const url = `${addon.baseUrl.replace(/\/$/, '')}${streamPath}`;
+            const res = await axios.get(url, { timeout: 15000 });
+            return (res.data?.streams || []).map(s => ({
+                ...s,
+                addonName: addon.name,
+                addonId: addon.id,
+            }));
+        })
+    );
+
+    return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+};
+
+// Legacy proxy path (kept for fallback)
 export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, episode, title, year }) => {
     try {
         const params = { type, imdbId, tmdbId, season, episode, title, year };
@@ -44,12 +78,10 @@ export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, epi
             params,
             timeout: 25000
         });
-        
-        // Return the streams along with the resolved metadata
-        return { 
-            streams: res.data?.streams || [], 
+        return {
+            streams: res.data?.streams || [],
             imdbId: res.data?.imdbId,
-            addons: res.data?.addons || [] // Fallback if backend returned addons list
+            addons: res.data?.addons || []
         };
     } catch (error) {
         console.error('Proxy fetch failed:', error);

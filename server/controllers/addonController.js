@@ -118,6 +118,75 @@ exports.uninstallAddon = async (req, res) => {
     }
 };
 
+// Lightweight endpoint: resolves IMDB ID + returns addon list.
+// Torrentio is then called directly from the browser (avoids cloud IP blocking).
+exports.resolveImdbId = async (req, res) => {
+    let { imdbId, tmdbId, type, title, year } = req.query;
+    if (!type) type = 'movie';
+    const tmdbType = type === 'series' ? 'tv' : 'movie';
+
+    try {
+        const accountData = await User.findById(req.user.id).select('installedAddons');
+        const addons = (accountData?.installedAddons || []).map(a => ({
+            id: a.id, name: a.name, baseUrl: a.baseUrl, logo: a.logo,
+        }));
+
+        let finalImdbId = (imdbId && String(imdbId).startsWith('tt')) ? imdbId : null;
+
+        // Step 1: numeric tmdbId → /external_ids
+        const numericTmdbId = (tmdbId && /^\d+$/.test(String(tmdbId))) ? tmdbId : null;
+        if (!finalImdbId && numericTmdbId && TMDB_API_KEY) {
+            try {
+                const r = await axios.get(
+                    `https://api.themoviedb.org/3/${tmdbType}/${numericTmdbId}/external_ids`,
+                    { params: { api_key: TMDB_API_KEY }, timeout: 8000 }
+                );
+                finalImdbId = r.data.imdb_id || null;
+            } catch (e) {
+                logger.error('[resolve] tmdbId lookup failed:', e.message);
+            }
+        }
+
+        // Step 2: title search → best match → /external_ids
+        if (!finalImdbId && title && TMDB_API_KEY) {
+            try {
+                const yearParam = tmdbType === 'tv' ? 'first_air_date_year' : 'primary_release_year';
+                const searchRes = await axios.get(
+                    `https://api.themoviedb.org/3/search/${tmdbType}`,
+                    { params: { api_key: TMDB_API_KEY, query: title, ...(year ? { [yearParam]: year } : {}) }, timeout: 8000 }
+                );
+                const results = searchRes.data.results || [];
+                const titleField = tmdbType === 'tv' ? 'name' : 'title';
+                const q = title.toLowerCase().trim();
+
+                let hit = results.find(r => (r[titleField] || '').toLowerCase().trim() === q);
+                if (!hit && year) {
+                    hit = results.find(r => {
+                        const ry = (r.release_date || r.first_air_date || '').slice(0, 4);
+                        return ry === String(year) && (r[titleField] || '').toLowerCase().includes(q.slice(0, 8));
+                    });
+                }
+                hit = hit || results[0];
+
+                if (hit?.id) {
+                    const extRes = await axios.get(
+                        `https://api.themoviedb.org/3/${tmdbType}/${hit.id}/external_ids`,
+                        { params: { api_key: TMDB_API_KEY }, timeout: 8000 }
+                    );
+                    finalImdbId = extRes.data.imdb_id || null;
+                }
+            } catch (e) {
+                logger.error('[resolve] title search failed:', e.message);
+            }
+        }
+
+        res.json({ imdbId: finalImdbId || null, addons });
+    } catch (err) {
+        logger.error('resolveImdbId error:', err);
+        res.status(500).json({ error: 'Failed to resolve IMDB ID' });
+    }
+};
+
 exports.fetchStreams = async (req, res) => {
     let { imdbId, tmdbId, type, season, episode, title, year } = req.query;
     if (!type) type = 'movie';

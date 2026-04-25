@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Puzzle, AlertTriangle, Play, Loader2, ExternalLink } from 'lucide-react';
-import { fetchStreams, parseStreamQuality, parseSeeders, buildTorrentStreamUrl } from '../services/addonService';
+import { resolveImdbId, fetchStreamsFromBrowser, parseStreamQuality, parseSeeders, buildTorrentStreamUrl } from '../services/addonService';
 import { useNavigate } from 'react-router-dom';
 
 const QUALITY_COLORS = {
@@ -66,34 +66,41 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
         setError('');
         setStreams([]);
         try {
-            // Only send imdbId if it's a real tt-format IMDB ID
+            // Only pass a real tt-format IMDB ID; only pass numeric TMDB IDs
             const rawImdb = movie.imdbID || movie.imdb_id || '';
             const imdbId = String(rawImdb).startsWith('tt') ? rawImdb : null;
-
-            // Only send tmdbId if it's a purely numeric TMDB ID (never send MongoDB ObjectIds)
             const candidates = [movie.tmdbId, movie.tmdb_id, movie.id, rawImdb];
-            const tmdbId = candidates
-                .map(v => String(v || ''))
-                .find(v => /^\d+$/.test(v) && v.length > 0) || null;
+            const tmdbId = candidates.map(v => String(v || '')).find(v => /^\d+$/.test(v) && v.length > 0) || null;
 
-            const data = await fetchStreams({
-                imdbId,
-                tmdbId,
+            // Step 1: backend resolves IMDB ID (TMDB call from Render, not rate-limited)
+            const resolved = await resolveImdbId({
+                imdbId, tmdbId,
                 type: isSeries ? 'series' : 'movie',
-                season: isSeries ? season : undefined,
-                episode: isSeries ? episode : undefined,
                 title: movie.title,
                 year: movie.year,
             });
-            
-            if (data.noAddons) {
+
+            if (!resolved.addons?.length) {
                 setNoAddons(true);
-            } else {
-                setNoAddons(false);
-                setStreams(data.streams || []);
-                setResolvedImdbId(data.imdbId || '');
-                if (data.addons) setInstalledCount(data.addons.length);
+                return;
             }
+            if (!resolved.imdbId) {
+                setError('Could not find this title on TMDB. Try searching by exact title.');
+                return;
+            }
+
+            setResolvedImdbId(resolved.imdbId);
+            setInstalledCount(resolved.addons.length);
+
+            // Step 2: call Torrentio directly from browser (home IP, not cloud IP)
+            const streams = await fetchStreamsFromBrowser({
+                imdbId: resolved.imdbId,
+                addons: resolved.addons,
+                type: isSeries ? 'series' : 'movie',
+                season: isSeries ? season : undefined,
+                episode: isSeries ? episode : undefined,
+            });
+            setStreams(streams);
         } catch (e) {
             const msg = e.response?.data?.error || e.message || 'Failed to fetch streams';
             setError(msg);
