@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const playbackController = require('../controllers/playbackController');
-const auth = require('../middleware/auth');
+const auth = require('../middleware/authMiddleware');
 
 // All playback routes require authentication
 router.post('/update', auth, playbackController.updateProgress);
