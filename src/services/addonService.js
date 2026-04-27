@@ -69,6 +69,30 @@ export const fetchStreamsFromBrowser = async ({ imdbId, addons, type = 'movie', 
     return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 };
 
+export const fetchSubtitles = async ({ imdbId, addons, type = 'movie', season, episode }) => {
+    if (!imdbId || !addons?.length) return [];
+
+    const subtitlePath = (type === 'series' && season && episode)
+        ? `/subtitles/series/${imdbId}:${season}:${episode}.json`
+        : `/subtitles/movie/${imdbId}.json`;
+
+    // Try all installed addons, many don't declare resources correctly
+    const subAddons = addons;
+
+    const results = await Promise.allSettled(
+        subAddons.map(async (addon) => {
+            const url = `${addon.baseUrl.replace(/\/$/, '')}${subtitlePath}`;
+            const res = await axios.get(url, { timeout: 10000 });
+            return (res.data?.subtitles || []).map(s => ({
+                ...s,
+                addonName: addon.name,
+            }));
+        })
+    );
+
+    return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+};
+
 // Legacy proxy path (kept for fallback)
 export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, episode, title, year }) => {
     try {
@@ -89,11 +113,16 @@ export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, epi
     }
 };
 
-export const buildTorrentStreamUrl = ({ magnet, infoHash, fileIdx }) => {
+export const buildTorrentStreamUrl = ({ magnet, infoHash, fileIdx, sources = [] }) => {
     const params = new URLSearchParams();
     if (magnet) params.set('magnet', magnet);
     if (infoHash) params.set('infoHash', infoHash);
     if (fileIdx !== undefined && fileIdx !== null) params.set('fileIdx', String(fileIdx));
+    if (sources.length > 0) params.set('sources', sources.join(','));
+
+    if (config.IS_ELECTRON) {
+        return `${config.TORRENT_SERVER_URL}/api/torrent/stream?${params.toString()}`;
+    }
     params.set('token', localStorage.getItem('token') || '');
     return `${config.API_URL}/api/torrent/stream?${params.toString()}`;
 };

@@ -3,10 +3,11 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/thunks';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, Puzzle, Sparkles, Gamepad2 } from 'lucide-react';
-
+import { User, List, LogOut, LayoutDashboard, Film, Tv, Users, Puzzle, Sparkles, Gamepad2, Clapperboard, Download } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import CueratesLogo from './CueratesLogo';
+import VideoPlayerModal from './VideoPlayerModal';
+import config from '../config';
 
 const Topbar = () => {
     const location = useLocation();
@@ -20,6 +21,10 @@ const Topbar = () => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const dropdownRef = useRef(null);
+    const [showJoinInput, setShowJoinInput] = useState(false);
+    const [joinCode, setJoinCode] = useState('');
+    const [joinRoomId, setJoinRoomId] = useState(null);
+    const joinInputRef = useRef(null);
 
     useMotionValueEvent(scrollY, "change", (latest) => {
         const previous = scrollY.getPrevious();
@@ -66,8 +71,6 @@ const Topbar = () => {
         { path: '/tvshows', label: 'Shows', icon: Tv },
         { path: '/discover', label: 'Discover', icon: Sparkles },
         { path: '/friends', label: 'Social', icon: Users },
-        { path: '/games', label: 'Games', icon: Gamepad2 },
-        { path: '/addons', label: 'Addons', icon: Puzzle },
     ];
 
     const isMovieDetail = location.pathname.startsWith('/movies/') && location.pathname !== '/movies-list';
@@ -137,18 +140,38 @@ const Topbar = () => {
 
                     <div className="topbar-actions-premium" ref={dropdownRef}>
 
-                        {/* Extension Install Button */}
+                        {/* Join Stream */}
                         {!isMobile && (
-                            <a
-                                href="https://github.com/RagedAbhi/cuerates"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="extension-install-btn"
-                                title="Install Cuerates Extension"
-                            >
-                                <Puzzle size={15} />
-                                <span>Get Extension</span>
-                            </a>
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => { setShowJoinInput(!showJoinInput); setTimeout(() => joinInputRef.current?.focus(), 100); }}
+                                    title="Join a Stream Together session"
+                                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(168,85,247,0.35)', background: 'rgba(168,85,247,0.1)', color: '#a855f7', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, transition: 'all 0.2s' }}
+                                >
+                                    <Clapperboard size={14} />
+                                    Join Stream
+                                </button>
+                                {showJoinInput && (
+                                    <div style={{ position: 'absolute', top: '110%', right: 0, background: 'rgba(11,9,28,0.97)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 12, padding: 12, zIndex: 40000, minWidth: 220, boxShadow: '0 16px 40px rgba(0,0,0,0.5)' }}>
+                                        <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Enter Room Code</p>
+                                        <div style={{ display: 'flex', gap: 6 }}>
+                                            <input
+                                                ref={joinInputRef}
+                                                value={joinCode}
+                                                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                                                onKeyDown={e => { if (e.key === 'Enter' && joinCode.trim()) { setJoinRoomId(joinCode.trim()); setShowJoinInput(false); setJoinCode(''); } }}
+                                                placeholder="e.g. AB12CD"
+                                                maxLength={8}
+                                                style={{ flex: 1, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '6px 10px', color: '#fff', fontSize: '0.82rem', fontFamily: 'monospace', letterSpacing: 2, outline: 'none' }}
+                                            />
+                                            <button
+                                                onClick={() => { if (joinCode.trim()) { setJoinRoomId(joinCode.trim()); setShowJoinInput(false); setJoinCode(''); } }}
+                                                style={{ background: '#a855f7', border: 'none', borderRadius: 8, padding: '6px 12px', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
+                                            >Join</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         )}
 
                         <div 
@@ -190,17 +213,22 @@ const Topbar = () => {
                                     
                                     <div className="dropdown-divider" />
 
-                                    <a
-                                        href="https://github.com/RagedAbhi/cuerates"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="dropdown-item"
-                                        onClick={() => setDropdownOpen(false)}
-                                    >
+                                    <NavLink to="/addons" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
                                         <Puzzle size={16} />
-                                        <span>Get Extension</span>
-                                    </a>
+                                        <span>Addons</span>
+                                    </NavLink>
 
+                                    {!config.IS_ELECTRON && (
+                                        <a
+                                            href={config.DESKTOP_APP_URL}
+                                            className="dropdown-item"
+                                            onClick={() => setDropdownOpen(false)}
+                                        >
+                                            <Download size={16} />
+                                            <span>Desktop App</span>
+                                        </a>
+                                    )}
+                                    
                                     <button className="dropdown-item logout" onClick={onLogout}>
                                         <LogOut size={16} />
                                         <span>Log out</span>
@@ -212,6 +240,17 @@ const Topbar = () => {
                 </div>
             </div>
         </motion.header>
+
+        {/* Guest stream join modal */}
+        {joinRoomId && (
+            <VideoPlayerModal
+                url={null}
+                stream={null}
+                title="Stream Together"
+                roomId={joinRoomId}
+                onClose={() => setJoinRoomId(null)}
+            />
+        )}
 
         {/* Mobile Bottom Navigation (Moved outside header to handle fixed positioning better) */}
         <AnimatePresence>

@@ -6,7 +6,6 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { fetchMovies, updateMovie, deleteMovie, markAsWatched, addMovie } from '../store/thunks';
 import MarkWatchedModal from '../components/MarkWatchedModal';
 import AddMovieModal from '../components/AddMovieModal';
-import WatchTogetherModal from '../components/WatchTogetherModal';
 import StreamSourcesModal from '../components/StreamSourcesModal';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { fetchStreamingAvailability, fetchTrailerID } from '../services/tmdbService';
@@ -24,8 +23,9 @@ function MovieDetailWrapper(props) {
   const location = useLocation();
   const isExternal = new URLSearchParams(location.search).get('external') === 'true';
   const autoRecommend = new URLSearchParams(location.search).get('recommend') === 'true';
+  const autoWatch = new URLSearchParams(location.search).get('watch') === 'true';
   const mediaType = new URLSearchParams(location.search).get('type');
-  return <MovieDetail {...props} navigate={navigate} movieId={id} isExternal={isExternal} autoRecommend={autoRecommend} mediaType={mediaType} />;
+  return <MovieDetail {...props} navigate={navigate} movieId={id} isExternal={isExternal} autoRecommend={autoRecommend} autoWatch={autoWatch} mediaType={mediaType} />;
 }
 
 class MovieDetail extends Component {
@@ -39,8 +39,6 @@ class MovieDetail extends Component {
       editForm: {},
       externalMovie: null,
       localLoading: false,
-      showWatchTogether: false,
-      watchTogetherNetflixUrl: null,
       showStreamSources: false,
       showVideoPlayer: false,
       playerUrl: null,
@@ -63,6 +61,10 @@ class MovieDetail extends Component {
 
     if (this.props.autoRecommend) {
         this.handleRecommendClick();
+    }
+
+    if (this.props.autoWatch) {
+        this.setState({ showStreamSources: true });
     }
   }
 
@@ -368,19 +370,6 @@ class MovieDetail extends Component {
             </a>
           ))}
         </div>
-
-        {netflixProvider && (
-          <button
-            className="wt-trigger-btn"
-            onClick={() => this.setState({
-              showWatchTogether: true,
-              watchTogetherNetflixUrl: netflixProvider.link
-            })}
-          >
-            <span className="wt-trigger-n">N</span>
-            Watch Together on Netflix
-          </button>
-        )}
       </div>
     );
   }
@@ -830,13 +819,25 @@ class MovieDetail extends Component {
                   <button className="btn btn-secondary" onClick={this.handleRecommendClick}>
                     ✉ Recommend to Friend
                   </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => this.setState({ showStreamSources: true })}
-                    style={{ background: 'var(--accent-gradient)', border: 'none' }}
-                  >
-                    ▶ Watch Now
-                  </button>
+                  {config.IS_ELECTRON ? (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => this.setState({ showStreamSources: true })}
+                      style={{ background: 'var(--accent-gradient)', border: 'none' }}
+                    >
+                      ▶ Watch Now
+                    </button>
+                  ) : (
+                    <a
+                      href={config.DESKTOP_APP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary"
+                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      ⬇ Desktop App to Stream
+                    </a>
+                  )}
                   <button
                     className="btn btn-secondary"
                     onClick={this.handlePlayTrailer}
@@ -1060,14 +1061,6 @@ class MovieDetail extends Component {
             </div>
           )}
 
-          {this.state.showWatchTogether && (
-            <WatchTogetherModal
-              movie={this.getMovie()}
-              netflixUrl={this.state.watchTogetherNetflixUrl}
-              onClose={() => this.setState({ showWatchTogether: false, watchTogetherNetflixUrl: null })}
-            />
-          )}
-
           {this.state.showMarkWatched && (
             <MarkWatchedModal
               movie={movie}
@@ -1116,6 +1109,8 @@ class MovieDetail extends Component {
               url={this.state.playerUrl}
               stream={this.state.playerStream}
               title={this.state.playerTitle || movie.title}
+              movie={movie}
+              imdbId={movie.imdbID}
               onClose={() => this.setState({ showVideoPlayer: false, playerUrl: null, playerTitle: null, playerStream: null })}
             />
           )}

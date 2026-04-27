@@ -238,7 +238,7 @@ class MovieCard extends Component {
       
     if (idToUse) {
       const url = (movie.isExternal || !movie._id || movie.isRecommendation)
-        ? `/movies/${idToUse}?external=true&type=${movie.mediaType || 'movie'}` 
+        ? `/movies/${idToUse}?external=true&type=${movie.mediaType || (movie.isExternal && movie.name ? 'series' : 'movie')}` 
         : `/movies/${idToUse}`;
       navigate(url);
     }
@@ -264,16 +264,16 @@ class MovieCard extends Component {
             // rec._id is a Recommendation MongoDB ObjectId — NOT a valid TMDB/IMDB movie ID.
             // Passing it to TMDB causes a completely different movie to be fetched.
             const idToUse = (movie.isRecommendation || movie.isExternal)
-                ? (movie.imdbID || movie._id)
-                : (movie._id || movie.imdbID);
+                ? (movie.imdbID || movie.tmdbId || movie._id)
+                : (movie._id || movie.imdbID || movie.tmdbId);
             if (idToUse) {
                 const url = (movie.isExternal || !movie._id || movie.isRecommendation)
-                    ? `/movies/${idToUse}?external=true&type=${movie.mediaType || 'movie'}` 
+                    ? `/movies/${idToUse}?external=true&type=${movie.mediaType || (movie.isExternal && movie.name ? 'series' : 'movie')}` 
                     : `/movies/${idToUse}`;
                 navigate(url);
             }
         }}
-        style={{ cursor: (movie._id || movie.imdbID) ? 'pointer' : 'default' }}
+        style={{ cursor: (movie._id || movie.imdbID || movie.tmdbId) ? 'pointer' : 'default' }}
       >
         <div className="movie-card-quick-actions">
           <button 

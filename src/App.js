@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { HelmetProvider } from 'react-helmet-async';
 import useSocket from './hooks/useSocket';
@@ -225,11 +225,14 @@ const App = () => {
   );
 };
 
+const IS_ELECTRON = typeof window !== 'undefined' && (window.location.protocol === 'file:' || !!window.__ELECTRON__?.isElectron);
+const Router = IS_ELECTRON ? HashRouter : BrowserRouter;
+
 const AppWrapper = () => (
   <HelmetProvider>
-    <BrowserRouter>
+    <Router>
       <App />
-    </BrowserRouter>
+    </Router>
   </HelmetProvider>
 );
 

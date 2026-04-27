@@ -1,6 +1,12 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, AlertTriangle, Loader2 } from 'lucide-react';
+import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, AlertTriangle, ExternalLink, Subtitles, Users, MessageCircle, Send, Copy, Check, Smile } from 'lucide-react';
+import { fetchSubtitles, getInstalledAddons } from '../services/addonService';
+import { updatePlaybackProgress, getPlaybackProgress } from '../services/playbackService';
+import { io } from 'socket.io-client';
+import config from '../config';
+
+const EMOJIS = ['😂','❤️','🔥','👏','😮','😭','🎬','🍿','✨','💀','😍','🤣','👀','💯','🎉'];
 
 const fmt = (secs) => {
     if (!isFinite(secs)) return '0:00';
@@ -29,13 +35,18 @@ const getMagnetURI = (stream) => {
     return null;
 };
 
-const VideoPlayerModal = ({ url, stream, title, onClose }) => {
+const IS_ELECTRON = typeof window !== 'undefined' && !!window.__ELECTRON__?.isElectron;
+
+const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: initialRoomId }) => {
     const videoRef = useRef(null);
     const containerRef = useRef(null);
     const wtClientRef = useRef(null);
     const controlsTimer = useRef(null);
 
-    const isTorrent = !url && stream && (stream.infoHash || stream.url?.startsWith('magnet:'));
+    // In Electron mode, torrent streams arrive as a pre-built localhost HTTP URL (url is set, stream is null).
+    // Browser WebTorrent is only used on web when url is absent and stream has a magnet/infoHash.
+    const isTorrent = !IS_ELECTRON && !url && stream && (stream.infoHash || stream.url?.startsWith('magnet:'));
+    const isLocalTorrentStream = IS_ELECTRON && !!(url?.includes('127.0.0.1') && url?.includes('/api/torrent/stream'));
 
     const [playing, setPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -48,6 +59,31 @@ const VideoPlayerModal = ({ url, stream, title, onClose }) => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [torrentInfo, setTorrentInfo] = useState('');
+    const [subtitles, setSubtitles] = useState([]);
+    const [activeSub, setActiveSub] = useState(null);
+    const [trackSrc, setTrackSrc] = useState(null);
+    const [showSubMenu, setShowSubMenu] = useState(false);
+
+    // Stream Together state
+    const socketRef = useRef(null);
+    const isSyncingRef = useRef(false);
+    const heartbeatRef = useRef(null);
+    const [roomId, setRoomId] = useState(initialRoomId || null);
+    const [isHost, setIsHost] = useState(false);
+    const [roomMembers, setRoomMembers] = useState([]);
+    const [chatMessages, setChatMessages] = useState([]);
+    const [chatInput, setChatInput] = useState('');
+    const [showChat, setShowChat] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [showRoomPanel, setShowRoomPanel] = useState(false);
+    const [initialState, setInitialState] = useState(null);
+    const chatEndRef = useRef(null);
+    const isInRoom = !!roomId;
+
+    // Progress Tracking
+    const lastSavedTimeRef = useRef(0);
+    const [hasRestoredProgress, setHasRestoredProgress] = useState(false);
 
     const resetControlsTimer = useCallback(() => {
         setShowControls(true);
@@ -112,7 +148,268 @@ const VideoPlayerModal = ({ url, stream, title, onClose }) => {
         };
     }, [isTorrent]); // only run once per mount
 
+    // Fetch subtitles
+    useEffect(() => {
+        const loadSubs = async () => {
+            try {
+                let id = imdbId || movie?.imdbID || movie?.imdb_id;
+                if (id && !id.startsWith('tt') && !id.includes(':')) {
+                    id = `tt${id}`;
+                }
+
+                const { installedAddons } = await getInstalledAddons();
+                const fetched = await fetchSubtitles({
+                    imdbId: id,
+                    addons: installedAddons,
+                    type: movie?.mediaType || 'movie'
+                });
+                setSubtitles(fetched);
+                // Auto-select English if available
+                const english = fetched.find(s => s.lang?.toLowerCase().includes('eng') || s.id?.toLowerCase().includes('eng'));
+                if (english) setActiveSub(english);
+            } catch (err) {
+                console.error('Subtitle fetch failed:', err);
+            }
+        };
+        if (movie || imdbId) loadSubs();
+    }, [imdbId, movie]);
+
+    // Handle SRT conversion and Track Src
+    useEffect(() => {
+        if (!activeSub) {
+            setTrackSrc(null);
+            return;
+        }
+
+        const prepareSub = async () => {
+            try {
+                // If it's likely an SRT (or explicitly labeled as such)
+                if (activeSub.url.toLowerCase().endsWith('.srt') || activeSub.format === 'srt') {
+                    const res = await fetch(activeSub.url);
+                    const text = await res.text();
+                    
+                    // Simple SRT to VTT conversion
+                    // 1. Header
+                    // 2. Change , to . in timestamps
+                    let vtt = 'WEBVTT\n\n' + text
+                        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+                    
+                    const blob = new Blob([vtt], { type: 'text/vtt' });
+                    setTrackSrc(URL.createObjectURL(blob));
+                } else {
+                    setTrackSrc(activeSub.url);
+                }
+            } catch (err) {
+                console.error('Failed to prepare subtitle:', err);
+                setTrackSrc(activeSub.url);
+            }
+        };
+
+        prepareSub();
+        return () => {
+            if (trackSrc && trackSrc.startsWith('blob:')) {
+                URL.revokeObjectURL(trackSrc);
+            }
+        };
+    }, [activeSub]);
+
+    // ── Stream Together socket ────────────────────────────────────────────────
+    useEffect(() => {
+        if (!roomId) return;
+        const token = localStorage.getItem('token');
+        const sock = io(config.SOCKET_URL, { auth: { token }, transports: ['websocket'] });
+        socketRef.current = sock;
+
+        sock.on('connect', () => {
+            sock.emit('join', null); // personal room optional
+            sock.emit('room:join_socket', roomId);
+        });
+
+        sock.on('room:joined', ({ isHost: h, members, lastState }) => {
+            setIsHost(h);
+            setRoomMembers(members);
+            setShowChat(true);
+            if (!h && lastState) {
+                // If video is ready, apply now. Otherwise, store for onLoadedMetadata
+                if (videoRef.current && videoRef.current.readyState >= 1) {
+                    isSyncingRef.current = true;
+                    videoRef.current.currentTime = lastState.currentTime;
+                    if (lastState.paused) videoRef.current.pause();
+                    else videoRef.current.play().catch(() => {});
+                    setTimeout(() => { isSyncingRef.current = false; }, 500);
+                } else {
+                    setInitialState(lastState);
+                }
+            }
+        });
+
+        sock.on('room:member_join', ({ members }) => setRoomMembers(members));
+        sock.on('room:member_left', ({ members }) => setRoomMembers(members));
+        sock.on('room:members_update', ({ members }) => setRoomMembers(members));
+
+        sock.on('room:synced', ({ action, currentTime }) => {
+            if (!videoRef.current) return;
+            isSyncingRef.current = true;
+            videoRef.current.currentTime = currentTime;
+            if (action === 'play') videoRef.current.play().catch(() => {});
+            else if (action === 'pause') videoRef.current.pause();
+            setTimeout(() => { isSyncingRef.current = false; }, 500);
+        });
+
+        sock.on('room:heartbeat', ({ currentTime, paused }) => {
+            if (!videoRef.current) return;
+            const drift = Math.abs(videoRef.current.currentTime - currentTime);
+            if (drift > 3) {
+                isSyncingRef.current = true;
+                videoRef.current.currentTime = currentTime;
+                setTimeout(() => { isSyncingRef.current = false; }, 500);
+            }
+            if (paused && !videoRef.current.paused) videoRef.current.pause();
+            if (!paused && videoRef.current.paused) videoRef.current.play().catch(() => {});
+        });
+
+        sock.on('room:pause_for_buffer', () => {
+            isSyncingRef.current = true;
+            videoRef.current?.pause();
+            setTimeout(() => { isSyncingRef.current = false; }, 500);
+        });
+
+        sock.on('room:resume_after_buffer', () => {
+            isSyncingRef.current = true;
+            videoRef.current?.play().catch(() => {});
+            setTimeout(() => { isSyncingRef.current = false; }, 500);
+        });
+
+        sock.on('room:message', (msg) => {
+            setChatMessages(prev => [...prev, msg]);
+        });
+
+        sock.on('room:reaction', ({ emoji, username }) => {
+            setChatMessages(prev => [...prev, { message: `${emoji}`, username, isReaction: true, timestamp: new Date() }]);
+        });
+
+        return () => {
+            sock.emit('room:leave_socket', roomId);
+            sock.disconnect();
+            socketRef.current = null;
+            clearInterval(heartbeatRef.current);
+        };
+    }, [roomId]);
+
+    // Host heartbeat (every 5s)
+    useEffect(() => {
+        if (!isHost || !roomId) return;
+        heartbeatRef.current = setInterval(() => {
+            if (videoRef.current && socketRef.current) {
+                socketRef.current.emit('room:heartbeat', {
+                    roomCode: roomId,
+                    currentTime: videoRef.current.currentTime,
+                    paused: videoRef.current.paused,
+                });
+            }
+        }, 5000);
+        return () => clearInterval(heartbeatRef.current);
+    }, [isHost, roomId]);
+
+    // Scroll chat to bottom
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages]);
+
+    const emitSync = useCallback((action) => {
+        if (!roomId || !socketRef.current || isSyncingRef.current) return;
+        socketRef.current.emit('room:sync', {
+            roomCode: roomId,
+            action,
+            currentTime: videoRef.current?.currentTime || 0,
+        });
+    }, [roomId]);
+
+    const startStreamTogether = useCallback(() => {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        setRoomId(code);
+        setIsHost(true);
+    }, []);
+
+    const copyRoomCode = useCallback(() => {
+        if (!roomId) return;
+        navigator.clipboard.writeText(roomId).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    }, [roomId]);
+
+    const sendChat = useCallback(() => {
+        if (!chatInput.trim() || !socketRef.current || !roomId) return;
+        socketRef.current.emit('room:chat', { roomCode: roomId, message: chatInput.trim() });
+        setChatInput('');
+    }, [chatInput, roomId]);
+
+    const sendEmoji = useCallback((emoji) => {
+        if (!socketRef.current || !roomId) return;
+        socketRef.current.emit('room:reaction', { roomCode: roomId, emoji });
+        setShowEmojiPicker(false);
+    }, [roomId]);
+
     // Reset state when direct URL changes
+    // Progress Restoration
+    useEffect(() => {
+        const restoreProgress = async () => {
+            if (!imdbId || hasRestoredProgress) return;
+            const progress = await getPlaybackProgress(imdbId);
+            if (progress && progress.currentTime > 10 && (progress.currentTime / progress.duration) < 0.95) {
+                if (videoRef.current) {
+                    videoRef.current.currentTime = progress.currentTime;
+                    lastSavedTimeRef.current = progress.currentTime;
+                }
+            }
+            setHasRestoredProgress(true);
+        };
+        restoreProgress();
+    }, [imdbId, hasRestoredProgress]);
+
+    // Periodic Progress Saving
+    useEffect(() => {
+        if (!playing || !imdbId || !videoRef.current) return;
+
+        const saveInterval = setInterval(() => {
+            const v = videoRef.current;
+            if (!v) return;
+
+            // Only save if moved significantly (at least 5 seconds)
+            if (Math.abs(v.currentTime - lastSavedTimeRef.current) >= 5) {
+                updatePlaybackProgress({
+                    mediaId: imdbId,
+                    title: title || movie?.title,
+                    poster: movie?.poster || stream?.poster,
+                    mediaType: movie?.mediaType || (url?.includes('series') ? 'series' : 'movie'),
+                    currentTime: v.currentTime,
+                    duration: v.duration
+                });
+                lastSavedTimeRef.current = v.currentTime;
+            }
+        }, 5000);
+
+        return () => clearInterval(saveInterval);
+    }, [playing, imdbId, title, movie, stream, url]);
+
+    // Save on Unmount
+    useEffect(() => {
+        return () => {
+            if (videoRef.current && imdbId) {
+                const v = videoRef.current;
+                updatePlaybackProgress({
+                    mediaId: imdbId,
+                    title: title || movie?.title,
+                    poster: movie?.poster || stream?.poster,
+                    mediaType: movie?.mediaType || (url?.includes('series') ? 'series' : 'movie'),
+                    currentTime: v.currentTime,
+                    duration: v.duration
+                });
+            }
+        };
+    }, [imdbId, title, movie, stream, url]);
+
     useEffect(() => {
         if (!url) return;
         setError(''); setLoading(true); setPlaying(false); setCurrentTime(0); setDuration(0);
@@ -219,21 +516,41 @@ const VideoPlayerModal = ({ url, stream, title, onClose }) => {
                     style={{ width: '100%', height: '100%', display: 'block', cursor: showControls ? 'default' : 'none' }}
                     onClick={togglePlay}
                     onTimeUpdate={onTimeUpdate}
-                    onLoadedMetadata={() => { setDuration(videoRef.current?.duration || 0); setLoading(false); }}
-                    onCanPlay={() => setLoading(false)}
-                    onWaiting={() => setLoading(true)}
-                    onPlaying={() => { setLoading(false); setPlaying(true); }}
-                    onPause={() => setPlaying(false)}
-                    onEnded={() => { setPlaying(false); setShowControls(true); }}
-                    onError={() => {
-                        if (!isTorrent) {
-                            setError('Failed to load stream. Format may be unsupported or source unavailable.');
-                            setLoading(false);
+                    onLoadedMetadata={() => { 
+                        setDuration(videoRef.current?.duration || 0); 
+                        setLoading(false); 
+                        if (initialState) {
+                            isSyncingRef.current = true;
+                            videoRef.current.currentTime = initialState.currentTime;
+                            if (initialState.paused) videoRef.current.pause();
+                            else videoRef.current.play().catch(() => {});
+                            setTimeout(() => { isSyncingRef.current = false; }, 500);
+                            setInitialState(null);
+                        } else if (lastSavedTimeRef.current > 0) {
+                            videoRef.current.currentTime = lastSavedTimeRef.current;
                         }
                     }}
+                    onPlaying={() => { setLoading(false); setPlaying(true); if (isInRoom && !isSyncingRef.current) emitSync('play'); }}
+                    onPause={() => { setPlaying(false); if (isInRoom && !isSyncingRef.current) emitSync('pause'); }}
+                    onSeeked={() => { if (isInRoom && !isSyncingRef.current) emitSync('seek'); }}
+                    onWaiting={() => { setLoading(true); if (isInRoom && socketRef.current) socketRef.current.emit('room:buffer_start', { roomCode: roomId }); }}
+                    onCanPlay={() => { setLoading(false); if (isInRoom && socketRef.current) socketRef.current.emit('room:buffer_end', { roomCode: roomId }); }}
+                    onEnded={() => { setPlaying(false); setShowControls(true); }}
+                    onError={() => { if (!isTorrent) { setError('Failed to load stream. Format may be unsupported or source unavailable.'); setLoading(false); } }}
                     preload="auto"
                     crossOrigin="anonymous"
-                />
+                >
+                    {activeSub && trackSrc && (
+                        <track 
+                            key={trackSrc}
+                            label={activeSub.lang || 'Unknown'} 
+                            kind="subtitles" 
+                            srcLang={activeSub.id || 'en'} 
+                            src={trackSrc} 
+                            default 
+                        />
+                    )}
+                </video>
 
                 {/* Loading */}
                 {loading && !error && (
@@ -255,6 +572,11 @@ const VideoPlayerModal = ({ url, stream, title, onClose }) => {
                                 Torrent streams can take 30–60 seconds to start
                             </p>
                         )}
+                        {isLocalTorrentStream && (
+                            <p style={{ color: '#94a3b8', fontSize: '0.8rem', maxWidth: 360, textAlign: 'center', padding: '0 16px' }}>
+                                Connecting to torrent swarm… can take up to 60 seconds on first load
+                            </p>
+                        )}
                     </div>
                 )}
 
@@ -266,7 +588,21 @@ const VideoPlayerModal = ({ url, stream, title, onClose }) => {
                     }}>
                         <AlertTriangle size={40} color="#f59e0b" style={{ marginBottom: 16 }} />
                         <p style={{ color: '#fff', fontWeight: 600, marginBottom: 8 }}>Playback Error</p>
-                        <p style={{ color: '#94a3b8', fontSize: '0.83rem', maxWidth: 420, lineHeight: 1.6 }}>{error}</p>
+                        <p style={{ color: '#94a3b8', fontSize: '0.83rem', maxWidth: 420, lineHeight: 1.6, marginBottom: 20 }}>{error}</p>
+                        {IS_ELECTRON && (
+                            <button 
+                                onClick={() => window.__ELECTRON__?.openExternal(url)}
+                                style={{
+                                    padding: '10px 20px', borderRadius: 10, border: 'none',
+                                    background: 'var(--accent-gradient)', color: '#fff',
+                                    cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem',
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    boxShadow: '0 10px 20px rgba(168,85,247,0.3)'
+                                }}
+                            >
+                                <ExternalLink size={16} /> Open in External Player (VLC)
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -315,6 +651,88 @@ const VideoPlayerModal = ({ url, stream, title, onClose }) => {
                             <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume}
                                 onChange={e => changeVolume(parseFloat(e.target.value))}
                                 style={{ width: 72, accentColor: '#a855f7', cursor: 'pointer' }} />
+                            
+                            {IS_ELECTRON && (
+                                <button 
+                                    onClick={() => window.__ELECTRON__?.openExternal(url)} 
+                                    style={iconBtnStyle} 
+                                    title="Open in External Player"
+                                >
+                                    <ExternalLink size={14} />
+                                </button>
+                            )}
+
+                            <div style={{ position: 'relative' }}>
+                                <button 
+                                    onClick={() => setShowSubMenu(!showSubMenu)} 
+                                    style={{ ...iconBtnStyle, color: activeSub ? 'var(--accent)' : '#fff' }}
+                                    title="Subtitles"
+                                >
+                                    <Subtitles size={16} />
+                                </button>
+
+                                {showSubMenu && (
+                                    <div style={{
+                                        position: 'absolute', bottom: '100%', right: 0, marginBottom: 10,
+                                        background: 'rgba(11,9,28,0.95)', border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: 8, padding: 8, minWidth: 160, maxHeight: 300, overflowY: 'auto',
+                                        zIndex: 30000, boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                                    }}>
+                                        <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subtitles</p>
+                                        <button 
+                                            onClick={() => { setActiveSub(null); setShowSubMenu(false); }}
+                                            style={{ ...subItemStyle, color: !activeSub ? 'var(--accent)' : 'inherit' }}
+                                        >
+                                            None
+                                        </button>
+                                        {subtitles.map((sub, i) => (
+                                            <button 
+                                                key={i}
+                                                onClick={() => { setActiveSub(sub); setShowSubMenu(false); }}
+                                                style={{ ...subItemStyle, color: activeSub === sub ? 'var(--accent)' : 'inherit' }}
+                                            >
+                                                {sub.lang || sub.id || 'Track'} <span style={{ opacity: 0.4, fontSize: '0.65rem' }}>({sub.addonName || 'Addon'})</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Stream Together Button */}
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={isInRoom ? () => setShowChat(!showChat) : startStreamTogether}
+                                    style={{ ...iconBtnStyle, color: isInRoom ? '#a855f7' : '#fff', position: 'relative' }}
+                                    title={isInRoom ? 'Toggle Chat' : 'Stream Together'}
+                                >
+                                    {isInRoom ? <MessageCircle size={16} /> : <Users size={16} />}
+                                    {isInRoom && roomMembers.length > 0 && (
+                                        <span style={{ position: 'absolute', top: -4, right: -4, background: '#a855f7', borderRadius: '50%', width: 14, height: 14, fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>
+                                            {roomMembers.length}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Room Code banner */}
+                                {isInRoom && showRoomPanel && (
+                                    <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 8, background: 'rgba(11,9,28,0.97)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 10, padding: 12, minWidth: 200, zIndex: 30000 }}>
+                                        <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Room Code</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ fontFamily: 'monospace', fontSize: '1.1rem', fontWeight: 700, color: '#a855f7', letterSpacing: 4 }}>{roomId}</span>
+                                            <button onClick={copyRoomCode} style={{ ...iconBtnStyle, width: 26, height: 26 }}>
+                                                {copied ? <Check size={12} /> : <Copy size={12} />}
+                                            </button>
+                                        </div>
+                                        <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>Share this code with friends to watch together</p>
+                                    </div>
+                                )}
+                                {isInRoom && (
+                                    <button onClick={() => setShowRoomPanel(!showRoomPanel)} style={{ position: 'absolute', bottom: '100%', left: -60, marginBottom: 8, background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.65rem', whiteSpace: 'nowrap' }}>
+                                        👥 {roomMembers.length} watching
+                                    </button>
+                                )}
+                            </div>
+
                             <button onClick={toggleFullscreen} style={iconBtnStyle}>
                                 {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
                             </button>
@@ -322,6 +740,81 @@ const VideoPlayerModal = ({ url, stream, title, onClose }) => {
                     </div>
                 </div>
             </motion.div>
+
+            {/* Stream Together Chat Panel */}
+            {isInRoom && showChat && (
+                <div style={{
+                    position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)',
+                    width: 280, height: 420, background: 'rgba(11,9,28,0.95)',
+                    border: '1px solid rgba(168,85,247,0.25)', borderRadius: 16,
+                    display: 'flex', flexDirection: 'column', zIndex: 99999,
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.6)', overflow: 'hidden',
+                }}>
+                    {/* Chat Header */}
+                    <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ color: '#a855f7', fontSize: '0.8rem', fontWeight: 700 }}>🎬 Stream Together</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <button onClick={copyRoomCode} style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 6, padding: '2px 8px', color: '#a855f7', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                {copied ? <Check size={10} /> : <Copy size={10} />} {roomId}
+                            </button>
+                            <button onClick={() => setShowChat(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>✕</button>
+                        </div>
+                    </div>
+
+                    {/* Watchers */}
+                    <div style={{ padding: '6px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {roomMembers.map((m, i) => (
+                            <span key={i} style={{ fontSize: '0.65rem', color: m.isHost ? '#a855f7' : 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                {m.isHost ? '👑' : '👤'} {m.username} {m.isBuffering ? '⏳' : ''}
+                            </span>
+                        ))}
+                    </div>
+
+                    {/* Messages */}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {chatMessages.map((msg, i) => (
+                            <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                                {msg.isReaction
+                                    ? <span style={{ fontSize: '1.4rem', alignSelf: 'center' }}>{msg.message}</span>
+                                    : <>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#a855f7', flexShrink: 0 }}>{msg.username}:</span>
+                                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.4 }}>{msg.message}</span>
+                                    </>
+                                }
+                            </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                    </div>
+
+                    {/* Emoji Picker */}
+                    {showEmojiPicker && (
+                        <div style={{ padding: '6px 10px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {EMOJIS.map(e => (
+                                <button key={e} onClick={() => sendEmoji(e)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', padding: 2 }}>{e}</button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Input */}
+                    <div style={{ padding: '8px 10px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>
+                            <Smile size={16} />
+                        </button>
+                        <input
+                            value={chatInput}
+                            onChange={e => setChatInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && sendChat()}
+                            placeholder="Say something..."
+                            style={{ flex: 1, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 10px', color: '#fff', fontSize: '0.78rem', outline: 'none' }}
+                        />
+                        <button onClick={sendChat} style={{ ...iconBtnStyle, background: '#a855f7', flexShrink: 0 }}>
+                            <Send size={13} />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {!isFullscreen && (
                 <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.73rem', marginTop: 10, textAlign: 'center' }}>
@@ -338,6 +831,13 @@ const iconBtnStyle = {
     background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff',
     width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+};
+
+const subItemStyle = {
+    width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#fff',
+    padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: '0.78rem',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    transition: 'background 0.2s',
 };
 
 export default VideoPlayerModal;

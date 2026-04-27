@@ -3,12 +3,14 @@ import { Helmet } from 'react-helmet-async';
 import { connect } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchMovies, addMovie, fetchRecommendations } from '../store/thunks';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, X } from 'lucide-react';
 import MovieCard from '../components/MovieCard';
 import AddMovieModal from '../components/AddMovieModal';
 import RecommendModal from '../components/RecommendModal';
 import Toast from '../components/Toast';
 import axios from 'axios';
+import config from '../config';
+import { getAllPlaybackProgress, deletePlaybackProgress } from '../services/playbackService';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -30,7 +32,8 @@ class Dashboard extends Component {
       showRecommendModal: false,
       selectedMedia: null,
       isEditingOrder: false,
-      sectionOrder: ['recent_movies', 'recent_shows', 'watchlist']
+      sectionOrder: ['continue_watching', 'recent_movies', 'recent_shows', 'watchlist'],
+      continueWatching: []
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
@@ -40,9 +43,21 @@ class Dashboard extends Component {
   componentDidMount() {
     if (this.props.movies.length === 0) this.props.fetchMovies();
     this.props.fetchRecommendations();
+    this.fetchContinueWatching();
     this.initAnimations();
     this.startHeroRotation();
     this.loadSectionOrder();
+  }
+
+  fetchContinueWatching = async () => {
+    const list = await getAllPlaybackProgress();
+    this.setState({ continueWatching: list });
+  }
+
+  handleRemoveFromContinue = async (e, mediaId) => {
+    e.stopPropagation();
+    await deletePlaybackProgress(mediaId);
+    this.fetchContinueWatching();
   }
 
   loadSectionOrder = () => {
@@ -236,6 +251,77 @@ class Dashboard extends Component {
 
 
 
+  renderContinueWatching() {
+    const { continueWatching } = this.state;
+    if (!continueWatching || continueWatching.length === 0) return null;
+
+    return (
+      <div className="media-row-container reveal" key="continue_watching">
+        <div className="row-header">
+          <h3>Continue Watching</h3>
+        </div>
+        <div className="media-row-wrapper" style={{ position: 'relative' }}>
+          <div className="media-row" style={{ gap: '20px', padding: '10px 0' }}>
+            {continueWatching.map(item => {
+                const progress = (item.currentTime / item.duration) * 100;
+                return (
+                    <div 
+                        key={item.mediaId} 
+                        className="continue-card glass-panel bio-luminescent"
+                        onClick={() => this.props.navigate(`/movies/${item.mediaId}?watch=true&type=${item.mediaType}`)}
+                        style={{ 
+                            flex: '0 0 280px', 
+                            height: '160px', 
+                            borderRadius: '16px', 
+                            overflow: 'hidden', 
+                            position: 'relative',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <img 
+                            src={item.poster} 
+                            alt={item.title} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} 
+                        />
+                        <div className="continue-overlay" style={{ 
+                            position: 'absolute', inset: 0, 
+                            background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 60%)',
+                            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '15px'
+                        }}>
+                            <div style={{ fontWeight: '700', fontSize: '14px', color: '#fff', marginBottom: '4px' }}>{item.title}</div>
+                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', width: '100%', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', background: 'var(--accent)', width: `${progress}%` }} />
+                            </div>
+                        </div>
+                        <button 
+                            className="remove-continue-btn"
+                            onClick={(e) => this.handleRemoveFromContinue(e, item.mediaId)}
+                            style={{ 
+                                position: 'absolute', top: '10px', right: '10px', 
+                                background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', 
+                                width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: '#fff', cursor: 'pointer'
+                            }}
+                        >
+                            <X size={14} />
+                        </button>
+                        <div className="play-hint" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0, transition: 'opacity 0.3s' }}>
+                            <Play size={40} fill="var(--accent)" stroke="none" />
+                        </div>
+                    </div>
+                );
+            })}
+          </div>
+        </div>
+        <style>{`
+            .continue-card:hover .play-hint { opacity: 1 !important; }
+            .continue-card:hover img { opacity: 0.8 !important; scale: 1.05; }
+            .continue-card img { transition: all 0.5s ease; }
+        `}</style>
+      </div>
+    );
+  }
+
   renderRow(title, items, path, id, index) {
     const { isEditingOrder, sectionOrder } = this.state;
     if ((!items || items.length === 0) && !isEditingOrder) return null;
@@ -364,7 +450,17 @@ class Dashboard extends Component {
               <span className="hero-tag">Featured {featured.mediaType === 'series' ? 'Series' : 'Movie'}</span>
               <h1 className="hero-title">{featured.title}</h1>
               <p className="hero-description">{featured.plot || `${featured.genre} · ${featured.director !== 'N/A' ? `Directed by ${featured.director}` : 'Start watching your latest addition.'}`}</p>
-              <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                {config.IS_ELECTRON && (
+                  <button 
+                    className="btn btn-accent" 
+                    onClick={() => navigate(`/movies/${featured._id}?watch=true`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}
+                  >
+                    <Play size={18} fill="currentColor" />
+                    Watch Now
+                  </button>
+                )}
                 <button className="btn btn-primary" onClick={() => navigate(`/movies/${featured._id}`)}>
                   View Details
                 </button>
@@ -431,14 +527,14 @@ class Dashboard extends Component {
           {this.state.sectionOrder.map((sectionId, index) => {
             switch (sectionId) {
 
+              case 'continue_watching':
+                return this.renderContinueWatching();
               case 'recent_movies':
                 return this.renderRow('Recently Watched Movies', recentlyWatchedMovies, '/watched', 'recent_movies', index);
               case 'recent_shows':
                 return this.renderRow('Recently Watched TV Shows', recentlyWatchedShows, '/watched', 'recent_shows', index);
               case 'watchlist':
                 return this.renderRow('My Watchlist', watchlistItems, '/watchlist', 'watchlist', index);
-
-
               default:
                 return null;
             }

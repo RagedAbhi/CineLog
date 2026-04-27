@@ -6,6 +6,7 @@ import { showToast, showConfirmModal } from '../store/actions';
 import { fetchRecommendations } from '../store/thunks';
 import config from '../config';
 import { useNavigate } from 'react-router-dom';
+import { Gamepad2 } from 'lucide-react';
 
 import gsap from 'gsap';
 import '../styles/global.css';
@@ -92,9 +93,24 @@ const FriendsPage = () => {
 
     return (
         <div className="container-fluid social-container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            <div className="page-header" style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <div className="page-header" style={{ textAlign: 'center', marginBottom: '40px', position: 'relative' }}>
                 <h2>Social</h2>
                 <p>Connect with fellow cinephiles</p>
+                
+                <button 
+                    onClick={() => navigate('/games')}
+                    style={{ 
+                        position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)',
+                        padding: '8px 16px', borderRadius: '100px', color: '#a855f7',
+                        fontWeight: '600', cursor: 'pointer', transition: 'all 0.3s'
+                    }}
+                    className="hover:bg-purple-600/20"
+                >
+                    <Gamepad2 size={18} />
+                    Play Games
+                </button>
             </div>
 
 

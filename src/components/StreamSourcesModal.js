@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Puzzle, AlertTriangle, Play, Loader2, ExternalLink } from 'lucide-react';
+import { X, Puzzle, AlertTriangle, Play, Loader2, ExternalLink, Monitor } from 'lucide-react';
 import { resolveImdbId, fetchStreamsFromBrowser, parseStreamQuality, parseSeeders, buildTorrentStreamUrl } from '../services/addonService';
 import { useNavigate } from 'react-router-dom';
+import config from '../config';
 
 const QUALITY_COLORS = {
     '4K': { bg: 'rgba(124,58,237,0.2)', border: 'rgba(124,58,237,0.5)', color: '#c4b5fd' },
@@ -101,7 +102,15 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                 season: isSeries ? season : undefined,
                 episode: isSeries ? episode : undefined,
             });
-            setStreams(streams);
+
+            // Sort streams by seeders descending
+            const sortedStreams = [...streams].sort((a, b) => {
+                const sA = parseSeeders(a) || 0;
+                const sB = parseSeeders(b) || 0;
+                return sB - sA;
+            });
+
+            setStreams(sortedStreams);
         } catch (e) {
             const msg = e.response?.data?.error || e.message || 'Failed to fetch streams';
             setError(msg);
@@ -120,13 +129,21 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
 
     const handleWatch = (stream) => {
         if (isMagnetOrHash(stream)) {
-            // Pass raw stream to player — browser WebTorrent handles it, no backend needed
-            onWatch(null, movie.title, stream);
-        } else {
-            const url = stream.url;
-            if (!url) return;
-            onWatch(url, movie.title, stream);
+            if (config.IS_ELECTRON) {
+                const torrentUrl = buildTorrentStreamUrl({
+                    magnet: stream.url?.startsWith('magnet:') ? stream.url : null,
+                    infoHash: stream.infoHash || null,
+                    fileIdx: stream.fileIdx ?? null,
+                    sources: stream.sources || [],
+                });
+                console.log('[DEBUG] torrentUrl:', torrentUrl);
+                onWatch(torrentUrl, movie.title, null);
+            }
+            return;
         }
+        const url = stream.url;
+        if (!url) return;
+        onWatch(url, movie.title, null);
     };
 
     return (
@@ -294,6 +311,9 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                                     const isTorrent = isMagnetOrHash(stream);
                                     const title = stream.title || stream.name || 'Stream';
                                     const cleanTitle = title.split('\n').filter(Boolean).slice(0, 2).join(' · ');
+                                    const isMKV = title.toLowerCase().includes('.mkv');
+                                    const isMP4 = title.toLowerCase().includes('.mp4');
+                                    const isUnsupported = isMKV || (!isMP4 && title.toLowerCase().includes('.avi') || title.toLowerCase().includes('.h265') || title.toLowerCase().includes('hevc'));
 
                                     return (
                                         <div
@@ -329,8 +349,10 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                                                 </p>
                                                 <div style={{ display: 'flex', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
                                                     {isTorrent && (
-                                                        <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>
+                                                        <span style={{ fontSize: '0.7rem', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 3 }}>
                                                             ⚡ Torrent
+                                                            {isMP4 && <span style={{ color: '#10b981', marginLeft: 4 }}>• Quick Play</span>}
+                                                            {isMKV && <span style={{ color: '#8b5cf6', marginLeft: 4 }}>• High Quality (MKV)</span>}
                                                         </span>
                                                     )}
                                                     {seeders !== null && (
@@ -341,21 +363,62 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                                                 </div>
                                             </div>
 
-                                            {/* Watch button */}
-                                            <button
-                                                onClick={() => handleWatch(stream)}
-                                                style={{
-                                                    padding: '7px 14px', borderRadius: 8, border: 'none',
-                                                    background: 'rgba(168,85,247,0.15)', color: 'var(--accent)',
-                                                    cursor: 'pointer', flexShrink: 0, fontWeight: 600,
-                                                    fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5,
-                                                    transition: 'background 0.2s',
-                                                }}
-                                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,0.3)'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(168,85,247,0.15)'}
-                                            >
-                                                <Play size={13} fill="currentColor" /> Watch
-                                            </button>
+                                            {/* Watch button — torrent streams require desktop app */}
+                                            {isTorrent && !config.IS_ELECTRON ? (
+                                                <span style={{
+                                                    padding: '5px 10px', borderRadius: 8, flexShrink: 0,
+                                                    background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.25)',
+                                                    color: '#64748b', fontSize: '0.72rem', fontWeight: 600,
+                                                    display: 'flex', alignItems: 'center', gap: 4,
+                                                }}>
+                                                    <Monitor size={11} /> Desktop only
+                                                </span>
+                                            ) : (
+                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                    {config.IS_ELECTRON && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const url = resolveStreamUrl(stream);
+                                                                if (url && window.__ELECTRON__?.openExternal) {
+                                                                    window.__ELECTRON__.openExternal(url);
+                                                                }
+                                                            }}
+                                                            title="Open in External Player (VLC/MPC)"
+                                                            style={{
+                                                                padding: '7px', borderRadius: 8, border: 'none',
+                                                                background: 'rgba(255,255,255,0.05)', color: 'var(--muted-foreground)',
+                                                                cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center',
+                                                                transition: 'background 0.2s, color 0.2s',
+                                                            }}
+                                                            onMouseEnter={e => {
+                                                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                                                                e.currentTarget.style.color = '#fff';
+                                                            }}
+                                                            onMouseLeave={e => {
+                                                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                                                e.currentTarget.style.color = 'var(--muted-foreground)';
+                                                            }}
+                                                        >
+                                                            <ExternalLink size={14} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleWatch(stream)}
+                                                        style={{
+                                                            padding: '7px 14px', borderRadius: 8, border: 'none',
+                                                            background: 'rgba(168,85,247,0.15)', color: 'var(--accent)',
+                                                            cursor: 'pointer', flexShrink: 0, fontWeight: 600,
+                                                            fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5,
+                                                            transition: 'background 0.2s',
+                                                        }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,0.3)'}
+                                                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(168,85,247,0.15)'}
+                                                    >
+                                                        <Play size={13} fill="currentColor" /> Watch
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}

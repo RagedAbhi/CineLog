@@ -9,8 +9,9 @@ import { showToast, showConfirmModal } from '../store/actions';
 import gsap from 'gsap';
 import MovieCard from '../components/MovieCard';
 import CineSelect from '../components/CineSelect';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { updatePrivacy } from '../services/engagementService';
+import { Settings, User, Lock, ChevronRight, Shield, Key } from 'lucide-react';
 import '../styles/global.css';
 import '../styles/engagement.css';
 
@@ -26,7 +27,7 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [formData, setFormData] = useState({ name: '', bio: '', username: '', profilePicture: '' });
-    const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '' });
+    const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
     
     // Filters
     const [recGenreFilter, setRecGenreFilter] = useState('all');
@@ -39,9 +40,10 @@ const Profile = () => {
 
     const [topGenreFilter, setTopGenreFilter] = useState('all');
     const [topMediaTypeFilter, setTopMediaTypeFilter] = useState('all');
-    const [activeTab, setActiveTab] = useState('expertise'); // ['expertise', 'top_picks', 'received', 'sent', 'settings']
+    const [activeTab, setActiveTab] = useState('expertise'); // ['expertise', 'top_picks', 'received', 'sent']
     const [isBioExpanded, setIsBioExpanded] = useState(false);
     const [privacyLoading, setPrivacyLoading] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
     
     const fileInputRef = useRef(null);
 
@@ -403,32 +405,84 @@ const Profile = () => {
     };
 
     const renderSettings = () => (
-        <div className="settings-tab-container profile-anim">
-            <div className="picks-header" style={{ marginBottom: '32px' }}>
-                <h2 className="picks-title">Settings</h2>
-                <div className="picks-line"></div>
-            </div>
-
-            <div className="settings-section glass-panel" style={{ padding: '28px 32px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', maxWidth: '520px' }}>
-                <div className="settings-row">
-                    <div className="settings-row-info">
-                        <div className="settings-row-title">Private Account</div>
-                        <div className="settings-row-desc">
-                            When on, only your friends can see your likes and comments on movies and shows.
-                            Your profile and stats remain visible to everyone.
-                        </div>
-                    </div>
-                    <button
-                        className={`privacy-toggle ${profile.isPrivate ? 'on' : 'off'}`}
-                        onClick={handlePrivacyToggle}
-                        disabled={privacyLoading}
-                        aria-label="Toggle private account"
+        <AnimatePresence>
+            {showSettings && (
+                <div 
+                    style={{ position: 'fixed', inset: 0, zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                >
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowSettings(false)}
+                        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
+                    />
+                    <motion.div 
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        style={{ 
+                            position: 'relative', width: '100%', maxWidth: '520px', 
+                            background: 'rgba(15,13,35,0.95)', border: '1px solid rgba(255,255,255,0.1)', 
+                            borderRadius: '24px', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                            maxHeight: '90vh', overflowY: 'auto'
+                        }}
                     >
-                        <span className="privacy-toggle-thumb" />
-                    </button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                            <h2 style={{ margin: 0, fontSize: '24px', color: '#fff' }}>Settings</h2>
+                            <button 
+                                onClick={() => setShowSettings(false)}
+                                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '20px' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {/* Edit Profile Entry */}
+                            <div 
+                                className="settings-section glass-panel" 
+                                style={{ padding: '20px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px' }}
+                                onClick={() => { setIsEditing(true); setShowSettings(false); }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(168,85,247,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a855f7' }}>
+                                        <User size={20} />
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: '600', fontSize: '15px', color: '#fff' }}>Edit Profile</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Name, bio, and security</div>
+                                    </div>
+                                </div>
+                                <ChevronRight size={18} color="rgba(255,255,255,0.3)" />
+                            </div>
+
+                            {/* Privacy Entry */}
+                            <div className="settings-section glass-panel" style={{ padding: '20px 24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <div className="settings-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
+                                            <Shield size={20} />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: '600', fontSize: '15px', color: '#fff' }}>Private Account</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '280px' }}>Activity visible to friends only</div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        className={`privacy-toggle ${profile.isPrivate ? 'on' : 'off'}`}
+                                        onClick={handlePrivacyToggle}
+                                        disabled={privacyLoading}
+                                    >
+                                        <span className="privacy-toggle-thumb" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
-            </div>
-        </div>
+            )}
+        </AnimatePresence>
     );
 
     const dismissRecommendation = async (recId, e) => {
@@ -466,14 +520,26 @@ const Profile = () => {
     };
 
     const handlePasswordUpdate = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
+        
+        if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
+            dispatch(showToast('Password must be at least 6 characters', 'error'));
+            return;
+        }
+
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            dispatch(showToast('Passwords do not match', 'error'));
+            return;
+        }
+
         try {
             const token = localStorage.getItem('token');
-            await axios.patch(`${config.API_URL}/api/users/profile/password`, passwordData, {
+            await axios.patch(`${config.API_URL}/api/users/profile/password`, {
+                newPassword: passwordData.newPassword
+            }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setIsChangingPassword(false);
-            setPasswordData({ currentPassword: '', newPassword: '' });
+            setPasswordData({ newPassword: '', confirmPassword: '' });
             dispatch(showToast('Password updated successfully!', 'success'));
         } catch (error) {
             console.error('Error changing password:', error);
@@ -530,10 +596,12 @@ const Profile = () => {
 
                     {isOwnProfile && !isEditing && (
                         <button
-                            onClick={() => setIsEditing(true)}
+                            onClick={() => setShowSettings(true)}
                             className="btn btn-secondary btn-sm"
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                         >
-                            Edit Profile
+                            <Settings size={14} />
+                            Settings
                         </button>
                     )}
                 </div>
@@ -613,6 +681,7 @@ const Profile = () => {
                     ) : (
                         <form onSubmit={handleUpdate} className="minimal-edit-form">
                             <div className="form-group-minimal">
+                                <label>Name</label>
                                 <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                             </div>
                             <div className="form-group-minimal">
@@ -623,50 +692,52 @@ const Profile = () => {
                                 <label>Bio</label>
                                 <textarea value={formData.bio} onChange={e => setFormData({ ...formData, bio: e.target.value })} rows={3} />
                             </div>
-                            <div className="form-actions-minimal">
-                                <button type="submit" className="btn btn-accent">Save</button>
-                                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>Cancel</button>
+
+                            <div style={{ marginTop: '30px', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', color: 'var(--accent)' }}>
+                                    <Key size={16} />
+                                    <h4 style={{ margin: 0, fontSize: '14px' }}>Security</h4>
+                                </div>
+                                <div className="form-group-minimal">
+                                    <label>New Password</label>
+                                    <input 
+                                        type="password"
+                                        placeholder="Minimum 6 characters"
+                                        value={passwordData.newPassword} 
+                                        onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })} 
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group-minimal">
+                                    <label>Confirm New Password</label>
+                                    <input 
+                                        type="password"
+                                        placeholder="Repeat new password"
+                                        value={passwordData.confirmPassword} 
+                                        onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} 
+                                        required
+                                    />
+                                </div>
+                                {passwordData.newPassword && passwordData.confirmPassword && (
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-sm" 
+                                        style={{ marginTop: '10px', fontSize: '11px', background: 'var(--accent)', color: '#000', fontWeight: '700' }}
+                                        onClick={handlePasswordUpdate}
+                                    >
+                                        Update Password
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="form-actions-minimal" style={{ marginTop: '30px' }}>
+                                <button type="submit" className="btn btn-accent">Save Changes</button>
+                                <button type="button" className="btn btn-secondary" onClick={() => { setIsEditing(false); setPasswordData({ newPassword: '', confirmPassword: '' }); }}>Cancel</button>
                             </div>
                         </form>
                     )}
 
-                    {isOwnProfile && !isEditing && !isChangingPassword && (
-                        <button 
-                            className="btn btn-secondary btn-sm" 
-                            style={{ marginTop: '12px' }}
-                            onClick={() => setIsChangingPassword(true)}
-                        >
-                            Change Password
-                        </button>
-                    )}
 
-                    {isChangingPassword && (
-                        <form onSubmit={handlePasswordUpdate} className="minimal-edit-form" style={{ marginTop: '20px' }}>
-                            <h4>Change Password</h4>
-                            <div className="form-group-minimal">
-                                <label>Current Password</label>
-                                <input 
-                                    type="password"
-                                    value={passwordData.currentPassword} 
-                                    onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })} 
-                                    required 
-                                />
-                            </div>
-                            <div className="form-group-minimal">
-                                <label>New Password</label>
-                                <input 
-                                    type="password"
-                                    value={passwordData.newPassword} 
-                                    onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })} 
-                                    required 
-                                />
-                            </div>
-                            <div className="form-actions-minimal">
-                                <button type="submit" className="btn btn-accent">Update</button>
-                                <button type="button" className="btn btn-secondary" onClick={() => setIsChangingPassword(false)}>Cancel</button>
-                            </div>
-                        </form>
-                    )}
                 </div>
             </div>
 
@@ -683,8 +754,7 @@ const Profile = () => {
                     { id: 'expertise', label: 'Cinema Expertise', icon: '🎬' },
                     { id: 'top_picks', label: 'Top Picks', icon: '⭐' },
                     { id: 'received', label: 'Received', icon: '📥' },
-                    { id: 'sent', label: 'Sent', icon: '📤' },
-                    ...(isOwnProfile ? [{ id: 'settings', label: 'Settings', icon: '⚙️' }] : [])
+                    { id: 'sent', label: 'Sent', icon: '📤' }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -728,6 +798,7 @@ const Profile = () => {
 
             {/* TAB CONTENT */}
             <div className="profile-tab-content">
+                {renderSettings()}
                 {activeTab === 'expertise' && renderExpertise()}
 
                 {activeTab === 'top_picks' && (
