@@ -47,7 +47,7 @@
     "asar": true,
     "directories": {
       "buildResources": "public",
-      "output": "release24"
+      "output": "release39"
     },
     "win": {
       "target": [

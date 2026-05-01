@@ -33,7 +33,7 @@ class Dashboard extends Component {
       selectedMedia: null,
       isEditingOrder: false,
       sectionOrder: ['continue_watching', 'recent_movies', 'recent_shows', 'watchlist'],
-      continueWatching: []
+      continueWatching: JSON.parse(localStorage.getItem('cached_continue_watching') || '[]')
     };
     this.heroRef = createRef();
     this.rotationTimer = null;
@@ -47,11 +47,20 @@ class Dashboard extends Component {
     this.initAnimations();
     this.startHeroRotation();
     this.loadSectionOrder();
+    
+    // Auto-refresh continue watching every 15 seconds
+    this.refreshInterval = setInterval(this.fetchContinueWatching, 15000);
+  }
+
+  componentWillUnmount() {
+    if (this.rotationTimer) clearInterval(this.rotationTimer);
+    if (this.refreshInterval) clearInterval(this.refreshInterval);
   }
 
   fetchContinueWatching = async () => {
     const list = await getAllPlaybackProgress();
     this.setState({ continueWatching: list });
+    localStorage.setItem('cached_continue_watching', JSON.stringify(list));
   }
 
   handleRemoveFromContinue = async (e, mediaId) => {
@@ -65,6 +74,10 @@ class Dashboard extends Component {
     if (saved) {
       try {
         let order = JSON.parse(saved);
+        // Ensure new sections like continue_watching are added if missing from saved layout
+        if (!order.includes('continue_watching')) {
+          order = ['continue_watching', ...order];
+        }
         this.setState({ sectionOrder: order });
       } catch (e) {
         console.error("Failed to load section order", e);
@@ -72,9 +85,15 @@ class Dashboard extends Component {
     }
   }
 
-  saveSectionOrder = () => {
-    localStorage.setItem('dashboard_section_order', JSON.stringify(this.state.sectionOrder));
-    this.setState({ isEditingOrder: false });
+  saveSectionOrder = (newOrder) => {
+    // Safety: never allow saving an order that excludes the core sections
+    let currentOrder = Array.isArray(newOrder) ? newOrder : this.state.sectionOrder;
+    let finalOrder = [...currentOrder];
+    
+    if (!finalOrder.includes('continue_watching')) finalOrder.unshift('continue_watching');
+    
+    localStorage.setItem('dashboard_section_order', JSON.stringify(finalOrder));
+    this.setState({ sectionOrder: finalOrder, isEditingOrder: false });
     this.showToast("Dashboard layout saved!");
   }
 
@@ -87,9 +106,6 @@ class Dashboard extends Component {
     this.setState({ sectionOrder: newOrder });
   }
 
-  componentWillUnmount() {
-    if (this.rotationTimer) clearInterval(this.rotationTimer);
-  }
 
   componentDidUpdate(prevProps) {
     if (prevProps.movies !== this.props.movies || prevProps.loading !== this.props.loading) {
@@ -261,36 +277,52 @@ class Dashboard extends Component {
           <h3>Continue Watching</h3>
         </div>
         <div className="media-row-wrapper" style={{ position: 'relative' }}>
-          <div className="media-row" style={{ gap: '20px', padding: '10px 0' }}>
+          <div className="media-row" style={{ gap: '24px', padding: '20px 20px 80px', overflowY: 'visible', overflowX: 'auto' }}>
             {continueWatching.map(item => {
                 const progress = (item.currentTime / item.duration) * 100;
                 return (
                     <div 
                         key={item.mediaId} 
                         className="continue-card glass-panel bio-luminescent"
-                        onClick={() => this.props.navigate(`/movies/${item.mediaId}?watch=true&type=${item.mediaType}`)}
+                        onClick={() => {
+                            let path = `/movies/${item.mediaId}?watch=true&type=${item.mediaType}`;
+                            if (item.mediaType === 'series') {
+                                path += `&season=${item.season || 1}&episode=${item.episode || 1}`;
+                            }
+                            this.props.navigate(path);
+                        }}
                         style={{ 
-                            flex: '0 0 280px', 
-                            height: '160px', 
-                            borderRadius: '16px', 
+                            flex: '0 0 200px', 
+                            height: '300px', 
+                            borderRadius: '18px', 
                             overflow: 'hidden', 
                             position: 'relative',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            zIndex: 1
                         }}
                     >
                         <img 
                             src={item.poster} 
                             alt={item.title} 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }} 
                         />
                         <div className="continue-overlay" style={{ 
                             position: 'absolute', inset: 0, 
-                            background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 60%)',
-                            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '15px'
+                            background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0) 60%)',
+                            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '12px'
                         }}>
-                            <div style={{ fontWeight: '700', fontSize: '14px', color: '#fff', marginBottom: '4px' }}>{item.title}</div>
-                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', width: '100%', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', background: 'var(--accent)', width: `${progress}%` }} />
+                            <div style={{ fontWeight: '700', fontSize: '13px', color: '#fff', marginBottom: '4px', lineHeight: '1.2' }}>{item.title}</div>
+                            {item.mediaType === 'series' && (item.season || item.episode) && (
+                                <div style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '600', marginBottom: '4px' }}>
+                                    S{item.season} E{item.episode}
+                                </div>
+                            )}
+                            <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '8px' }}>
+                                {Math.ceil((item.duration - item.currentTime) / 60)}m left
+                            </div>
+                            <div style={{ height: '6px', background: 'rgba(255,255,255,0.15)', borderRadius: '3px', width: '100%', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', background: 'var(--accent)', width: `${progress}%`, boxShadow: '0 0 10px var(--accent)' }} />
                             </div>
                         </div>
                         <button 
@@ -314,8 +346,9 @@ class Dashboard extends Component {
           </div>
         </div>
         <style>{`
+            .continue-card:hover { transform: translateY(-10px) scale(1.02); z-index: 10; box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 30px var(--accent-glow) !important; }
             .continue-card:hover .play-hint { opacity: 1 !important; }
-            .continue-card:hover img { opacity: 0.8 !important; scale: 1.05; }
+            .continue-card:hover img { opacity: 0.9 !important; }
             .continue-card img { transition: all 0.5s ease; }
         `}</style>
       </div>
@@ -402,7 +435,7 @@ class Dashboard extends Component {
         const titleKey = `${m.title?.toLowerCase().trim()}|${m.mediaType || 'movie'}|${m.year || ''}`;
         return arr.findIndex(x => (x.imdbID && x.imdbID === m.imdbID) || (`${x.title?.toLowerCase().trim()}|${x.mediaType || 'movie'}|${x.year || ''}` === titleKey)) === i;
       })
-      .slice(0, 10);
+      .slice(0, 20);
 
     const recentlyWatchedShows = movies
       .filter(m => m.status === 'watched' && m.watchedOn && m.mediaType === 'series')

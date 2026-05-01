@@ -619,40 +619,104 @@ async function processResults(results, userId) {
  * 3. Filters out already owned/watched items.
  * 4. Ranks via processResults for social and personalized weighting.
  */
-exports.getDiscoveryFeed = async (userId, page = 1, limit = 60) => {
+exports.getDiscoveryFeed = async (userId, page = 1, limit = 60, filters = {}) => {
     try {
+        const { type, genre, language } = filters;
         const userLibrary = await Media.find({ userId }).select('title').lean();
         const libraryTitles = new Set(userLibrary.map(m => m.title?.toLowerCase().trim()));
 
-        // We fetch 3 TMDB pages per requested application page (20 * 3 = 60 movies + 60 tv = 120 raw items)
+        // We fetch 3 TMDB pages per requested application page to ensure enough variety after filtering library items
         const startTmdbPage = (page - 1) * 3 + 1;
         const endTmdbPage = page * 3;
 
         const fetchPromises = [];
-        for (let i = startTmdbPage; i <= endTmdbPage; i++) {
-            fetchPromises.push(axios.get(`${BASE_URL}/trending/movie/week`, { httpsAgent, params: { api_key: TMDB_API_KEY, page: i } }));
-            fetchPromises.push(axios.get(`${BASE_URL}/trending/tv/week`, { httpsAgent, params: { api_key: TMDB_API_KEY, page: i } }));
+        
+        // Normalize filters to avoid "null" strings or empty strings
+        const cleanType = (filters.type && filters.type !== 'null' && filters.type !== '') ? filters.type : 'all';
+        const cleanGenre = (filters.genre && filters.genre !== 'null' && filters.genre !== '') ? filters.genre : null;
+        const cleanLanguage = (filters.language && filters.language !== 'null' && filters.language !== '') ? filters.language : null;
+
+        console.log(`[Discovery] userId: ${userId}, type: ${cleanType}, genre: ${cleanGenre}, language: ${cleanLanguage}`);
+
+        const hasFilters = cleanGenre || cleanLanguage || (cleanType !== 'all');
+
+        if (hasFilters) {
+            console.log('[Discovery] Path: FILTERED (Discover API)');
+            const typesToFetch = (cleanType === 'movie' || cleanType === 'series') ? [cleanType] : ['movie', 'series'];
+            
+            for (let i = startTmdbPage; i <= endTmdbPage; i++) {
+                typesToFetch.forEach(t => {
+                    const tmdbType = t === 'series' ? 'tv' : 'movie';
+                    const params = {
+                        api_key: TMDB_API_KEY,
+                        page: i,
+                        sort_by: 'popularity.desc',
+                        include_adult: false,
+                        language: 'en-US'
+                    };
+                    if (cleanGenre) params.with_genres = cleanGenre;
+                    if (cleanLanguage) params.with_original_language = cleanLanguage;
+                    
+                    console.log(`[Discovery] Fetching ${tmdbType} page ${i} with params:`, params);
+                    
+                    fetchPromises.push(
+                        axios.get(`${BASE_URL}/discover/${tmdbType}`, { httpsAgent, params })
+                            .then(res => ({ data: res.data, type: t }))
+                    );
+                });
+            }
+        } else {
+            console.log('[Discovery] Path: DIVERSE TRENDING (Mixed API)');
+            // Create a diverse mix for the "All Languages" view
+            // We fetch Global Trending + Specific popular languages to ensure diversity
+            
+            // 1. Global Trending (Top priority)
+            for (let i = startTmdbPage; i <= endTmdbPage; i++) {
+                fetchPromises.push(
+                    axios.get(`${BASE_URL}/trending/movie/week`, { httpsAgent, params: { api_key: TMDB_API_KEY, page: i } })
+                        .then(res => ({ data: res.data, type: 'movie' }))
+                );
+                fetchPromises.push(
+                    axios.get(`${BASE_URL}/trending/tv/week`, { httpsAgent, params: { api_key: TMDB_API_KEY, page: i } })
+                        .then(res => ({ data: res.data, type: 'tv' }))
+                );
+            }
+
+            // 2. Sprinkle in trending from diverse languages using Discover API
+            const diverseLangs = ['hi', 'ko', 'ja', 'es'];
+            diverseLangs.forEach(lang => {
+                fetchPromises.push(
+                    axios.get(`${BASE_URL}/discover/movie`, { 
+                        httpsAgent, 
+                        params: { 
+                            api_key: TMDB_API_KEY, 
+                            with_original_language: lang, 
+                            sort_by: 'popularity.desc',
+                            page: startTmdbPage
+                        } 
+                    }).then(res => ({ data: res.data, type: 'movie' }))
+                );
+            });
         }
 
         const responses = await Promise.allSettled(fetchPromises);
         
-        let trendingMovies = [];
-        let trendingTv = [];
+        const movies = [];
+        const shows = [];
 
-        responses.forEach((res, index) => {
+        responses.forEach((res) => {
             if (res.status === 'fulfilled' && res.value?.data?.results) {
-                // Even indices are movies, odd are TV shows
-                if (index % 2 === 0) trendingMovies.push(...res.value.data.results);
-                else trendingTv.push(...res.value.data.results);
+                if (res.value.type === 'movie') movies.push(...res.value.data.results);
+                else shows.push(...res.value.data.results);
             }
         });
 
-        // Interleave Movie and TV results for 50/50 variety
+        // Interleave Movie and TV results
         let blend = [];
-        const maxLen = Math.max(trendingMovies.length, trendingTv.length);
+        const maxLen = Math.max(movies.length, shows.length);
         for (let i = 0; i < maxLen; i++) {
-            if (trendingMovies[i]) blend.push({ ...trendingMovies[i], media_type: 'movie' });
-            if (trendingTv[i]) blend.push({ ...trendingTv[i], media_type: 'tv' });
+            if (movies[i]) blend.push({ ...movies[i], media_type: 'movie' });
+            if (shows[i]) blend.push({ ...shows[i], media_type: 'tv' });
         }
 
         // Deduplicate and filter out library items
@@ -662,20 +726,32 @@ exports.getDiscoveryFeed = async (userId, page = 1, limit = 60) => {
             if (!title || libraryTitles.has(title.toLowerCase().trim())) return;
             if (!item.poster_path) return;
 
+            // Strict Filter Safeguard: Ensure the item matches requested language/genre
+            // (TMDB Discover sometimes returns "related" results that don't match exactly)
+            if (cleanLanguage && item.original_language !== cleanLanguage) return;
+            if (cleanGenre && !(item.genre_ids || []).includes(parseInt(cleanGenre))) return;
+
             if (!uniqueItems.has(item.id)) {
                 uniqueItems.set(item.id, item);
             }
         });
 
-        // Re-rank slightly based on social signals (friends who watched)
         const candidates = Array.from(uniqueItems.values());
+        console.log(`[Discovery] Found ${candidates.length} unique candidates after strict filtering`);
+        
         const processed = await processResults(candidates, userId);
+        const results = processed.slice(0, limit);
 
-        // Return up to 'limit' items
-        return processed.slice(0, limit);
+        // If we found fewer items than the limit, but we fetched at least one page successfully,
+        // we can assume there's more on the next "discovery" page unless we hit a very high page number.
+        // For simplicity, we'll return hasMore: true if results exist and we haven't reached a reasonable limit.
+        return {
+            results,
+            hasMore: results.length > 0 && page < 50 // TMDB limit is usually 500 pages, but 50 is plenty for us
+        };
     } catch (error) {
-        console.error('[SearchService] Trending Feed failed:', error.message);
-        return [];
+        console.error('[SearchService] Discovery Feed failed:', error.stack);
+        return { results: [], hasMore: false };
     }
 };
 

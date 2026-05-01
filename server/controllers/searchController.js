@@ -144,8 +144,9 @@ exports.getDiscoverFeed = async (req, res) => {
         const userId = req.user.id;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
+        const { type, genre, language } = req.query;
         
-        const results = await searchService.getDiscoveryFeed(userId, page, limit);
+        const results = await searchService.getDiscoveryFeed(userId, page, limit, { type, genre, language });
         res.status(200).json(results);
     } catch (error) {
         console.error('Discover Feed Error:', error);

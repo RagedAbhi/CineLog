@@ -57,7 +57,7 @@ export const fetchStreamsFromBrowser = async ({ imdbId, addons, type = 'movie', 
     const results = await Promise.allSettled(
         addons.map(async (addon) => {
             const url = `${addon.baseUrl.replace(/\/$/, '')}${streamPath}`;
-            const res = await axios.get(url, { timeout: 15000 });
+            const res = await axios.get(url, { timeout: 20000 });
             return (res.data?.streams || []).map(s => ({
                 ...s,
                 addonName: addon.name,
@@ -93,7 +93,56 @@ export const fetchSubtitles = async ({ imdbId, addons, type = 'movie', season, e
     return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 };
 
-// Legacy proxy path (kept for fallback)
+// SORTING & FILTERING LOGIC MOVED TO MODAL FOR FLEXIBILITY
+export const fetchAllStreams = async (params) => {
+    // 1. Try Browser Fetch (Fastest, uses user IP)
+    const browserPromise = fetchStreamsFromBrowser(params);
+    
+    // 2. Try Server Proxy (Most reliable, bypasses CORS)
+    const serverPromise = fetchStreams(params);
+    
+    const [browserResults, serverResults] = await Promise.allSettled([browserPromise, serverPromise]);
+    
+    const bStreams = browserResults.status === 'fulfilled' ? browserResults.value : [];
+    const sStreams = serverResults.status === 'fulfilled' ? (serverResults.value.streams || []) : [];
+    
+    // Keep all streams but mark their source
+    const merged = [...bStreams, ...sStreams].map(s => ({
+        ...s,
+        // Ensure source identity is preserved
+        addonName: s.addonName || 'Unknown Source'
+    }));
+    
+    return merged;
+};
+
+// DUAL-FETCH SUBTITLES
+export const fetchAllSubtitles = async (params) => {
+    // 1. Browser Fetch
+    const bPromise = fetchSubtitles(params);
+    // 2. Server Proxy
+    const sPromise = axios.get(`${config.API_URL}/api/addons/subtitles`, {
+        headers: auth(),
+        params,
+        timeout: 12000
+    }).then(res => res.data.subtitles || []).catch(() => []);
+
+    const [bRes, sRes] = await Promise.allSettled([bPromise, sPromise]);
+    const bSubs = bRes.status === 'fulfilled' ? bRes.value : [];
+    const sSubs = sRes.status === 'fulfilled' ? sRes.value : [];
+
+    // Merge & Deduplicate
+    const seen = new Set();
+    const merged = [];
+    [...bSubs, ...sSubs].forEach(s => {
+        const key = s.url || s.id;
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        merged.push(s);
+    });
+    return merged;
+};
+
 export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, episode, title, year }) => {
     try {
         const params = { type, imdbId, tmdbId, season, episode, title, year };
@@ -113,12 +162,28 @@ export const fetchStreams = async ({ imdbId, tmdbId, type = 'movie', season, epi
     }
 };
 
-export const buildTorrentStreamUrl = ({ magnet, infoHash, fileIdx, sources = [] }) => {
+// Builds a URL that routes an HTTP video stream through the local proxy server.
+// Required because <video> cannot send custom headers (e.g. Torrentio's behaviorHints.proxyHeaders).
+export const buildHttpProxyUrl = ({ url, headers = {} }) => {
+    if (!config.IS_ELECTRON || !config.TORRENT_SERVER_URL) return url;
+    const params = new URLSearchParams();
+    params.set('url', url);
+    if (Object.keys(headers).length > 0) params.set('headers', JSON.stringify(headers));
+    return `${config.TORRENT_SERVER_URL}/api/http-proxy?${params.toString()}`;
+};
+
+export const buildTorrentStreamUrl = ({ magnet, infoHash, fileIdx, sources = [], season, episode }) => {
     const params = new URLSearchParams();
     if (magnet) params.set('magnet', magnet);
     if (infoHash) params.set('infoHash', infoHash);
     if (fileIdx !== undefined && fileIdx !== null) params.set('fileIdx', String(fileIdx));
-    if (sources.length > 0) params.set('sources', sources.join(','));
+    if (season) params.set('season', String(season));
+    if (episode) params.set('episode', String(episode));
+    // sources is an array of tracker/peer strings from Torrentio — critical for peer discovery
+    if (Array.isArray(sources) && sources.length > 0) {
+        params.set('sources', sources.join(','));
+        console.log('[Torrent] Forwarding', sources.length, 'sources to local server');
+    }
 
     if (config.IS_ELECTRON) {
         return `${config.TORRENT_SERVER_URL}/api/torrent/stream?${params.toString()}`;

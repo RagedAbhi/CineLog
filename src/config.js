@@ -1,4 +1,7 @@
-const API_URL = process.env.REACT_APP_API_URL || 'https://cuerates.onrender.com';
+const API_URL = process.env.REACT_APP_API_URL || 
+                (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+                    ? 'http://localhost:5000' 
+                    : 'https://cuerates.onrender.com');
 
 // window.__ELECTRON__ is injected by electron/preload.js at runtime.
 // In a regular browser it is undefined, so IS_ELECTRON is false.

@@ -8,7 +8,8 @@ router.use(protect);
 router.get('/', addonController.getAddons);
 router.post('/install', addonController.installAddon);
 router.delete('/:addonId', addonController.uninstallAddon);
-router.get('/resolve', addonController.resolveImdbId); // lightweight: ID resolution only
-router.get('/streams', addonController.fetchStreams);  // kept for backward compat
+router.get('/resolve', addonController.resolveImdbId);
+router.get('/streams', addonController.fetchStreams);
+router.get('/subtitles', addonController.fetchSubtitles);
 
 module.exports = router;

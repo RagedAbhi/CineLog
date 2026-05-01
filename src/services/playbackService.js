@@ -20,9 +20,13 @@ export const updatePlaybackProgress = async (data) => {
     }
 };
 
-export const getPlaybackProgress = async (mediaId) => {
+export const getPlaybackProgress = async (mediaId, season, episode) => {
     try {
-        const response = await axios.get(`${BASE_URL}/${mediaId}`, getAuthHeader());
+        let url = `${BASE_URL}/${mediaId}`;
+        if (season !== undefined && episode !== undefined) {
+            url += `?season=${season}&episode=${episode}`;
+        }
+        const response = await axios.get(url, getAuthHeader());
         return response.data;
     } catch (error) {
         console.error('Failed to get playback progress:', error);

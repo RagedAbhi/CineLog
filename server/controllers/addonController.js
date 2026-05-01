@@ -26,6 +26,13 @@ const FEATURED_ADDONS = [
         baseUrl: 'https://cyberflix.elfhosted.com',
         logo: 'https://elfhosted.com/images/logo.png',
     },
+    {
+        id: 'opensubtitles-org',
+        name: 'OpenSubtitles (Official)',
+        description: 'The most popular subtitle provider in the world. Essential for movies and series.',
+        baseUrl: 'https://opensubtitles-v3.strem.fun',
+        logo: 'https://www.opensubtitles.org/favicon.ico',
+    },
 ];
 
 exports.getAddons = async (req, res) => {
@@ -271,11 +278,13 @@ exports.fetchStreams = async (req, res) => {
                 try {
                     const response = await axios.get(url, { 
                         headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Stremio/4.4.159',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Stremio/4.4.160',
                             'Accept': 'application/json, text/plain, */*',
-                            'X-Stremio-Client': 'stremio-desktop'
+                            'X-Stremio-Client': 'stremio-desktop',
+                            'Origin': 'https://web.stremio.com',
+                            'Referer': 'https://web.stremio.com/'
                         },
-                        timeout: 10000 
+                        timeout: 30000 
                     });
                     const streams = response.data?.streams || [];
                     return streams.map(s => ({
@@ -304,5 +313,56 @@ exports.fetchStreams = async (req, res) => {
     } catch (err) {
         logger.error('fetchStreams Proxy Error:', err);
         res.status(500).json({ error: 'Failed to fetch streams via proxy' });
+    }
+};
+
+exports.fetchSubtitles = async (req, res) => {
+    let { imdbId, type, season, episode, title } = req.query;
+    try {
+        const accountData = await User.findById(req.user.id).select('installedAddons');
+        const addons = accountData?.installedAddons || [];
+        
+        // Build the standard Stremio path
+        let subPath = (type === 'series' && season && episode)
+            ? `/subtitles/series/${imdbId}:${season}:${episode}.json`
+            : `/subtitles/movie/${imdbId}.json`;
+
+        // If no ID is provided, or we want to try a title fallback later
+        // Note: Some addons support title-based paths, but standard Stremio is ID-based.
+        // We will try the ID-based path first.
+
+        const results = await Promise.allSettled(
+            addons.map(async (addon) => {
+                const url = `${addon.baseUrl.replace(/\/$/, '')}${subPath}`;
+                try {
+                    const response = await axios.get(url, { 
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Stremio/4.4.160',
+                            'Accept': 'application/json, text/plain, */*',
+                            'X-Stremio-Client': 'stremio-desktop'
+                        },
+                        timeout: 15000 
+                    });
+                    return (response.data?.subtitles || []).map(s => ({
+                        ...s,
+                        addonName: addon.name
+                    }));
+                } catch (e) { return []; }
+            })
+        );
+
+        const allSubs = [];
+        results.forEach(r => {
+            if (r.status === 'fulfilled') allSubs.push(...r.value);
+        });
+
+        // FALLBACK: If no subs found by ID, and we have a title, try searching by title if the addon supports it
+        // (Most OpenSubtitles addons use a search endpoint, but the standard Stremio path is ID-based)
+        // For now, we'll just return what we found, but we've increased the timeout and masking.
+
+        res.json({ subtitles: allSubs });
+    } catch (err) {
+        logger.error('fetchSubtitles Proxy Error:', err);
+        res.status(500).json({ error: 'Failed to fetch subtitles' });
     }
 };

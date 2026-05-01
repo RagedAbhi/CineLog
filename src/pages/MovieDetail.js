@@ -1094,12 +1094,13 @@ class MovieDetail extends Component {
                 tmdbId: movie.tmdbId || (!String(this.props.movieId).startsWith('tt') ? this.props.movieId : null)
               }}
               onClose={() => this.setState({ showStreamSources: false })}
-              onWatch={(url, title, stream) => this.setState({
+              onWatch={(url, title, stream, resolvedImdbId) => this.setState({
                 showStreamSources: false,
                 showVideoPlayer: true,
                 playerUrl: url,
                 playerTitle: title,
                 playerStream: stream || null,
+                playerImdbId: resolvedImdbId || null,
               })}
             />
           )}
@@ -1110,8 +1111,8 @@ class MovieDetail extends Component {
               stream={this.state.playerStream}
               title={this.state.playerTitle || movie.title}
               movie={movie}
-              imdbId={movie.imdbID}
-              onClose={() => this.setState({ showVideoPlayer: false, playerUrl: null, playerTitle: null, playerStream: null })}
+              imdbId={this.state.playerImdbId || movie.imdbID}
+              onClose={() => this.setState({ showVideoPlayer: false, playerUrl: null, playerTitle: null, playerStream: null, playerImdbId: null })}
             />
           )}
         </div>

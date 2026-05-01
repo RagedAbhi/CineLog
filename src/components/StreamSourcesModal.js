@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Puzzle, AlertTriangle, Play, Loader2, ExternalLink, Monitor } from 'lucide-react';
-import { resolveImdbId, fetchStreamsFromBrowser, parseStreamQuality, parseSeeders, buildTorrentStreamUrl } from '../services/addonService';
+import { X, Puzzle, AlertTriangle, Play, Loader2, Monitor } from 'lucide-react';
+import { resolveImdbId, fetchAllStreams, parseStreamQuality, parseSeeders, buildTorrentStreamUrl, buildHttpProxyUrl } from '../services/addonService';
 import { useNavigate } from 'react-router-dom';
 import config from '../config';
 
@@ -50,6 +50,8 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
     const [episode, setEpisode] = useState(1);
     const [installedCount, setInstalledCount] = useState(0);
     const [resolvedImdbId, setResolvedImdbId] = useState('');
+    const [showAll, setShowAll] = useState(false);
+    const [filteredCount, setFilteredCount] = useState(0);
     const navigate = useNavigate();
 
     const isSeries = movie?.mediaType === 'series';
@@ -94,13 +96,16 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
             setResolvedImdbId(resolved.imdbId);
             setInstalledCount(resolved.addons.length);
 
-            // Step 2: call Torrentio directly from browser (home IP, not cloud IP)
-            const streams = await fetchStreamsFromBrowser({
+            // Step 2: call all addons via Dual-Fetch (Browser + Server Proxy)
+            const streams = await fetchAllStreams({
                 imdbId: resolved.imdbId,
+                tmdbId,
                 addons: resolved.addons,
                 type: isSeries ? 'series' : 'movie',
                 season: isSeries ? season : undefined,
                 episode: isSeries ? episode : undefined,
+                title: movie.title,
+                year: movie.year,
             });
 
             // Sort streams by seeders descending
@@ -127,7 +132,32 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
         return acc;
     }, {});
 
+    const isMegaPackStream = (stream) => {
+        const t = stream.title || stream.name || '';
+        return /(season|s)s?\s?(\d+[\s\-\&\+to]+\d+)/i.test(t) ||
+            /\d\s\d\s\d\s\d/.test(t) ||
+            /complete|all seasons|full pack|collection|boxset|bundle/i.test(t);
+    };
+
+    // Count mega packs hidden when showAll is false (series only)
+    const hiddenMegaPackCount = (isSeries && !showAll)
+        ? streams.filter(isMegaPackStream).length
+        : 0;
+
     const handleWatch = (stream) => {
+        const hasHttpUrl = !!(stream.url && stream.url.startsWith('http'));
+
+        // Priority 1: HTTP Quick Play stream — starts instantly, no BitTorrent needed
+        if (hasHttpUrl) {
+            const proxyHeaders = stream.behaviorHints?.proxyHeaders || {};
+            const watchUrl = (config.IS_ELECTRON && Object.keys(proxyHeaders).length > 0)
+                ? buildHttpProxyUrl({ url: stream.url, headers: proxyHeaders })
+                : stream.url;
+            onWatch(watchUrl, movie.title, null, resolvedImdbId);
+            return;
+        }
+
+        // Priority 2: BitTorrent stream (infoHash / magnet)
         if (isMagnetOrHash(stream)) {
             if (config.IS_ELECTRON) {
                 const torrentUrl = buildTorrentStreamUrl({
@@ -135,15 +165,16 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                     infoHash: stream.infoHash || null,
                     fileIdx: stream.fileIdx ?? null,
                     sources: stream.sources || [],
+                    season: isSeries ? season : null,
+                    episode: isSeries ? episode : null,
                 });
-                console.log('[DEBUG] torrentUrl:', torrentUrl);
-                onWatch(torrentUrl, movie.title, null);
+                onWatch(torrentUrl, movie.title, null, resolvedImdbId);
             }
             return;
         }
-        const url = stream.url;
-        if (!url) return;
-        onWatch(url, movie.title, null);
+
+        // Fallback: any other URL
+        if (stream.url) onWatch(stream.url, movie.title, null, resolvedImdbId);
     };
 
     return (
@@ -313,7 +344,30 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                                     const cleanTitle = title.split('\n').filter(Boolean).slice(0, 2).join(' · ');
                                     const isMKV = title.toLowerCase().includes('.mkv');
                                     const isMP4 = title.toLowerCase().includes('.mp4');
-                                    const isUnsupported = isMKV || (!isMP4 && title.toLowerCase().includes('.avi') || title.toLowerCase().includes('.h265') || title.toLowerCase().includes('hevc'));
+                                    const hasAC3 = title.toLowerCase().includes('ac3') || title.toLowerCase().includes('dolby') || title.toLowerCase().includes('dd5') || title.toLowerCase().includes('dd+');
+                                    const hasHEVC = title.toLowerCase().includes('hevc') || title.toLowerCase().includes('h265') || title.toLowerCase().includes('h.265') || title.toLowerCase().includes('x265');
+                                    const isAVI = title.toLowerCase().includes('.avi');
+                                    
+                                    // Advanced Regex for Mega Packs (e.g. "Seasons 1-10", "1 2 3 4 5 6", "S01-S10")
+                                    const megaRegex = /(season|s)s?\s?(\d+[\s\-\&\+to]+\d+)/i;
+                                    const sequenceRegex = /\d\s\d\s\d\s\d/; // Catches "1 2 3 4..."
+                                    const keywordMatch = /complete|all seasons|full pack|collection|boxset|bundle/i.test(title);
+                                    
+                                    const isMegaPack = megaRegex.test(title) || sequenceRegex.test(title) || keywordMatch;
+
+                                    // Hide mega packs for series by default — they load slowly
+                                    if (isSeries && !showAll && isMegaPack) return null;
+
+                                    // HTTP Quick Play: stream has an HTTP URL (not magnet) — served from Torrentio's CDN
+                                    const isQuickPlay = !!(stream.url && stream.url.startsWith('http'));
+                                    // Pure BitTorrent: only reachable via infoHash/magnet, no HTTP URL
+                                    const isBitTorrent = isMagnetOrHash(stream) && !isQuickPlay;
+
+                                    // In Electron, filter streams that the Chromium video element cannot decode
+                                    const isUnsupported = config.IS_ELECTRON && !isQuickPlay && (isMKV || hasAC3 || hasHEVC || isAVI);
+                                    
+                                    // NO FILTERING: Allow all streams (MegaPacks included)
+                                    // if (isUnsupported) return null; 
 
                                     return (
                                         <div
@@ -348,11 +402,15 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                                                     {cleanTitle}
                                                 </p>
                                                 <div style={{ display: 'flex', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
-                                                    {isTorrent && (
+                                                    {isQuickPlay && (
+                                                        <span style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                            ▶ Quick Play
+                                                        </span>
+                                                    )}
+                                                    {isBitTorrent && (
                                                         <span style={{ fontSize: '0.7rem', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 3 }}>
                                                             ⚡ Torrent
-                                                            {isMP4 && <span style={{ color: '#10b981', marginLeft: 4 }}>• Quick Play</span>}
-                                                            {isMKV && <span style={{ color: '#8b5cf6', marginLeft: 4 }}>• High Quality (MKV)</span>}
+                                                            {isMKV && <span style={{ color: '#8b5cf6', marginLeft: 4 }}>• MKV</span>}
                                                         </span>
                                                     )}
                                                     {seeders !== null && (
@@ -360,11 +418,22 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                                                             👤 {seeders.toLocaleString()} seeders
                                                         </span>
                                                     )}
+                                                    {/* Source Badge */}
+                                                    <span style={{ 
+                                                        fontSize: '0.65rem', 
+                                                        background: 'rgba(255,255,255,0.05)', 
+                                                        padding: '1px 6px', 
+                                                        borderRadius: 4,
+                                                        color: 'rgba(255,255,255,0.4)',
+                                                        border: '1px solid rgba(255,255,255,0.1)'
+                                                    }}>
+                                                        {stream.addonName}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            {/* Watch button — torrent streams require desktop app */}
-                                            {isTorrent && !config.IS_ELECTRON ? (
+                                            {/* Watch button — pure BitTorrent is desktop-only; HTTP Quick Play works everywhere */}
+                                            {isBitTorrent && !config.IS_ELECTRON ? (
                                                 <span style={{
                                                     padding: '5px 10px', borderRadius: 8, flexShrink: 0,
                                                     background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.25)',
@@ -374,50 +443,20 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                                                     <Monitor size={11} /> Desktop only
                                                 </span>
                                             ) : (
-                                                <div style={{ display: 'flex', gap: 6 }}>
-                                                    {config.IS_ELECTRON && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const url = resolveStreamUrl(stream);
-                                                                if (url && window.__ELECTRON__?.openExternal) {
-                                                                    window.__ELECTRON__.openExternal(url);
-                                                                }
-                                                            }}
-                                                            title="Open in External Player (VLC/MPC)"
-                                                            style={{
-                                                                padding: '7px', borderRadius: 8, border: 'none',
-                                                                background: 'rgba(255,255,255,0.05)', color: 'var(--muted-foreground)',
-                                                                cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center',
-                                                                transition: 'background 0.2s, color 0.2s',
-                                                            }}
-                                                            onMouseEnter={e => {
-                                                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                                                                e.currentTarget.style.color = '#fff';
-                                                            }}
-                                                            onMouseLeave={e => {
-                                                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                                                                e.currentTarget.style.color = 'var(--muted-foreground)';
-                                                            }}
-                                                        >
-                                                            <ExternalLink size={14} />
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleWatch(stream)}
-                                                        style={{
-                                                            padding: '7px 14px', borderRadius: 8, border: 'none',
-                                                            background: 'rgba(168,85,247,0.15)', color: 'var(--accent)',
-                                                            cursor: 'pointer', flexShrink: 0, fontWeight: 600,
-                                                            fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5,
-                                                            transition: 'background 0.2s',
-                                                        }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,0.3)'}
-                                                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(168,85,247,0.15)'}
-                                                    >
-                                                        <Play size={13} fill="currentColor" /> Watch
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    onClick={() => handleWatch(stream)}
+                                                    style={{
+                                                        padding: '7px 14px', borderRadius: 8, border: 'none',
+                                                        background: 'rgba(168,85,247,0.15)', color: 'var(--accent)',
+                                                        cursor: 'pointer', flexShrink: 0, fontWeight: 600,
+                                                        fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 5,
+                                                        transition: 'background 0.2s',
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,0.3)'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(168,85,247,0.15)'}
+                                                >
+                                                    <Play size={13} fill="currentColor" /> Watch
+                                                </button>
                                             )}
                                         </div>
                                     );
@@ -425,6 +464,32 @@ const StreamSourcesModal = ({ movie, onClose, onWatch }) => {
                             </div>
                         </div>
                     ))}
+
+                    {/* Mega pack toggle — shown for series only */}
+                    {isSeries && hiddenMegaPackCount > 0 && (
+                        <button
+                            onClick={() => setShowAll(true)}
+                            style={{
+                                width: '100%', padding: '10px', borderRadius: 8, border: '1px dashed rgba(245,158,11,0.3)',
+                                background: 'rgba(245,158,11,0.05)', color: '#f59e0b', cursor: 'pointer',
+                                fontSize: '0.78rem', marginTop: 4,
+                            }}
+                        >
+                            ⚠ {hiddenMegaPackCount} mega pack stream{hiddenMegaPackCount > 1 ? 's' : ''} hidden (slow to load) — Show anyway
+                        </button>
+                    )}
+                    {isSeries && showAll && streams.some(isMegaPackStream) && (
+                        <button
+                            onClick={() => setShowAll(false)}
+                            style={{
+                                width: '100%', padding: '10px', borderRadius: 8, border: '1px dashed rgba(100,116,139,0.3)',
+                                background: 'transparent', color: '#64748b', cursor: 'pointer',
+                                fontSize: '0.78rem', marginTop: 4,
+                            }}
+                        >
+                            Hide mega packs
+                        </button>
+                    )}
                 </div>
 
                 {/* Footer disclaimer */}

@@ -79,9 +79,15 @@ class DiscoverPage extends Component {
     }
 
     setFilter = (key, value) => {
-        // Toggle off if same value clicked again
         const current = this.state[key];
-        this.setState({ [key]: current === value ? (key === 'typeFilter' ? 'all' : null) : value });
+        const newValue = current === value ? (key === 'typeFilter' ? 'all' : null) : value;
+        this.setState({ [key]: newValue }, () => this.resetAndFetch());
+    }
+
+    resetAndFetch = () => {
+        this.setState({ recommendations: [], page: 1, hasMore: true }, () => {
+            this.generateFeed(false, 1);
+        });
     }
 
     generateFeed = async (silent = false, page = 1) => {
@@ -90,18 +96,27 @@ class DiscoverPage extends Component {
         if (!isInitialLoad) this.setState({ loadingMore: true });
 
         try {
+            const { typeFilter, genreFilter, languageFilter } = this.state;
+            console.log('[Discovery] Sending request with filters:', { typeFilter, genreFilter, languageFilter });
             const token = localStorage.getItem('token');
             const res = await axios.get(`${config.API_URL}/api/search/discover`, {
                 headers: { Authorization: `Bearer ${token}` },
-                params: { page, limit: 60 }
+                params: { 
+                    page, 
+                    limit: 60,
+                    type: typeFilter,
+                    genre: genreFilter,
+                    language: languageFilter
+                }
             });
-            const recs = res.data;
+            const { results, hasMore } = res.data;
+            const recs = results || [];
 
             this.setState(prev => ({
                 recommendations: isInitialLoad ? recs : [...prev.recommendations, ...recs],
                 loading: false,
                 loadingMore: false,
-                hasMore: recs.length === 60,
+                hasMore: hasMore ?? (recs.length === 60),
                 feedGeneratedAt: isInitialLoad ? Date.now() : prev.feedGeneratedAt
             }), () => {
                 if (!silent && isInitialLoad && this.gridRef.current) {
@@ -118,20 +133,8 @@ class DiscoverPage extends Component {
         }
     }
 
-    getFilteredRecs() {
-        const { recommendations, typeFilter, genreFilter, languageFilter } = this.state;
-        return recommendations.filter(m => {
-            if (typeFilter === 'movie' && m.mediaType !== 'movie') return false;
-            if (typeFilter === 'series' && m.mediaType !== 'series') return false;
-            if (genreFilter && !(m.genreIds || []).includes(genreFilter)) return false;
-            if (languageFilter && m.originalLanguage !== languageFilter) return false;
-            return true;
-        });
-    }
-
     render() {
-        const { loading, error, typeFilter, genreFilter, languageFilter } = this.state;
-        const filtered = this.getFilteredRecs();
+        const { loading, error, recommendations, typeFilter, genreFilter, languageFilter } = this.state;
         const activeFilters = (typeFilter !== 'all' ? 1 : 0) + (genreFilter ? 1 : 0) + (languageFilter ? 1 : 0);
 
         return (
@@ -139,8 +142,11 @@ class DiscoverPage extends Component {
                 {/* Header — matches page-header pattern used in Movies/TV pages */}
                 <div className="page-header" ref={this.headerRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                        <h2>Trending Now</h2>
-                        <p>The most popular global movies and shows this week.</p>
+                        <h2>{activeFilters > 0 ? 'Discovery Results' : 'Trending Now'}</h2>
+                        <p>
+                            {languageFilter ? `${LANGUAGES.find(l => l.code === languageFilter)?.name} ` : 'Global '}
+                            {typeFilter === 'movie' ? 'Movies' : typeFilter === 'series' ? 'TV Shows' : 'Content'}
+                        </p>
                     </div>
                     <button
                         className="btn btn-primary"
@@ -161,7 +167,7 @@ class DiscoverPage extends Component {
                             <button
                                 key={t.v}
                                 className={`filter-toggle-btn ${typeFilter === t.v ? 'active' : ''}`}
-                                onClick={() => this.setState({ typeFilter: t.v })}
+                                onClick={() => this.setState({ typeFilter: t.v }, () => this.resetAndFetch())}
                             >{t.l}</button>
                         ))}
                     </div>
@@ -171,7 +177,7 @@ class DiscoverPage extends Component {
                         <CineSelect
                             options={[{ value: '', label: 'All Genres' }, ...GENRES.map(g => ({ value: String(g.id), label: g.name }))]}
                             value={genreFilter ? String(genreFilter) : ''}
-                            onChange={val => this.setState({ genreFilter: val ? parseInt(val) : null })}
+                            onChange={val => this.setState({ genreFilter: val ? parseInt(val) : null }, () => this.resetAndFetch())}
                             placeholder="Genre"
                         />
                     </div>
@@ -181,7 +187,7 @@ class DiscoverPage extends Component {
                         <CineSelect
                             options={[{ value: '', label: 'All Languages' }, ...LANGUAGES.map(l => ({ value: l.code, label: l.name }))]}
                             value={languageFilter || ''}
-                            onChange={val => this.setState({ languageFilter: val || null })}
+                            onChange={val => this.setState({ languageFilter: val || null }, () => this.resetAndFetch())}
                             placeholder="Language"
                         />
                     </div>
@@ -189,7 +195,7 @@ class DiscoverPage extends Component {
                     {activeFilters > 0 && (
                         <button
                             className="btn-clear"
-                            onClick={() => this.setState({ typeFilter: 'all', genreFilter: null, languageFilter: null })}
+                            onClick={() => this.setState({ typeFilter: 'all', genreFilter: null, languageFilter: null }, () => this.resetAndFetch())}
                         >Clear filters</button>
                     )}
                 </div>
@@ -211,7 +217,7 @@ class DiscoverPage extends Component {
                     </div>
                 )}
 
-                {!loading && !error && filtered.length === 0 && (
+                {!loading && !error && recommendations.length === 0 && (
                     <div className="empty-state">
                         <div className="empty-icon">🔍</div>
                         <h3>No results found</h3>
@@ -219,10 +225,10 @@ class DiscoverPage extends Component {
                     </div>
                 )}
 
-                {!loading && !error && filtered.length > 0 && (
+                {!loading && !error && recommendations.length > 0 && (
                     <>
                         <div className="movie-grid discover-grid" ref={this.gridRef}>
-                            {filtered.map(movie => (
+                            {recommendations.map(movie => (
                                 <MovieCard
                                     key={`${movie.id}-${movie.mediaType}`}
                                     movie={{ 

@@ -27,6 +27,9 @@ const PlaybackProgressSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    season: Number,
+    episode: Number,
+    episodeTitle: String,
     updatedAt: {
         type: Date,
         default: Date.now

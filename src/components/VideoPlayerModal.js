@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, AlertTriangle, ExternalLink, Subtitles, Users, MessageCircle, Send, Copy, Check, Smile } from 'lucide-react';
-import { fetchSubtitles, getInstalledAddons } from '../services/addonService';
+import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, AlertTriangle, Subtitles, Users, MessageCircle, Send, Copy, Check, Smile } from 'lucide-react';
+import { fetchAllSubtitles, getInstalledAddons } from '../services/addonService';
 import { updatePlaybackProgress, getPlaybackProgress } from '../services/playbackService';
 import { io } from 'socket.io-client';
 import config from '../config';
@@ -37,6 +37,65 @@ const getMagnetURI = (stream) => {
 
 const IS_ELECTRON = typeof window !== 'undefined' && !!window.__ELECTRON__?.isElectron;
 
+const PlayerPicker = ({ mediaPlayers, savedPlayer, showPicker, onTogglePicker, onSelect }) => (
+    <div style={{ position: 'relative', marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+            <button
+                onClick={() => savedPlayer ? onSelect(savedPlayer) : onTogglePicker()}
+                style={{
+                    padding: '8px 16px', borderRadius: 8,
+                    background: 'rgba(255,165,0,0.15)', border: '1px solid rgba(255,165,0,0.4)',
+                    color: '#ffa500', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                }}
+            >
+                🎬 {savedPlayer ? `Open in ${savedPlayer.name}` : 'Open with...'}
+            </button>
+            {savedPlayer && (
+                <button
+                    onClick={onTogglePicker}
+                    title="Change player"
+                    style={{
+                        padding: '8px 10px', borderRadius: 8,
+                        background: 'rgba(255,165,0,0.1)', border: '1px solid rgba(255,165,0,0.3)',
+                        color: '#ffa500', cursor: 'pointer', fontSize: '0.8rem',
+                    }}
+                >⚙</button>
+            )}
+        </div>
+        {showPicker && (
+            <div style={{
+                position: 'absolute', top: '110%', zIndex: 50,
+                background: '#0b091c', border: '1px solid rgba(255,165,0,0.3)',
+                borderRadius: 10, padding: 8, minWidth: 180,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            }}>
+                <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', padding: '4px 8px 8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Open stream with
+                </p>
+                {mediaPlayers.length === 0 ? (
+                    <p style={{ fontSize: '0.78rem', color: '#64748b', padding: '4px 8px' }}>No players detected</p>
+                ) : mediaPlayers.map(player => (
+                    <button
+                        key={player.path}
+                        onClick={() => onSelect(player)}
+                        style={{
+                            width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                            color: savedPlayer?.path === player.path ? '#ffa500' : '#fff',
+                            padding: '8px 12px', borderRadius: 6, cursor: 'pointer',
+                            fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,165,0,0.1)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                        {player.name}
+                        {savedPlayer?.path === player.path && <span style={{ fontSize: '0.7rem' }}>✓ saved</span>}
+                    </button>
+                ))}
+            </div>
+        )}
+    </div>
+);
+
 const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: initialRoomId }) => {
     const videoRef = useRef(null);
     const containerRef = useRef(null);
@@ -63,6 +122,11 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
     const [activeSub, setActiveSub] = useState(null);
     const [trackSrc, setTrackSrc] = useState(null);
     const [showSubMenu, setShowSubMenu] = useState(false);
+
+    // External player picker
+    const [mediaPlayers, setMediaPlayers] = useState([]);
+    const [savedPlayer, setSavedPlayer] = useState(null);
+    const [showPlayerPicker, setShowPlayerPicker] = useState(false);
 
     // Stream Together state
     const socketRef = useRef(null);
@@ -148,20 +212,71 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
         };
     }, [isTorrent]); // only run once per mount
 
+    // Desktop Torrent Status Polling
+    useEffect(() => {
+        if (!isLocalTorrentStream || !loading) return;
+
+        const getInfoHash = () => {
+            if (!url) return null;
+            // Try query param first
+            const fromQuery = new URLSearchParams(url.split('?')[1]).get('infoHash');
+            if (fromQuery) return fromQuery;
+            
+            // Try extracting from path (e.g., /stream/HASH)
+            const parts = url.split('/');
+            const lastPart = parts[parts.length - 1].split('?')[0];
+            if (lastPart && lastPart.length === 40) return lastPart; // Standard 40-char infoHash
+            
+            return null;
+        };
+
+        const infoHash = getInfoHash();
+        if (!infoHash) return;
+
+        const pollStatus = async () => {
+            try {
+                const res = await fetch(`${config.TORRENT_SERVER_URL}/api/torrent/status?infoHash=${infoHash}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const speedMb = (data.downloadSpeed / (1024 * 1024)).toFixed(2);
+                    setTorrentInfo(`Connected to ${data.numPeers} peers | Speed: ${speedMb} MB/s`);
+                }
+            } catch (err) {
+                console.error('[Torrent] Status poll failed:', err);
+            }
+        };
+
+        const interval = setInterval(pollStatus, 2000);
+        pollStatus();
+
+        return () => clearInterval(interval);
+    }, [isLocalTorrentStream, loading, url]);
+
     // Fetch subtitles
     useEffect(() => {
         const loadSubs = async () => {
             try {
                 let id = imdbId || movie?.imdbID || movie?.imdb_id;
-                if (id && !id.startsWith('tt') && !id.includes(':')) {
-                    id = `tt${id}`;
+                if (id) {
+                    // Strip any existing :s:e markers to avoid tt123:1:1:1:1
+                    id = String(id).split(':')[0];
+                    if (!id.startsWith('tt')) id = `tt${id}`;
                 }
 
+                // Extract season/episode from URL if it's a series
+                const params = new URLSearchParams(url?.split('?')[1] || '');
+                const season = params.get('season');
+                const episode = params.get('episode');
+                const type = (movie?.mediaType || params.get('type')) === 'series' ? 'series' : 'movie';
+
                 const { installedAddons } = await getInstalledAddons();
-                const fetched = await fetchSubtitles({
+                const fetched = await fetchAllSubtitles({
                     imdbId: id,
                     addons: installedAddons,
-                    type: movie?.mediaType || 'movie'
+                    type: type,
+                    season: type === 'series' ? (season || 1) : undefined,
+                    episode: type === 'series' ? (episode || 1) : undefined,
+                    title: movie?.title || title
                 });
                 setSubtitles(fetched);
                 // Auto-select English if available
@@ -171,37 +286,40 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
                 console.error('Subtitle fetch failed:', err);
             }
         };
-        if (movie || imdbId) loadSubs();
-    }, [imdbId, movie]);
+        if (movie || imdbId || url) loadSubs();
+    }, [imdbId, movie, url]);
 
     // Handle SRT conversion and Track Src
     useEffect(() => {
         if (!activeSub) {
             setTrackSrc(null);
+            // Hide all text tracks when subtitles turned off
+            if (videoRef.current) {
+                Array.from(videoRef.current.textTracks).forEach(t => { t.mode = 'hidden'; });
+            }
             return;
         }
 
         const prepareSub = async () => {
             try {
-                // If it's likely an SRT (or explicitly labeled as such)
-                if (activeSub.url.toLowerCase().endsWith('.srt') || activeSub.format === 'srt') {
-                    const res = await fetch(activeSub.url);
-                    const text = await res.text();
-                    
-                    // Simple SRT to VTT conversion
-                    // 1. Header
-                    // 2. Change , to . in timestamps
-                    let vtt = 'WEBVTT\n\n' + text
-                        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
-                    
-                    const blob = new Blob([vtt], { type: 'text/vtt' });
-                    setTrackSrc(URL.createObjectURL(blob));
-                } else {
-                    setTrackSrc(activeSub.url);
+                // Fetch subtitle directly — Electron's session CORS bypass (in electron.js) allows
+                // the renderer to fetch any external URL without restrictions or proxying.
+                const res = await fetch(activeSub.url);
+                let text = await res.text();
+
+                // Convert SRT to VTT if the content doesn't already start with WEBVTT
+                if (!text.trimStart().startsWith('WEBVTT')) {
+                    text = 'WEBVTT\n\n' + text
+                        .replace(/\r\n/g, '\n')
+                        .replace(/\r/g, '\n')
+                        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
+                        .trim();
                 }
+
+                const blob = new Blob([text], { type: 'text/vtt' });
+                setTrackSrc(URL.createObjectURL(blob));
             } catch (err) {
                 console.error('Failed to prepare subtitle:', err);
-                setTrackSrc(activeSub.url);
             }
         };
 
@@ -212,6 +330,66 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
             }
         };
     }, [activeSub]);
+
+    // Load available media players and saved preference once on mount
+    useEffect(() => {
+        if (!IS_ELECTRON) return;
+        window.__ELECTRON__?.getMediaPlayers?.()?.then(players => {
+            setMediaPlayers(players || []);
+        });
+        try {
+            const saved = JSON.parse(localStorage.getItem('cinelog_media_player') || 'null');
+            if (saved?.name && saved?.path) setSavedPlayer(saved);
+        } catch {}
+    }, []);
+
+    const openWithPlayer = (player) => {
+        window.__ELECTRON__?.launchWithPlayer(player.path, url);
+        localStorage.setItem('cinelog_media_player', JSON.stringify(player));
+        setSavedPlayer(player);
+        setShowPlayerPicker(false);
+    };
+
+    // Imperatively manage the <track> element instead of using React JSX.
+    // React's declarative <track> inside <video> is unreliable in Electron —
+    // dynamically added JSX tracks often don't register in textTracks correctly.
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        // Remove any existing subtitle tracks from previous selection
+        Array.from(video.querySelectorAll('track[kind="subtitles"]')).forEach(t => t.remove());
+        // Hide any lingering textTracks
+        Array.from(video.textTracks).forEach(t => { t.mode = 'hidden'; });
+
+        if (!trackSrc) return;
+
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.src = trackSrc;
+        track.srclang = activeSub?.id || 'en';
+        track.label = activeSub?.lang || 'Subtitle';
+        track.default = true;
+        video.appendChild(track);
+
+        const enable = () => {
+            // Find and show our track
+            Array.from(video.textTracks).forEach(t => {
+                t.mode = (t.label === track.label) ? 'showing' : 'hidden';
+            });
+        };
+
+        track.addEventListener('load', enable);
+        // Also apply immediately and after a short delay in case load already fired
+        enable();
+        const t = setTimeout(enable, 500);
+
+        return () => {
+            clearTimeout(t);
+            track.removeEventListener('load', enable);
+            if (track.parentNode === video) video.removeChild(track);
+        };
+    }, [trackSrc]);
 
     // ── Stream Together socket ────────────────────────────────────────────────
     useEffect(() => {
@@ -356,7 +534,11 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
     useEffect(() => {
         const restoreProgress = async () => {
             if (!imdbId || hasRestoredProgress) return;
-            const progress = await getPlaybackProgress(imdbId);
+            
+            const season = movie?.mediaType === 'series' ? (movie.season || parseInt(new URLSearchParams(url.split('?')[1]).get('season'))) : undefined;
+            const episode = movie?.mediaType === 'series' ? (movie.episode || parseInt(new URLSearchParams(url.split('?')[1]).get('episode'))) : undefined;
+            
+            const progress = await getPlaybackProgress(imdbId, season, episode);
             if (progress && progress.currentTime > 10 && (progress.currentTime / progress.duration) < 0.95) {
                 if (videoRef.current) {
                     videoRef.current.currentTime = progress.currentTime;
@@ -366,7 +548,7 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
             setHasRestoredProgress(true);
         };
         restoreProgress();
-    }, [imdbId, hasRestoredProgress]);
+    }, [imdbId, hasRestoredProgress, movie, url]);
 
     // Periodic Progress Saving
     useEffect(() => {
@@ -384,7 +566,9 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
                     poster: movie?.poster || stream?.poster,
                     mediaType: movie?.mediaType || (url?.includes('series') ? 'series' : 'movie'),
                     currentTime: v.currentTime,
-                    duration: v.duration
+                    duration: v.duration,
+                    season: movie?.mediaType === 'series' ? (movie.season || parseInt(new URLSearchParams(url.split('?')[1]).get('season'))) : undefined,
+                    episode: movie?.mediaType === 'series' ? (movie.episode || parseInt(new URLSearchParams(url.split('?')[1]).get('episode'))) : undefined
                 });
                 lastSavedTimeRef.current = v.currentTime;
             }
@@ -404,7 +588,9 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
                     poster: movie?.poster || stream?.poster,
                     mediaType: movie?.mediaType || (url?.includes('series') ? 'series' : 'movie'),
                     currentTime: v.currentTime,
-                    duration: v.duration
+                    duration: v.duration,
+                    season: movie?.mediaType === 'series' ? (movie.season || parseInt(new URLSearchParams(url.split('?')[1]).get('season'))) : undefined,
+                    episode: movie?.mediaType === 'series' ? (movie.episode || parseInt(new URLSearchParams(url.split('?')[1]).get('episode'))) : undefined
                 });
             }
         };
@@ -538,25 +724,14 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
                     onEnded={() => { setPlaying(false); setShowControls(true); }}
                     onError={() => { if (!isTorrent) { setError('Failed to load stream. Format may be unsupported or source unavailable.'); setLoading(false); } }}
                     preload="auto"
-                    crossOrigin="anonymous"
-                >
-                    {activeSub && trackSrc && (
-                        <track 
-                            key={trackSrc}
-                            label={activeSub.lang || 'Unknown'} 
-                            kind="subtitles" 
-                            srcLang={activeSub.id || 'en'} 
-                            src={trackSrc} 
-                            default 
-                        />
-                    )}
-                </video>
+                />
 
                 {/* Loading */}
                 {loading && !error && (
                     <div style={{
                         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', gap: 16,
+                        zIndex: 10,
                     }}>
                         <div style={{
                             width: 48, height: 48, border: '3px solid rgba(255,255,255,0.15)',
@@ -577,6 +752,16 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
                                 Connecting to torrent swarm… can take up to 60 seconds on first load
                             </p>
                         )}
+                        {/* External player picker — shown while loading a local torrent stream */}
+                        {IS_ELECTRON && isLocalTorrentStream && (
+                            <PlayerPicker
+                                mediaPlayers={mediaPlayers}
+                                savedPlayer={savedPlayer}
+                                showPicker={showPlayerPicker}
+                                onTogglePicker={() => setShowPlayerPicker(p => !p)}
+                                onSelect={openWithPlayer}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -585,23 +770,19 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
                     <div style={{
                         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: 24, textAlign: 'center',
+                        zIndex: 10,
                     }}>
                         <AlertTriangle size={40} color="#f59e0b" style={{ marginBottom: 16 }} />
                         <p style={{ color: '#fff', fontWeight: 600, marginBottom: 8 }}>Playback Error</p>
                         <p style={{ color: '#94a3b8', fontSize: '0.83rem', maxWidth: 420, lineHeight: 1.6, marginBottom: 20 }}>{error}</p>
-                        {IS_ELECTRON && (
-                            <button 
-                                onClick={() => window.__ELECTRON__?.openExternal(url)}
-                                style={{
-                                    padding: '10px 20px', borderRadius: 10, border: 'none',
-                                    background: 'var(--accent-gradient)', color: '#fff',
-                                    cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem',
-                                    display: 'flex', alignItems: 'center', gap: 8,
-                                    boxShadow: '0 10px 20px rgba(168,85,247,0.3)'
-                                }}
-                            >
-                                <ExternalLink size={16} /> Open in External Player (VLC)
-                            </button>
+                        {IS_ELECTRON && isLocalTorrentStream && (
+                            <PlayerPicker
+                                mediaPlayers={mediaPlayers}
+                                savedPlayer={savedPlayer}
+                                showPicker={showPlayerPicker}
+                                onTogglePicker={() => setShowPlayerPicker(p => !p)}
+                                onSelect={openWithPlayer}
+                            />
                         )}
                     </div>
                 )}
@@ -651,16 +832,6 @@ const VideoPlayerModal = ({ url, stream, title, movie, imdbId, onClose, roomId: 
                             <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume}
                                 onChange={e => changeVolume(parseFloat(e.target.value))}
                                 style={{ width: 72, accentColor: '#a855f7', cursor: 'pointer' }} />
-                            
-                            {IS_ELECTRON && (
-                                <button 
-                                    onClick={() => window.__ELECTRON__?.openExternal(url)} 
-                                    style={iconBtnStyle} 
-                                    title="Open in External Player"
-                                >
-                                    <ExternalLink size={14} />
-                                </button>
-                            )}
 
                             <div style={{ position: 'relative' }}>
                                 <button 
